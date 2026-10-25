@@ -18,7 +18,7 @@
     "engine/checks/alarm.py": "82fa1bdca1e0a23ce668de631efd9cc00cc3e108b99c358ae6273346deb3c699",
     "engine/checks/approval_check.py": "f2e4f22290be15cac1e2f923febac6b476e3f18da80ce85a19535cc71d097f7d",
     "engine/checks/backup_check.py": "4a03b4110316f7ae24b4d3f2fa8eb2f08a7cf5699e8e7ff83594bdd600652964",
-    "engine/checks/config_check.py": "d8235b9c572c9f3227616a1642ebc54e34ca79fc98b58ae84493ffc6cc54071c",
+    "engine/checks/config_check.py": "5d96787f9c082f71de148c91825d7c8293e03ea583156e8d27025515faf49585",
     "engine/checks/drift.py": "4bdfbdaade59937264d60847486d33ef1ef2870f249595c05e38e01c63b7d61b",
     "engine/checks/github.py": "7d2ee7c2bdb7c11c40ed2c9ea731a48e71c25ca2c30bdc3d1488558a33a92d6e",
     "engine/checks/gitio.py": "27008cc1bd856d42a44bf6437b1ce6cdc0bec1242e5b062d8c800d37b7e51b00",
@@ -36,7 +36,7 @@
     "engine/checks/tests/test_alarm.py": "45595aa09a1d311086235093de652518b6df26e6e6ef77f081580069bc15a96f",
     "engine/checks/tests/test_approval.py": "c66fb2b04a2dfdad14dbdcfd7abaedf19425d90ab55015e6ad802e9efb1ae8c2",
     "engine/checks/tests/test_backup_check.py": "975dc1a4a89d714740a80d6ac0e0abbcbb6e7aeffead2de12fa57f6be8ee7713",
-    "engine/checks/tests/test_config.py": "2e10031b463c87bd010be7a2b5ed29e6ac5442c50d1a5843f00fa65a961bb614",
+    "engine/checks/tests/test_config.py": "0b77ad79099f33f9296e23218cea5beddb760b8514a0ee783c9a8b5a933cc0d4",
     "engine/checks/tests/test_drift.py": "b024021e7fd56e92c860eb6acb7a00331289cf46b086ec889f21a53157f1a08e",
     "engine/checks/tests/test_english_only.py": "6afe8cca1e25ca1928fbde5c5e5b1224338709b51389f5c71b1ec1a4b1399a45",
     "engine/checks/tests/test_github.py": "9e7f957dc08296dfdc4c6d8d457b982b6ebbdc7f20d6afc7a8268bcf993c786f",
@@ -48,7 +48,7 @@
     "engine/checks/tests/test_routine_check.py": "9150c55c9d76e095a4f2511c91653a8cc9d4c377533ff389fe00ffd2016479f5",
     "engine/checks/tests/test_rules_budget.py": "b75e9162d8650a6962e0c967b5a1d3fc23cf6eccec76cc3568a2d0b15aee06f7",
     "engine/checks/tests/test_run.py": "d7e6da592846b61627579043858e0fdbdd2888424873cb13acdbfa0016e12304",
-    "engine/checks/tests/test_scenarios.py": "58f054dd88fb1e2e50c6d2621ae49f580af420b3a901d8c32f8225033ec6ebd3",
+    "engine/checks/tests/test_scenarios.py": "789014e139a42beed0ccc676bc45f0018750555fc5641c3531de929e0e54ca70",
     "engine/checks/tests/test_text.py": "f14a1cfd57c84526cc55a03c0c790e195d8e175954c90563da932ac67b38ea68",
     "engine/checks/tests/test_watch.py": "9f1523d72c3099ae89aa7a58c1d0aa7f2537f11ba2cf5634b322dd57008832ec",
     "engine/checks/text_check.py": "18721fa6c43394273e9410a1b646148b515a9c8310dae244a66d0c2541ece835",
@@ -68,12 +68,12 @@
     "engine/setup/release.py": "d5dabfb9d4c36090953e234e0deb1c1f65b7478d375115ef5c30f474818d193d",
     "engine/setup/tests/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "engine/setup/tests/test_release.py": "04806daf68adc588c97179abb0a41bb5e06d69889307348a176450dcbcccea22",
-    "engine/setup/tests/test_release_scenarios.py": "763c9252a416ffdb1ea0c75517a2c468b3c4e3ca0d22ff2f10a53db181a569bb",
+    "engine/setup/tests/test_release_scenarios.py": "4259b8e614af0df6b614be3a151d4e348af0ba05901a96d7d97cc0b7a63250c2",
     "engine/workflows/backup.yml": "adf84bdd45d51d2b6637fa2fa6346d161a70d49c7ce27972f4673208717742b0",
     "engine/workflows/check.yml": "68685c6f20bf7fc8b28eaa9ed1c51c61550a8384372da957be12d5b6cb8366f9",
     "engine/workflows/watch.yml": "ad557daa0070d9a5be8c8e93452aa1a70bd27f2c889600f6a4762322fc5a84b5"
   },
-  "published": "2026-10-24T20:24:42Z",
-  "release": "v0.1.0",
-  "source": "55773aa068193e7c11197d00ec54b7b88c2f285b"
+  "published": "2026-10-25T11:15:16Z",
+  "release": "v0.1.1",
+  "source": "4b65b45490deae1a6c110719e7a4f8affbc1c6ad"
 }
