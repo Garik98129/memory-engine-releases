@@ -54,15 +54,16 @@
     "engine/checks/text_check.py": "18721fa6c43394273e9410a1b646148b515a9c8310dae244a66d0c2541ece835",
     "engine/checks/watch.py": "9c5405af6a40a7dcb761a269ce2e2090633cfd3aa322a319cf4126e65dff424d",
     "engine/defaults.toml": "374e0dccd18d07d1fbd8fecb5c4965f799f6c6b278bed9a5de12955f0e596690",
-    "engine/rules/README.md": "a1739c6d6f9a3fe61bea1739f23e82a739390db92c532785f8520e29000d28a2",
-    "engine/rules/core.md": "c95ee3bea69fb3beda7e53b5d574617c64ff6835afc1abefa1992387cbabe462",
+    "engine/rules/README.md": "d61f954afbf6865ab6538376b45f94fd4ef9d24f472318b9612897ef0b452e74",
+    "engine/rules/core.md": "1001021ba159ccb65c145361b6a8ed8ad2707e77dfaca1c77478594f7940f42f",
     "engine/rules/documents.md": "f04e64923da93a50441e0e684bc2756146e5d1e22780f3da5523ef104ed0c81a",
-    "engine/rules/fields/bot.md": "2313b9000941baed9528a4682535337b43c05c6664ada02138f57143e6448415",
+    "engine/rules/fields/bot.md": "11d034e7183387096aeb21b68014ef3b2a7caea9979d9c0e08f659f283aad255",
     "engine/rules/fields/chat.md": "cc66a91ea3da0bdee30e39b5bd7d36aa85c14da7b3c2d34c77c395b73751282c",
     "engine/rules/health.md": "e1e450924967e5816b05c841f111986b2620f4e075394656846063ff283ca6c3",
     "engine/rules/mail.md": "1e3789f2de3fffcef3ceee6a57461f4cd8ac0b3b4ff0eaff437c3257239f5eb1",
     "engine/rules/notion.md": "495a8fd7e25b2432578c8fa919e3aa12e2e9daf917db1133db26e28464791540",
-    "engine/rules/routines.md": "fa21811a688d2d267f52de5cdcc3e06a921bd6a02233cf7ddd47c8fc1685280f",
+    "engine/rules/repository.md": "c1c0e1e8ceb97348f4ab366a214b80fe4aabfdf866fc653bfe8d28e6b460b300",
+    "engine/rules/routines.md": "8c4efc7546db88c4e0003281b52fe47def6cfdef49d958d61995ec788fe4a850",
     "engine/rules/shopping.md": "f7a2cbd270fce201183b01b6af7a80244790798d1db30f7582cef6914e3ac308",
     "engine/setup/__init__.py": "47f3c65e90b9d9e6fbfd900c2e4f02fd473b9b9aac8a15ee5463d90afb1699a7",
     "engine/setup/release.py": "d5dabfb9d4c36090953e234e0deb1c1f65b7478d375115ef5c30f474818d193d",
@@ -73,7 +74,7 @@
     "engine/workflows/check.yml": "68685c6f20bf7fc8b28eaa9ed1c51c61550a8384372da957be12d5b6cb8366f9",
     "engine/workflows/watch.yml": "ad557daa0070d9a5be8c8e93452aa1a70bd27f2c889600f6a4762322fc5a84b5"
   },
-  "published": "2026-10-25T11:15:16Z",
-  "release": "v0.1.1",
-  "source": "4b65b45490deae1a6c110719e7a4f8affbc1c6ad"
+  "published": "2026-10-25T12:51:59Z",
+  "release": "v0.1.2",
+  "source": "73b8d411efc285e39638ed2afeea1496788907ff"
 }
