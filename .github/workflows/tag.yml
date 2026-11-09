@@ -1,0 +1,33 @@
+# Sets a release's tag (the template's docs/DESIGN.md §5): every release on main after the
+# newest release tag gets the tag its manifest names, whatever order the runs take. The
+# owner's word stays on cutting the release — Claude Code pushes a manifest only on it;
+# this replaces the owner's hand on the tag. It only creates a tag — the tag ruleset forbids
+# moving or deleting one — and a refused release gets none; the run is red when the newest
+# manifest on main was refused (.github/scripts/tag-release.sh says what is refused).
+name: tag
+
+on:
+  push:
+    branches: [main]
+    paths: [release-manifest.json]
+
+permissions: {}
+
+concurrency:
+  # One run at a time, and none cancelled: by default a newer run would cancel the one
+  # waiting. The order of waiting runs is not guaranteed; the script does not depend on it.
+  group: tag
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  tag:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write          # to push the tag
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
+        with:
+          fetch-depth: 0       # every commit of the push, not only its head
+      - name: Tag the releases on main that have no tag yet
+        run: bash .github/scripts/tag-release.sh "$GITHUB_SHA"
