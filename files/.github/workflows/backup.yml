@@ -1,0 +1,112 @@
+# The nightly text copy of the person's Notion (docs/DESIGN.md §9). Installed as
+# .github/workflows/backup.yml and locked by C1 — N1 checks this file too.
+#
+# Reads Notion with the one secret of the repository, NOTION_TOKEN — a read-only internal
+# integration, kept in the environment `backup`, which the installation restricts to
+# `main` where the plan allows it (§2a) — and writes the copy to the branch
+# `notion-backup`: one file per page or row, payment data cut out (N6), a stamp every
+# run, so a quiet Notion still moves the branch and N2 sees the copy alive. The branch
+# is never merged into main. N3 compares tonight's count with last night's. Nothing is
+# committed when Notion could not be read in full, when the copy could not be written, or
+# when the copy crashed; that night is an alarm instead.
+name: backup
+
+on:
+  schedule:
+    - cron: "11 1 * * *"      # nightly, 01:11 UTC — after the watch (00:41)
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  # One group with watch.yml, up to 100 waiting runs kept (Issue #18, item 48; see there).
+  group: notion-copy
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  backup:
+    # A dispatch on another branch would run that branch's copy of this file.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: backup
+    permissions:
+      contents: write         # the push to notion-backup
+      issues: write           # the alarm Issues (N3, N6, the copy's own error)
+    steps:
+      - name: Code from main — the commit whose copy of this workflow runs
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: The copy's branch, as a worktree
+        id: worktree
+        run: |
+          set -euo pipefail
+          if git rev-parse --verify --quiet refs/remotes/origin/notion-backup >/dev/null; then
+            git worktree add --detach "$RUNNER_TEMP/copy" refs/remotes/origin/notion-backup
+          else
+            # The first night: a branch with no common history with main (§9), made the
+            # way every git since 1.7 knows — not `worktree add --orphan` (git 2.42+).
+            git worktree add --detach "$RUNNER_TEMP/copy" HEAD
+            git -C "$RUNNER_TEMP/copy" checkout --quiet --orphan notion-backup
+            git -C "$RUNNER_TEMP/copy" rm -r -q -f .
+          fi
+
+      - name: Copy Notion
+        id: copy
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          MAIN: ${{ github.sha }}
+        # Exit 1 is «N3 or N6 found something»: the copy is made and goes on to its commit.
+        # A crash exits 1 too. The report is the night's last write, made in one step, and a
+        # failed night exits 2 — so 1 counts only with a non-empty report; any other end stops
+        # here, before the commit (Issue #18, item 42).
+        run: >-
+          python3 -m engine.backup.run --main "$MAIN" --worktree "$RUNNER_TEMP/copy"
+          --report "$RUNNER_TEMP/report.json"
+          || { [ "$?" = 1 ] && [ -s "$RUNNER_TEMP/report.json" ]; }
+
+      - name: Commit and push the copy
+        id: push
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/copy"
+          git add -A
+          git -c user.name='github-actions[bot]' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit --quiet --allow-empty -m "Notion copy $(date -u +%Y-%m-%dT%H:%MZ)"
+          # The token stays out of .git/config and argv.
+          auth=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          GIT_CONFIG_COUNT=1 \
+            GIT_CONFIG_KEY_0=http.https://github.com/.extraheader \
+            GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $auth" \
+            git push --quiet origin HEAD:refs/heads/notion-backup
+
+      - name: Alarms
+        # Also after a failed step: a copy that could not run is an alarm (P5), and
+        # nothing was committed for it. A copy that was made but not committed or pushed
+        # leaves a clean report behind — the step's failure is handed to the alarm
+        # itself, or the night would pass for a quiet one (Kimi, PR #8).
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MAIN: ${{ github.sha }}
+          WORKTREE: ${{ steps.worktree.outcome }}
+          PUSH: ${{ steps.push.outcome }}
+        run: |
+          set -euo pipefail
+          args=()
+          if [ "$WORKTREE" = failure ]; then
+            args+=(--error "the copy's branch could not be checked out: the worktree step failed")
+          fi
+          if [ "$PUSH" = failure ]; then
+            args+=(--error "the copy was made but could not be committed or pushed to notion-backup")
+          fi
+          python3 -m engine.checks.alarm --main "$MAIN" --report "$RUNNER_TEMP/report.json" \
+            --run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" --what backup "${args[@]}"

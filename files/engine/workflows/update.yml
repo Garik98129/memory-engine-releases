@@ -1,0 +1,48 @@
+# The engine update of a person's repository (docs/DESIGN.md §5). Installed as
+# .github/workflows/update.yml and locked by C1.
+#
+# Every week, and by hand, it runs main's code: `engine.setup.update` takes the newest
+# release main's channel allows from the public repository of releases, holds its files to
+# the manifest and opens an update PR. The gate checks that PR like any other — C1 holds
+# every file under engine/ and .github/ to the manifest — and job `merge` lands it. A PR
+# opened with GITHUB_TOKEN starts no pull_request_target run, so the update starts the gate
+# through workflow_dispatch. A release that changes .github/ is not pushed: GITHUB_TOKEN
+# cannot write workflow files. It opens an Issue for the trusted contact instead.
+name: update
+
+on:
+  schedule:
+    - cron: "23 4 * * 1"      # Mondays, 04:23 UTC — away from the nightly runs (00:41, 01:11)
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    # A dispatch on any other branch would run that branch's copy of this file.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write         # the update branch
+      pull-requests: write    # the update PR; closing the older ones it supersedes
+      issues: write           # «has to be applied by hand»
+      actions: write          # start the gate on the update PR
+    steps:
+      - name: Code from main
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Update
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          python3 -m engine.setup.update --main "$GITHUB_SHA"
+          --run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"

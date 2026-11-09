@@ -1,0 +1,99 @@
+# The nightly watch of a person's repository: N1 integrity and N5 field-drift
+# (docs/DESIGN.md §6). Installed as .github/workflows/watch.yml and locked by C1 —
+# N1 checks this file too.
+#
+# Runs every night and on every push to main. A merge by job `merge` is made with
+# GITHUB_TOKEN and starts no workflow, so the push trigger fires exactly for a push
+# that did not come through the gate. Findings become alarm Issues for the repository
+# owner and the trusted contact; they never pass through the bot. The same checks run
+# inside the gate on every save (check.yml): this nightly run is the supplement for
+# days without saves, because a collaborator can switch it off (§13, question 9).
+name: watch
+
+on:
+  schedule:
+    - cron: "41 0 * * *"      # nightly, 00:41 UTC
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  # One group with backup.yml: this watch does not read the copy's branch while the copy
+  # pushes to it, or N2 would see a head GitHub had not recorded yet (Issue #18, item 48).
+  # The gate's own run of the watch is outside the group, and so is a re-run of a run made
+  # before this change: a re-run takes its first run's commit.
+  # `queue: max` keeps up to 100 waiting runs: by default a newer run cancels the one
+  # waiting, and a push to main could cancel a night's copy.
+  group: notion-copy
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  watch:
+    # A dispatch on another branch would run that branch's copy of this file.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read          # main, every branch, the activity log of main, its branch settings
+      pull-requests: read     # which PR each merge came from, and who merged it
+      statuses: read          # the `gate` status on each merged head
+      actions: read           # the checking runs and their logs
+      issues: write           # the alarm Issues
+    steps:
+      - name: Code from main — the commit whose copy of this workflow runs
+        # A re-run of an old run executes the old workflow on the old main; the checks
+        # then see that main has moved on and judge nothing (engine/checks/watch.py).
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Every branch, as data
+        id: main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # The token stays out of .git/config and argv.
+          auth=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          GIT_CONFIG_COUNT=1 \
+            GIT_CONFIG_KEY_0=http.https://github.com/.extraheader \
+            GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $auth" \
+            git fetch --no-tags --quiet --prune origin '+refs/heads/*:refs/remotes/origin/*'
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Release manifest from the public repository of releases
+        env:
+          MAIN: ${{ steps.main.outputs.sha }}
+        run: |
+          set -euo pipefail
+          url=$(python3 -m engine.checks.run --base "$MAIN" --head "$MAIN" --kind person --manifest-url)
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/manifest.json" "$url"
+
+      - name: N1, N5
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MAIN: ${{ steps.main.outputs.sha }}
+        # Exit 1 is «found something»: whether that is red is the alarm step's call — a finding
+        # someone closed as known is green. A crash exits 1 too, but the report is the watch's
+        # last write, made in one step, so 1 counts only with a non-empty report; an error (2)
+        # or a crash stays red here (Issue #18, item 1).
+        run: >-
+          python3 -m engine.checks.watch --main "$MAIN"
+          --manifest "$RUNNER_TEMP/manifest.json" --report "$RUNNER_TEMP/report.json"
+          || { [ "$?" = 1 ] && [ -s "$RUNNER_TEMP/report.json" ]; }
+
+      - name: Alarms
+        # Also after a failed step, the checkout included: a watch that could not run
+        # is an alarm (P5). github.sha is main's head when the checkout did not say.
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MAIN: ${{ steps.main.outputs.sha || github.sha }}
+        run: >-
+          python3 -m engine.checks.alarm --main "$MAIN" --report "$RUNNER_TEMP/report.json"
+          --run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"

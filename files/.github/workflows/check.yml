@@ -1,0 +1,241 @@
+# The gate of a person's repository (docs/DESIGN.md §5, §7). Installed as
+# .github/workflows/check.yml and locked by C1.
+#
+# Job `check` runs the code from main and reads the PR as git objects: nothing from
+# the PR is checked out or executed. Its verdict is the commit status `gate` on the PR
+# head — the one required check. A status, not the job's own check run: a run started
+# by workflow_dispatch reports its jobs on main's commit, not on the PR head. Update
+# and repair PRs are opened with GITHUB_TOKEN, which starts no pull_request_target run,
+# so their jobs start this workflow through workflow_dispatch, on main only. Job
+# `merge` merges exactly the head `check` verified, and only onto the main it read.
+name: check
+
+on:
+  # Runs the code from main on the PR's objects; never checks out or runs PR code.
+  pull_request_target:  # zizmor: ignore[dangerous-triggers]
+    branches: [main]
+    types: [opened, synchronize, reopened, edited]   # edited: C4 and C7 read the body
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: Number of the PR to check
+        required: true
+        type: number
+
+permissions: {}
+
+concurrency:
+  group: check-${{ github.event.pull_request.number || inputs.pr }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    # A dispatch on any other branch would run that branch's copy of this file;
+    # an edit to a closed PR starts nothing.
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'pull_request_target' && github.event.pull_request.state == 'open')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read          # main's code, every branch, the PR's objects, main's activity log
+      pull-requests: read     # the PR's head, author and target; which PR each merge came from
+      statuses: write         # the `gate` status on the PR head
+      actions: read           # the checking runs and their logs (N1)
+      issues: write           # the alarm Issues (N1, N5)
+    outputs:
+      number: ${{ steps.pr.outputs.number }}
+      head: ${{ steps.pr.outputs.head }}
+      base: ${{ steps.pr.outputs.base }}
+      body_sha: ${{ steps.pr.outputs.body_sha }}
+    steps:
+      - name: Code from main — the commit whose copy of this workflow runs
+        # github.sha is main as it was at the event (pull_request_target: the base branch;
+        # workflow_dispatch: main). Not `ref: main`: a re-run of an old run executes the
+        # old workflow, and with `ref: main` it would check out the current main and pass
+        # as a check of it. With github.sha a re-run checks out the old main, job `merge`
+        # sees that main moved and starts the check again on the current one (Grok Bot, PR #7).
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: The PR as data
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number || inputs.pr }}
+          EVENT: ${{ github.event_name }}
+          ACTION: ${{ github.event.action }}
+          EVENT_HEAD: ${{ github.event.pull_request.head.sha }}
+          EVENT_BEFORE: ${{ github.event.before }}
+          SENDER: ${{ github.event.sender.login }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" > "$RUNNER_TEMP/pr.json"
+          state=$(jq -r .state "$RUNNER_TEMP/pr.json")
+          target=$(jq -r .base.ref "$RUNNER_TEMP/pr.json")
+          head=$(jq -r .head.sha "$RUNNER_TEMP/pr.json")
+          author=$(jq -r .user.login "$RUNNER_TEMP/pr.json")
+          if [ "$state" != open ]; then echo "PR $PR is $state"; exit 1; fi
+          if [ "$target" != main ]; then echo "PR $PR targets $target, not main"; exit 1; fi
+          # Only automation opens PRs as github-actions[bot]; they may touch the
+          # engine, but C1 still holds it to the release manifest.
+          kind=person
+          if [ "$author" = "github-actions[bot]" ]; then kind=update; fi
+          # Fetch the PR's objects; the token stays out of .git/config and argv.
+          auth=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          GIT_CONFIG_COUNT=1 \
+            GIT_CONFIG_KEY_0=http.https://github.com/.extraheader \
+            GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $auth" \
+            git fetch --no-tags --quiet origin "refs/pull/$PR/head"
+          if [ "$(git rev-parse FETCH_HEAD)" != "$head" ]; then
+            echo "PR $PR moved while it was read; the run for the new head checks it"
+            exit 1
+          fi
+          if [ "$EVENT" = pull_request_target ] && [ "$EVENT_HEAD" != "$head" ]; then
+            echo "PR $PR moved since this run was started; the run for the new head checks it"
+            exit 1
+          fi
+          # Who pushed this head, and what the head was before. Trusted for the protected
+          # config keys (C3) only on `synchronize`: the sender is the pusher, and C3 can
+          # see whether this very push brought the change. An open, a reopen, an edit or a
+          # dispatch does not say who pushed what: then nobody is trusted, a change of a
+          # protected key is red, and the trusted contact makes it in a push of their own.
+          actor=""; before=""
+          if [ "$EVENT:$ACTION" = pull_request_target:synchronize ]; then
+            actor="$SENDER"; before="$EVENT_BEFORE"
+          fi
+          jq -r '.body // ""' "$RUNNER_TEMP/pr.json" > "$RUNNER_TEMP/body.md"
+          {
+            echo "number=$PR"
+            echo "head=$head"
+            echo "kind=$kind"
+            echo "actor=$actor"
+            echo "before=$before"
+            echo "base=$(git rev-parse HEAD)"
+            echo "body_sha=$(sha256sum < "$RUNNER_TEMP/body.md" | cut -d' ' -f1)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Gate pending
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD: ${{ steps.pr.outputs.head }}
+        run: >-
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$HEAD" -f state=pending -f context=gate
+          -f description="checking" -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+
+      - name: Release manifest from the public repository of releases
+        env:
+          BASE: ${{ steps.pr.outputs.base }}
+          HEAD: ${{ steps.pr.outputs.head }}
+          KIND: ${{ steps.pr.outputs.kind }}
+        run: |
+          set -euo pipefail
+          url=$(python3 -m engine.checks.run --base "$BASE" --head "$HEAD" --kind "$KIND" --manifest-url)
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/manifest.json" "$url"
+
+      - name: C1–C7
+        env:
+          PR: ${{ steps.pr.outputs.number }}
+          BASE: ${{ steps.pr.outputs.base }}
+          HEAD: ${{ steps.pr.outputs.head }}
+          KIND: ${{ steps.pr.outputs.kind }}
+          ACTOR: ${{ steps.pr.outputs.actor }}
+          BEFORE: ${{ steps.pr.outputs.before }}
+        run: |
+          set -euo pipefail
+          # The run's own record of what it checked; N1 reads it by run id (§6).
+          echo "GATE pr=$PR head=$HEAD base=$BASE run=$GITHUB_RUN_ID"
+          python3 -m engine.checks.run --base "$BASE" --head "$HEAD" --kind "$KIND" \
+            --actor "$ACTOR" --before "$BEFORE" --manifest "$RUNNER_TEMP/manifest.json" --body "$RUNNER_TEMP/body.md"
+
+      - name: Main's own release manifest
+        env:
+          BASE: ${{ steps.pr.outputs.base }}
+        run: |
+          set -euo pipefail
+          url=$(python3 -m engine.checks.run --base "$BASE" --head "$BASE" --kind person --manifest-url)
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/manifest-main.json" "$url"
+
+      - name: N1, N5 on main — the watch inside the gate
+        # The nightly watch can be switched off by a collaborator; a save cannot skip
+        # this (§13, question 9). Red while the checks find something nobody has
+        # acknowledged; closing the alarm says «known, not fixing» (§6).
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE: ${{ steps.pr.outputs.base }}
+          HEAD: ${{ steps.pr.outputs.head }}
+        run: |
+          set -euo pipefail
+          args=()
+          # The same view of the change as C2: main against the merge result, no renames.
+          result=$(git merge-tree --write-tree --no-messages "$BASE" "$HEAD" | head -n 1)
+          if [ "$(git diff --name-only --no-renames "$BASE" "$result")" = "user/fields/installed.toml" ]; then
+            args+=(--record-pr)
+          fi
+          python3 -m engine.checks.watch --main "$BASE" --manifest "$RUNNER_TEMP/manifest-main.json" \
+            --report "$RUNNER_TEMP/watch.json" "${args[@]}" || true
+          python3 -m engine.checks.alarm --main "$BASE" --report "$RUNNER_TEMP/watch.json" \
+            --run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+
+      - name: Gate passed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD: ${{ steps.pr.outputs.head }}
+        run: >-
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$HEAD" -f state=success -f context=gate
+          -f description="all checks passed" -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+
+      - name: Gate failed
+        if: failure() && steps.pr.outputs.head != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD: ${{ steps.pr.outputs.head }}
+        run: >-
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$HEAD" -f state=failure -f context=gate
+          -f description="a check blocked or could not run" -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+
+  merge:
+    needs: check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    # One merge at a time: two PRs checked against the same main cannot both land.
+    concurrency:
+      group: merge-main
+      cancel-in-progress: false
+    permissions:
+      contents: write         # the merge and deleting the merged branch
+      pull-requests: write    # gh pr merge
+      statuses: write         # `gate` back to pending when main moved
+      actions: write          # start the check again on the new main
+    steps:
+      - name: Merge exactly the head and the record that check verified, onto the main it read
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ needs.check.outputs.number }}
+          HEAD: ${{ needs.check.outputs.head }}
+          BASE: ${{ needs.check.outputs.base }}
+          BODY_SHA: ${{ needs.check.outputs.body_sha }}
+        run: |
+          set -euo pipefail
+          main=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)
+          if [ "$main" != "$BASE" ]; then
+            # Another PR landed meanwhile: what this PR would merge into was never checked.
+            echo "main moved since the check; checking again on the new main"
+            gh api "repos/$GITHUB_REPOSITORY/statuses/$HEAD" -f state=pending -f context=gate \
+              -f description="main moved; checking again"
+            gh workflow run check.yml --repo "$GITHUB_REPOSITORY" --ref main -f pr="$PR"
+            exit 0
+          fi
+          gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" > "$RUNNER_TEMP/pr.json"
+          jq -r '.body // ""' "$RUNNER_TEMP/pr.json" > "$RUNNER_TEMP/body.md"
+          if [ "$(sha256sum < "$RUNNER_TEMP/body.md" | cut -d' ' -f1)" != "$BODY_SHA" ]; then
+            echo "The PR body changed after the check; the run for the edit checks it"
+            exit 1
+          fi
+          # The checked record becomes the merge commit's message: a PR body can be
+          # edited later, the history of main cannot.
+          gh pr merge "$PR" --repo "$GITHUB_REPOSITORY" --squash --delete-branch \
+            --match-head-commit "$HEAD" --body-file "$RUNNER_TEMP/body.md"
