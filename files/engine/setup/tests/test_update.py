@@ -208,11 +208,12 @@ class Update(unittest.TestCase):
 
     def test_a_pr_somebody_else_opened_from_the_branch_is_not_pushed_into(self):
         self.w.publish("v0.1.1", {"engine/rules/core.md": b"v0.1.1\n"}, NOW - 2 * WEEK)
-        self.w.api.lists[PULLS].append({"number": 5, "state": "open", "user": {"login": "alex-bot"},
-                                        "head": {"ref": "engine-update/v0.1.1", "repo": {"full_name": REPO}}})
+        for number, who in ((5, "alex-bot"), (6, "someone")):
+            self.w.api.lists[PULLS].append({"number": number, "state": "open", "user": {"login": who},
+                                            "head": {"ref": "engine-update/v0.1.1", "repo": {"full_name": REPO}}})
         code, out = self.w.run()
         self.assertEqual(code, 1, out)
-        self.assertIn("PR #5 by alex-bot is open from engine-update/v0.1.1", out)
+        self.assertIn("PR #5 by alex-bot is open from engine-update/v0.1.1", out)       # the first such PR is named
         self.assertIsNone(self.w.pushed("engine-update/v0.1.1"))
         self.assertEqual(self.w.writes("POST", PULLS) + self.w.writes("POST", DISPATCH), [])
 

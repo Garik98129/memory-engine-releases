@@ -75,14 +75,14 @@
     "engine/setup/tests/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "engine/setup/tests/test_release.py": "9b51f5c119ec61c0438c930ed1d2218f76c745438d06eb7b0322fb681e73d23e",
     "engine/setup/tests/test_release_scenarios.py": "e7cb0b1a8f4105a75487b11479b0973ed1505ca5e66e080c541f7dd61788c63b",
-    "engine/setup/tests/test_update.py": "ca9ab4b93289a1d91da8dc9b69fc163b5ea0a41f1f5b4e6835581c185784ab5e",
-    "engine/setup/update.py": "d2f8237326c70c407dd557d56c07424c1bd000e07121dff965e53199a34d9f34",
+    "engine/setup/tests/test_update.py": "d7d612e191cbdaddc6dca3fbb7d5afaab7db6ad2331bdfeffc13d30ca0b7e236",
+    "engine/setup/update.py": "92dd1a88bff5b39c11ca2b33c0ead850c0c68c5a1655b11eebdd0157ce56f739",
     "engine/workflows/backup.yml": "5f35a8341ce4c2f23a1b0702367618d540832f87974098e820b87fb84c304c39",
     "engine/workflows/check.yml": "68685c6f20bf7fc8b28eaa9ed1c51c61550a8384372da957be12d5b6cb8366f9",
     "engine/workflows/update.yml": "48262c73e509d1cb871f531f059debaca1cdbb6cd11cc1fbdb5731dd26bc1bb5",
     "engine/workflows/watch.yml": "c9e6a66a04dadf7028cafa9e0b9e8c1676210616c762d99c5e1f70d9928b3cd6"
   },
-  "published": "2026-11-09T12:10:20Z",
-  "release": "v0.1.6",
-  "source": "1381a25ca8207afa6f75b0cab26924b6b6ba22a5"
+  "published": "2026-11-09T12:39:12Z",
+  "release": "v0.1.7",
+  "source": "429f71658e9fd7de00d268ea72332d01e9d7e2d2"
 }

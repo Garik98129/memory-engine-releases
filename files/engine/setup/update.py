@@ -315,7 +315,9 @@ def update(repo: Path, main: str, api, origin: Callable[[str], str], token: str,
         commit = update_commit(repo, main, store, tag, files)
     branch = BRANCH_PREFIX + tag
     prs = open_prs(api)
-    for pr in taken_by_others(api, prs, branch):
+    others = taken_by_others(api, prs, branch)
+    if others:
+        pr = others[0]
         raise ValueError(f"PR #{pr.get('number')} by {(pr.get('user') or {}).get('login')} is open from {branch}; "
                          f"the update does not push into a PR it did not open")
     mine = existing_pr(api, prs, branch)
