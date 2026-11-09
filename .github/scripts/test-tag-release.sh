@@ -12,10 +12,15 @@ cd "$tmp/w"
 git commit -q --allow-empty -m start && git push -q origin HEAD:main
 fails=0
 before=$(git rev-parse HEAD)
-commit() {    # a commit whose manifest has release $1 and source $2 (raw JSON text: $3)
+commit() {    # a commit whose manifest has release $1 and source $2 (raw JSON text: $3), with files/
+  rm -rf files && mkdir -p files/engine && printf 'release %s\n' "$1" > files/engine/a.py
+  local sha; sha=$(sha256sum files/engine/a.py | cut -d' ' -f1)
   if [ -n "${3:-}" ]; then printf '%s\n' "$3" > release-manifest.json
-  else printf '{"release": "%s", "source": "%s", "files": {}}\n' "$1" "${2:-$src}" > release-manifest.json; fi
-  git add release-manifest.json && git commit -q --allow-empty -m "${1:-raw}"
+  else printf '{"release": "%s", "source": "%s", "files": {"engine/a.py": "%s"}}\n' "$1" "${2:-$src}" "$sha" > release-manifest.json; fi
+  [ "${FILES:-same}" = none ] && rm -rf files
+  [ "${FILES:-same}" = changed ] && printf 'changed\n' > files/engine/a.py
+  [ "${FILES:-same}" = extra ] && printf 'x\n' > files/engine/b.py
+  git add -A && git commit -q --allow-empty -m "${1:-raw}"
 }
 push() { before=$(git rev-parse origin/main); git push -q origin HEAD:main; git fetch -q origin; }
 expect() {    # expect <ok|fail> <name> [words the run must say] — runs as the workflow does, in a fresh checkout
@@ -44,6 +49,9 @@ commit x "" '{"release": "v0.2.0\n0123456789abcdef0123456789abcdef01234567", "so
                 push; expect fail "a release with a line break in it is refused" "is not vMAJOR.MINOR.PATCH"
 commit v0.2.0 notacommit; push; expect fail "a manifest whose source is not a commit sha is refused" "is not a 40-hex commit sha"
 commit x "" '{not json'; push; expect fail "a manifest that does not parse is refused" "does not parse"
+FILES=none    commit v0.2.0 1111111111111111111111111111111111111111; push; expect fail "a release without its files is refused" "has no files/"
+FILES=changed commit v0.2.0 2222222222222222222222222222222222222222; push; expect fail "a release whose file differs from the manifest is refused" "different ['engine/a.py']"
+FILES=extra   commit v0.2.0 3333333333333333333333333333333333333333; push; expect fail "a release with a file the manifest does not list is refused" "extra ['engine/b.py']"
 check "no refused release left a tag" '[ "$(git ls-remote --tags origin "v0.2*" | wc -l)" = 0 ]'
 first=$(commit v0.2.0 && git rev-parse HEAD); second=$(commit v0.2.1 && git rev-parse HEAD)
 push; expect ok "two releases in one push are both tagged, oldest first"
