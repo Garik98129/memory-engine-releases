@@ -327,6 +327,36 @@ class Scenarios(unittest.TestCase):
 
     # -- Issue #18, item 1: the nightly job's colour follows the alarm step --------------
 
+    def test_an_installation_acknowledged_before_the_protection_was_set_still_alarms_when_it_goes(self):
+        # The install push lands while main has no protection; the installer sets it, runs the
+        # watch again, and closes the Issue once its last list holds only the push. Taking the
+        # protection off later alarms again (fresh-eye pre-check of the install guide, 09.11.2026).
+        w = self.w
+        protected = w.api.objects[f"repos/{REPO}/branches/main"]
+        w.api.objects[f"repos/{REPO}/branches/main"] = {"protection": {"enabled": False}}
+        w.bypass("owner", b"Who: installed.\n")
+        _, red, out = w.run()
+        self.assertEqual(red, 1, out)
+        [issue] = w.issues("open")
+        self.assertIn("push by owner", issue["body"])
+        self.assertIn("does not require", issue["body"])
+        w.api.objects[f"repos/{REPO}/branches/main"] = protected               # part 3: the protection set
+        w.advance(1)
+        _, red, out = w.run()
+        self.assertEqual(red, 1, out)
+        [changed] = w.comments(issue["number"])
+        self.assertTrue(changed.startswith("The findings changed"), changed)
+        self.assertNotIn("does not require", changed)
+        w.api.close(ISSUES, issue["number"], by="owner")                         # «known»: the install push
+        _, red, out = w.run()
+        self.assertEqual((red, w.issues("open")), (0, []), out)
+        w.advance(2)
+        w.api.objects[f"repos/{REPO}/branches/main"] = {"protection": {"enabled": False}}   # taken off later
+        _, red, out = w.run()
+        self.assertEqual(red, 1, out)
+        [again] = w.issues("open")
+        self.assertIn("does not require", again["body"])
+
     def test_the_nightly_job_is_green_once_every_finding_is_known_and_red_again_on_a_new_one(self):
         w = self.w
         w.bypass("alex", b"Who: pushed past the gate.\n")

@@ -53,6 +53,49 @@ class NoContent(unittest.TestCase):
                 Recorded([(status, headers(), b"")]).post_no_content("x", {})
 
 
+class Reason(unittest.TestCase):
+    """GitHub's own words come with the error as `reason`, not in its text: «HTTP 403» alone
+    did not say why the update's PR was refused (canary test repository, 09.11.2026), and an
+    alarm line that carried GitHub's wording would change whenever that wording does."""
+
+    MESSAGE = "GitHub Actions is not permitted to create or approve pull requests."
+    REFUSED = json.dumps({"message": MESSAGE, "documentation_url": "https://docs.github.com/rest"}).encode()
+
+    def test_every_refusal_keeps_a_stable_text_and_githubs_reason_beside_it(self):
+        calls = {
+            "post": ("POST repos/owner/repo/pulls", lambda api: api.post("repos/owner/repo/pulls", {})),
+            "post_no_content": ("POST repos/owner/repo/dispatches", lambda api: api.post_no_content("repos/owner/repo/dispatches", {})),
+            "get": ("GET repos/owner/repo/pulls/1", lambda api: api.get("repos/owner/repo/pulls/1")),
+            "pages": ("GET repos/owner/repo/pulls", lambda api: list(api.pages("repos/owner/repo/pulls"))),
+            "text": ("GET repos/owner/repo/actions/jobs/1/logs", lambda api: api.text("repos/owner/repo/actions/jobs/1/logs")),
+        }
+        for name, (what, call) in calls.items():
+            with self.subTest(name):
+                with self.assertRaises(ApiError) as caught:
+                    call(Recorded([(403, headers(), self.REFUSED)]))
+                self.assertEqual(str(caught.exception), f"{what}: HTTP 403")
+                self.assertEqual(caught.exception.reason, self.MESSAGE)
+
+    def test_no_reason_where_github_gives_none_and_a_long_one_is_cut_to_one_line(self):
+        for raw in (b"", b"<html>", b"[1, 2]", json.dumps({"message": "  "}).encode(), json.dumps({"message": 7}).encode()):
+            with self.assertRaises(ApiError) as caught:
+                Recorded([(403, headers(), raw)]).get("x")
+            self.assertEqual((str(caught.exception), caught.exception.reason), ("GET x: HTTP 403", ""), raw)
+        long = json.dumps({"message": "line one\nline two " + "x" * 400}).encode()
+        with self.assertRaises(ApiError) as caught:
+            Recorded([(422, headers(), long)]).post("x", {})
+        reason = caught.exception.reason
+        self.assertTrue(reason.startswith("line one line two xxx"), reason)
+        self.assertEqual((len(reason), reason[-1]), (200, "…"))
+
+    def test_a_network_error_names_the_address_without_its_query(self):
+        api = GitHub("owner/repo", "secret-token", api="https://api.example")
+        api._opener = type("Opener", (), {"open": lambda self, *a, **k: (_ for _ in ()).throw(TimeoutError("timed out"))})()
+        with self.assertRaises(ApiError) as caught:
+            api._once("GET", "https://logs.example/job/1?sig=SIGNED&se=2026")
+        self.assertEqual(str(caught.exception), "GET https://logs.example/job/1: timed out")
+
+
 class Retry(unittest.TestCase):
     def test_a_server_error_is_retried_once(self):
         api = RecordedOnce([(502, headers(), b""), (200, headers(), json.dumps({"ok": 1}).encode())])

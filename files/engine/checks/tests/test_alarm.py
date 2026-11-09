@@ -121,6 +121,60 @@ class Sync(unittest.TestCase):
         self.comment(5, alarm._text(["A", "B"], "owner", "", RUN))
         self.assertEqual(self.sync({"N1": ["B"]}), (["acknowledged N1"], False))
 
+    def test_closing_acknowledges_the_last_list_not_a_line_that_had_left_it(self):
+        # An installation's first alarm listed the install push A and «main does not require
+        # gate» G; the protection was set, the next run listed only A, and the Issue was
+        # closed. Taking G off the protection later must alarm again.
+        self.closed_issue("N1", ["A", "G"], 5, by="owner")
+        self.comment(5, "The findings changed:\n\n" + alarm._text(["A"], "owner", "", RUN))
+        self.assertEqual(self.sync({"N1": ["A"]}), (["acknowledged N1"], False))
+        self.assertEqual(self.sync({"N1": ["A", "G"]}), (["opened #101 N1"], True))
+
+    def test_a_clean_last_word_acknowledges_nothing(self):
+        # «Clean …» was the workflow's last word before somebody closed the Issue: nothing was open.
+        self.closed_issue("N1", ["A"], 5, by="owner")
+        self.comment(5, alarm._clean_text(RUN))
+        self.assertEqual(self.sync({"N1": ["A"]}), (["opened #101 N1"], True))
+
+    def test_a_machine_close_reopened_and_closed_by_a_person_acknowledges_nothing(self):
+        # «Clean … Closing.» is an empty list: a person who reopens and closes it knows nothing.
+        self.sync({"N5": ["x"]})
+        self.sync({})                                                       # clean: the machine closes #101
+        [issue] = [i for i in self.api.lists[ISSUES] if i["number"] == 101]
+        self.assertEqual(issue["state"], "closed")
+        issue["closed_by"] = {"login": "owner"}                             # reopened and closed by hand
+        self.assertEqual(self.sync({"N5": ["x"]})[0][0], "opened #102 N5")
+
+    def test_an_old_machine_close_without_a_digest_is_an_empty_list_too(self):
+        # Before PR #36 «Clean … Closing.» carried no digest (Kimi, review of #36): an old Issue
+        # reopened and closed by a person after it acknowledges nothing.
+        self.closed_issue("N5", ["x"], 5, by="owner")
+        self.comment(5, f"Clean in {RUN}. Closing.")
+        self.assertEqual(self.sync({"N5": ["x"]})[0][0], "opened #101 N5")
+        self.closed_issue("N2", ["y"], 6, by="owner")                     # anything else after the list: the list stands
+        self.comment(6, f"Clean in {RUN}. Closing. And more.")
+        self.assertIn("acknowledged N2", self.sync({"N2": ["y"]})[0])
+
+    def test_an_old_issue_reopened_after_an_old_machine_close_gets_its_list_again(self):
+        # Reopened after an old «Clean … Closing.»: the same findings are posted as its new
+        # last list, so a person who closes it then acknowledges them (pre-check of this PR).
+        self.open_issue("N5", ["x"], number=5)
+        self.comment(5, f"Clean in {RUN}. Closing.")
+        done, red = self.sync({"N5": ["x"]})
+        self.assertEqual(done, ["updated #5 N5"])
+        self.api.close(ISSUES, 5, by="owner")
+        self.api.lists[ISSUES][0]["closed_by"] = {"login": "owner"}
+        self.assertEqual(self.sync({"N5": ["x"]})[0], ["acknowledged N5"])
+
+    def test_a_run_with_a_failed_part_posts_no_changed_list(self):
+        # A failed part judged nothing: a line it could not see has not left the list.
+        self.open_issue("N1", ["A", "G"], number=5)
+        done, red = self.sync({"N1": ["A"], "ERROR": ["N1 settings could not run: ApiError: x"]})
+        self.assertTrue(red)
+        self.assertEqual([p for m, p, _ in self.api.writes if p.endswith("/5/comments")], [])
+        self.sync({"N1": ["A"]})                                            # a whole run: the list changes
+        self.assertEqual(len([p for m, p, _ in self.api.writes if p.endswith("/5/comments")]), 1)
+
     def test_a_closed_error_comes_back_on_the_next_run(self):
         # Owner, 23.10.2026: an acknowledged error is silenced only until the next run.
         self.closed_issue("ERROR", ["N1 settings could not run: ApiError: x"], 5, by="owner")

@@ -23,7 +23,14 @@ Issue per check:
   left alone: nothing opened, nothing closed.
 
 What counts as «listed»: the workflow marks every finding it posts with a hash of that
-line, in the Issue body and in its own comments. A collaborator — the bot's token is one —
+line, in the Issue body and in its own comments; closing acknowledges the findings of the
+Issue's last list — the latest list the workflow wrote, the body or a comment; a «Clean …»
+comment is an empty list — because that is what was open when someone closed it. A run in
+which a part of a check failed posts no changed list for that check: its list is partial,
+and a line the failed part could not judge has not left it. A line that left the list before
+the close was not «known» then: an installation's first alarm listed «main does not
+require gate» until the protection was set, and closing it later must not silence that
+line for good (fresh-eye pre-check of the install guide, 09.11.2026). A collaborator — the bot's token is one —
 can edit those texts and so «acknowledge» a finding before it exists; the owner takes
 that as a price rather than more machinery (owner, 23.10.2026; DESIGN §7). An Issue the
 workflow closed itself («Clean») counts for nothing: that close meant «clean», not
@@ -73,6 +80,10 @@ def titles_for(what: str) -> dict[str, str]:
     return {**CHECK_TITLES, "ERROR": ERROR_TITLES[what]}
 DIGEST_RE = re.compile(r"<!-- alarm-digest: ([0-9a-f]{64}) -->")
 LINE_RE = re.compile(r"<!-- alarm-line: ([0-9a-f]{64}) -->")
+# The machine's closing comment before it carried a digest — the only form it ever had: an
+# empty list too, so that an old Issue someone reopens and closes acknowledges nothing (Kimi,
+# review of PR #36).
+LEGACY_CLEAN_CLOSE_RE = re.compile(r"Clean in \S+\. Closing\.")
 
 
 def digest(lines: list[str]) -> str:
@@ -130,6 +141,8 @@ def _last_digest(api, issue: dict) -> str | None:
         found = DIGEST_RE.findall(text)
         if found:
             last = found[-1]        # the marker is the last thing the workflow writes
+        elif LEGACY_CLEAN_CLOSE_RE.fullmatch(text.strip()):
+            last = digest([])       # an old «Clean … Closing.»: an empty list, as `acknowledged` reads it
     return last
 
 
@@ -138,8 +151,8 @@ def _own(issue: dict) -> bool:
 
 
 def acknowledged(api, title: str) -> set[str]:
-    """Hashes of findings listed in a closed Issue under this title that the workflow did
-    not close itself: «known, not fixing», whoever closed it."""
+    """Hashes of the findings in the last list of a closed Issue under this title that the
+    workflow did not close itself: «known, not fixing», whoever closed it."""
     found: set[str] = set()
     for issue in api.pages(f"repos/{api.repository}/issues",
                            {"state": "closed", "creator": BOT, "sort": "updated", "direction": "desc"}):
@@ -147,8 +160,13 @@ def acknowledged(api, title: str) -> set[str]:
             continue
         if ((issue.get("closed_by") or {}).get("login") or "") == BOT:
             continue                # closed by the machine: that meant «clean», not «known»
+        last: list[str] = []
         for text in _texts(api, issue):
-            found.update(LINE_RE.findall(text))
+            if DIGEST_RE.search(text):          # every list the workflow writes ends with its digest
+                last = LINE_RE.findall(text)
+            elif LEGACY_CLEAN_CLOSE_RE.fullmatch(text.strip()):
+                last = []                       # an old «Clean … Closing.»: an empty list
+        found.update(last)
     return found
 
 
@@ -190,6 +208,8 @@ def sync(api, findings: dict[str, list[str]], owner: str, contact: str, run_url:
             done.append(f"opened #{made['number']} {check}")
         elif lines:
             red = True
+            if check != "ERROR" and _concerns(errors, check):
+                continue            # a part of this check failed: a partial list must not stand as the last one
             if _last_digest(api, issue) != digest(lines):
                 api.post(f"repos/{api.repository}/issues/{issue['number']}/comments",
                          {"body": "The findings changed:\n\n" + _text(lines, owner, contact, run_url, about)})
@@ -204,7 +224,7 @@ def sync(api, findings: dict[str, list[str]], owner: str, contact: str, run_url:
                     done.append(f"clean #{issue['number']} {check}, left open")
             else:
                 api.post(f"repos/{api.repository}/issues/{issue['number']}/comments",
-                         {"body": f"Clean in {run_url}. Closing."})
+                         {"body": f"Clean in {run_url}. Closing.\n\n<!-- alarm-digest: {digest([])} -->\n"})
                 api.patch(f"repos/{api.repository}/issues/{issue['number']}",
                           {"state": "closed", "state_reason": "completed"})
                 done.append(f"closed #{issue['number']} {check}")

@@ -344,7 +344,8 @@ def main(argv: list[str] | None = None, now: datetime | None = None, api=None,
         lines = update(args.repo, args.main, api, origin, token, now or datetime.now(timezone.utc),
                        os.environ.get("GITHUB_REPOSITORY_OWNER", ""), args.run_url, sleep)
     except Exception as exc:    # noqa: BLE001 — anything is a loud ERROR line, never a traceback (P5)
-        print(f"ERROR the update could not run: {type(exc).__name__}: {exc}")
+        reason = getattr(exc, "reason", "")
+        print(f"ERROR the update could not run: {type(exc).__name__}: {exc}" + (f" — {reason}" if reason else ""))
         return 1
     for line in lines:
         print(line)

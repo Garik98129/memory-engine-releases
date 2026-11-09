@@ -22,6 +22,7 @@ from pathlib import Path
 from unittest import mock
 
 from engine.checks import gitio, run
+from engine.checks.github import ApiError
 from engine.checks.tests.fakeapi import BOT, REPO, FakeApi
 from engine.checks.tests.helpers import Repo, _git
 from engine.setup import release, update
@@ -330,6 +331,16 @@ class Update(unittest.TestCase):
         code, out = self.w.run(NOW + 52 * WEEK)
         self.assertEqual(code, 0, out)
         self.assertIn("NONE v0.1.0", out)
+
+    def test_a_refusal_prints_githubs_reason(self):
+        self.w.publish("v0.1.1", {"engine/rules/core.md": b"v0.1.1\n"}, NOW - 2 * WEEK)
+        refused = ApiError("POST repos/owner/person-memory/pulls: HTTP 403",
+                           "GitHub Actions is not permitted to create or approve pull requests.")
+        with mock.patch.object(self.w.api, "post", side_effect=refused):
+            code, out = self.w.run()
+        self.assertEqual(code, 1, out)
+        self.assertIn("ERROR the update could not run: ApiError: POST repos/owner/person-memory/pulls: HTTP 403 — "
+                      "GitHub Actions is not permitted to create or approve pull requests.", out)
 
     def test_an_api_failure_is_loud(self):
         self.w.publish("v0.1.1", {"engine/rules/core.md": b"v0.1.1\n"}, NOW - 2 * WEEK)

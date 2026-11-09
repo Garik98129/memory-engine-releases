@@ -24,7 +24,39 @@ MAX_PAGES = 20      # 2000 items at 100 a page; more than any list the checks re
 
 
 class ApiError(RuntimeError):
-    """GitHub answered something the checks cannot use."""
+    """GitHub answered something the checks cannot use. `reason` holds GitHub's own words,
+    kept out of the text: an alarm line is the text, and GitHub's wording can change from one
+    request to the next (a request id), so a line that carried it would change every run and
+    post «The findings changed» each time. The update prints the reason in its run's log."""
+
+    def __init__(self, message: str, reason: str = ""):
+        super().__init__(message)
+        self.reason = reason
+
+
+REASON_MAX = 200
+
+
+def refused(method: str, path: str, status: int, raw: bytes) -> ApiError:
+    """The error for an answer the checks cannot use, with GitHub's own words where it gives
+    them as `reason` — the `message` of its JSON error body, on one line, cut at REASON_MAX
+    characters. A bare «HTTP 403» did not say why the update's PR was refused on the canary
+    test repository (09.11.2026): a repository setting."""
+    reason = ""
+    try:
+        message = json.loads(raw.decode("utf-8")).get("message")
+    except (UnicodeDecodeError, ValueError, AttributeError):
+        message = None
+    if isinstance(message, str) and message.strip():
+        text = " ".join(message.split())
+        reason = text if len(text) <= REASON_MAX else text[:REASON_MAX - 1] + "…"
+    return ApiError(f"{method} {path}: HTTP {status}", reason)
+
+
+def _without_query(url: str) -> str:
+    """A URL for an error line: no query string — a log's address after a redirect is signed
+    there, and an error line can land in an alarm Issue."""
+    return urllib.parse.urlsplit(url)._replace(query="", fragment="").geturl()
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -78,9 +110,9 @@ class GitHub:
         except urllib.error.HTTPError as exc:
             return exc.code, exc.headers, exc.read()
         except urllib.error.URLError as exc:
-            raise ApiError(f"{method} {url}: {exc.reason}") from None
+            raise ApiError(f"{method} {_without_query(url)}: {exc.reason}") from None
         except OSError as exc:              # a timeout, a reset: the network, not the checks
-            raise ApiError(f"{method} {url}: {exc}") from None
+            raise ApiError(f"{method} {_without_query(url)}: {exc}") from None
 
     @staticmethod
     def _decode(raw: bytes, what: str):
@@ -95,7 +127,7 @@ class GitHub:
         if status == 404 and allow_404:
             return None
         if status not in (200, 201):
-            raise ApiError(f"{method} {path}: HTTP {status}")
+            raise refused(method, path, status, raw)
         return self._decode(raw, f"{method} {path}"), headers
 
     def get(self, path: str, params: dict | None = None, allow_404: bool = False):
@@ -115,7 +147,7 @@ class GitHub:
                 return
             status, headers, raw = self._send("GET", url)
             if status != 200:
-                raise ApiError(f"GET {path}: HTTP {status}")
+                raise refused("GET", path, status, raw)
             data = self._decode(raw, f"GET {path}")
             items = data.get(key, []) if key else data
             if not isinstance(items, list):
@@ -135,7 +167,7 @@ class GitHub:
                 raise ApiError(f"GET {path}: redirect to {location!r}")
             status, headers, raw = self._send("GET", location, auth=False)
         if status != 200:
-            raise ApiError(f"GET {path}: HTTP {status}")
+            raise refused("GET", path, status, raw)
         return raw.decode("utf-8", "replace")
 
     def post(self, path: str, body: dict):
@@ -144,9 +176,9 @@ class GitHub:
     def post_no_content(self, path: str, body: dict) -> None:
         """A POST whose answer the caller does not read: a workflow dispatch answers 204, or
         200 with the run's details where GitHub is asked for them (changelog, 19.02.2026)."""
-        status = self._send("POST", self._url(path), body)[0]
+        status, _headers, raw = self._send("POST", self._url(path), body)
         if status not in (200, 204):
-            raise ApiError(f"POST {path}: HTTP {status}")
+            raise refused("POST", path, status, raw)
 
     def patch(self, path: str, body: dict):
         return self._json("PATCH", path, body=body)[0]
