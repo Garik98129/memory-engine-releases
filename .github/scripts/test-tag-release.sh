@@ -61,5 +61,14 @@ b=$(commit v0.3.1 && git rev-parse HEAD); push
 run_at "$b" ok "the later push's run comes first and tags both releases"
 run_at "$a" ok "the earlier push's run, coming late, finds its release tagged" "nothing to tag"
 check "v0.3.0 is on its commit and v0.3.1 on its" '[ "$(tag_of v0.3.0)" = "$a" ] && [ "$(tag_of v0.3.1)" = "$b" ]'
+commit x "" 'null'; push; expect fail "a manifest that is not a JSON object is refused, not a crash" "is not a JSON object"
+v040=$(commit v0.4.0 && git rev-parse HEAD); push
+expect ok "a release after a manifest that is not an object is tagged"
+check "v0.4.0 is on its commit" '[ "$(tag_of v0.4.0)" = "$v040" ]'
+git rm -q release-manifest.json && git commit -q -m "manifest removed"; push
+expect fail "a commit that removes the manifest is refused, not a crash" "has no release-manifest.json"
+v041=$(commit v0.4.1 && git rev-parse HEAD); push
+expect ok "a release after a removed manifest is tagged"
+check "v0.4.1 is on its commit" '[ "$(tag_of v0.4.1)" = "$v041" ]'
 git commit -q --allow-empty -m "readme only"; push; expect ok "a push that does not change the manifest tags nothing" "nothing to tag"
 exit $fails

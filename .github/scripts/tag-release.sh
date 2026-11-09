@@ -53,10 +53,24 @@ def refuse(msg):
     print("REFUSED", msg); sys.exit(0)
 def git(*args):
     return subprocess.run(["git", *args], check=True, capture_output=True).stdout
+def check():
+    try:
+        raw = git("show", f"{sha}:release-manifest.json")
+    except subprocess.CalledProcessError:
+        refuse("this commit has no release-manifest.json")
+    try:
+        m = json.loads(raw)
+    except ValueError as exc:
+        refuse(f"release-manifest.json does not parse: {exc}")
+    if not isinstance(m, dict):
+        refuse(f"release-manifest.json is not a JSON object but {type(m).__name__}")
+    return m
 try:
-    m = json.loads(git("show", f"{sha}:release-manifest.json"))
-except ValueError as exc:
-    refuse(f"release-manifest.json does not parse: {exc}")
+    m = check()
+except SystemExit:
+    raise
+except Exception as exc:            # the check itself must never stop the run: a refusal instead
+    refuse(f"the manifest could not be checked: {type(exc).__name__}: {exc}")
 tag, source, files = m.get("release"), m.get("source"), m.get("files")
 if not isinstance(tag, str) or not re.fullmatch(r"v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)", tag):
     refuse(f"release {tag!r} in release-manifest.json is not vMAJOR.MINOR.PATCH")
@@ -65,7 +79,11 @@ if not isinstance(source, str) or not re.fullmatch(r"[0-9a-f]{40}", source):
 if not isinstance(files, dict) or not files:
     refuse("release-manifest.json lists no files")
 have = {}
-for entry in git("ls-tree", "-r", "-z", sha, "--", "files/").split(b"\0"):
+try:
+    tree = git("ls-tree", "-r", "-z", sha, "--", "files/")
+except subprocess.CalledProcessError as exc:
+    refuse(f"files/ could not be read: {exc}")
+for entry in tree.split(b"\0"):
     if not entry:
         continue
     meta, path = entry.split(b"\t", 1)
@@ -83,7 +101,7 @@ if missing or extra or changed:
     refuse(f"files/ is not the manifest: missing {missing[:3]}, extra {extra[:3]}, different {changed[:3]}")
 print("OK", tag, source)
 PY
-  )
+  ) || verdict="REFUSED the check of this commit failed"
   read -r word rest <<<"$verdict"
   if [ "$word" = OK ]; then
     read -r tag source <<<"$rest"
