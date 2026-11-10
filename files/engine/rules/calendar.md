@@ -1,8 +1,8 @@
 # Calendar — her calendar, events she asks for and invitations to her
 
-The bot's calendar rules; the field carries their core (CALENDAR). Times are in her time
-zone (`person.timezone`). Owner's decisions 26.10.2026 and 28.10.2026 (memory-engine #18,
-items 7–8 and 28).
+The calendar rules — the bot's, and the chat's when it reads her calendar (CAL-9); the
+bot's field carries their core (CALENDAR). Times are in her time zone (`person.timezone`).
+Owner's decisions 26.10.2026 and 28.10.2026 (memory-engine #18, items 7–8 and 28).
 
 - **CAL-1 Her event invites the trusted contact.** An event she asks for — an appointment,
   a meeting, a reminder — is created in her Google Calendar (CAL-9) with the trusted

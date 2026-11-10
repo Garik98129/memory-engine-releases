@@ -45,7 +45,11 @@ class Runner(unittest.TestCase):
         self.assertIn("SUMMARY alarm=0 ran=N1,N2,N4,N5", out)
         self.assertIn("N2 NOTE the Notion copy has not run yet", out)
         self.assertIn("N4 NOTE no open Issue «routine marks»", out)
-        self.assertEqual(report, {"N1": [], "N2": [], "N4": [], "N5": [], "error": [], "skipped": []})
+        self.assertEqual(report, {"N1": [], "N2": [], "N4": [], "N5": [], "error": [], "skipped": [],
+                                  "todo": ["field chat: the installed text is not its master — install it and record it",
+                                           "field bot: the installed text is not its master — install it and record it"]})
+        self.assertIn("TODO field chat: the installed text is not its master", out)
+        self.assertEqual(code, 0, "the to-do never turns the run red")
 
     def test_an_alarm_is_in_the_report(self):
         self.api.objects[f"repos/{REPO}/branches/main"] = {"protection": {"enabled": False}}
@@ -78,6 +82,8 @@ class Runner(unittest.TestCase):
                                "--branches", "refs/heads/", "--record-pr"], api=self.api, now=late)
         self.assertEqual(code, 0)
         self.assertIn("N5 N/A this PR records an installation", out.getvalue())
+        self.assertNotIn("todo", json.loads(self.report.read_text(encoding="utf-8")),
+                         "a run that does not judge N5 leaves the to-do out, so its Issue is left alone")
         self.assertIn("SUMMARY alarm=0 ran=N1,N2,N4", out.getvalue())
         self.assertEqual(json.loads(self.report.read_text(encoding="utf-8"))["skipped"], ["N5"])
 

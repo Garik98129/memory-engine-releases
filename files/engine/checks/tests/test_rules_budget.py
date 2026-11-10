@@ -8,7 +8,8 @@ from engine.checks import limits_check
 
 FIELDS = Path(__file__).resolve().parents[2] / "rules" / "fields"
 JOIN = 2
-PROMISED = {"chat.md": (4000, 990), "bot.md": (10000, 2900)}      # the pilot's platform limit, the room promised
+PROMISED = {"chat.md": (4000, 1030), "bot.md": (10000, 2900)}     # the pilot's platform limit, the room promised
+# chat 1 030: the pilot's part needs it with its line 1 «(v5)» and the chat's gender line (Issue #38, step 3)
 
 
 class ReleasedHardParts(unittest.TestCase):

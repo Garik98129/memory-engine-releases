@@ -27,6 +27,7 @@ PROTECTION_MODES = frozenset({"required", "none"})   # none: a plan without bran
 LOGIN_RE = re.compile(r"(?!-)(?!.*--)[A-Za-z0-9-]{1,39}(?<!-)")
 LANGUAGE_RE = re.compile(r"[a-z]{2,3}(-[A-Za-z0-9]{2,8})*")   # BCP 47, e.g. ru, he, pt-BR
 COUNTRY_RE = re.compile(r"[A-Z]{2}")                         # ISO 3166-1 alpha-2
+DECLINED_RE = re.compile(r"([a-z][a-z0-9-]*)@([1-9][0-9]*)")   # engine.declined: routine@task version (N7)
 
 class Strings(list):
     """A list whose reader keeps only strings: anything else in it is a type error, or it
@@ -50,7 +51,8 @@ SCHEMA: dict[str, dict[str, tuple[type, bool]]] = {
         "routine_limit": (int, False),
         "read_budget_bytes": (int, True),
     },
-    "engine": {"channel": (str, True)},
+    "engine": {"channel": (str, True),
+               "declined": (Strings, False)},    # task versions she said no to: N7 stops listing them (her yes, C7)
     "notion": {"backup_exclude": (Strings, False), "shrink_alarm": (float, False),
                "removed_bases": (Strings, False)},     # bases she removed: N3 stops holding them (her yes, C7)
     "alarm": {"trusted_contact": (str, False), "marks_issue": (int, False)},
@@ -196,6 +198,38 @@ def _introduced_by_this_push(repo: Path, before: str, on_main: dict | None, paym
     return _guarded(parsed, payment) == _guarded(on_main, payment)
 
 
+def _strings(value: object) -> set[str]:
+    return {v for v in value if isinstance(v, str)} if isinstance(value, list) else set()
+
+
+def _declined_findings(repo: Path, head: str, config: dict, on_main: dict | None) -> list[Finding]:
+    """A «no» a PR adds to `engine.declined` is to a version on her list now: the current version
+    of a task in the engine's routines.md that does not say «never declined» — never a future
+    one, a routine that is no task, or task 3, by which she hears of every update (N7). One she
+    has stays until she changes her mind; it stops counting at the task's next version."""
+    added = sorted(_strings(_value(config, "engine", "declined")) - _strings(_value(on_main, "engine", "declined")))
+    if not added:
+        return []
+    from .behind import RULES, task_list      # here: behind reads this module
+    raw = gitio.file_at(repo, head, RULES)
+    try:
+        listed = task_list(raw.decode("utf-8")) if raw is not None else {}
+    except (UnicodeDecodeError, ValueError):
+        listed = {}
+    findings = []
+    for entry in added:
+        m = DECLINED_RE.fullmatch(entry)
+        if m is None:
+            continue                            # the form's finding, below
+        task = listed.get(m.group(1))
+        if task is None or task.version != int(m.group(2)):
+            findings.append(Finding("C3", f"engine.declined entry {entry!r} is not a task's current version in "
+                                          f"{RULES}: only a version on her list now can be declined"))
+        elif task.fixed:
+            findings.append(Finding("C3", f"engine.declined entry {entry!r}: task {task.number} says «never declined»"))
+    return findings
+
+
 def check(repo: Path, base: str, head: str, kind: str, actor: str = "", before: str = "") -> list[Finding]:
     floors_rev = base if kind == PERSON else head
     defaults, findings = _parse(gitio.file_at(repo, floors_rev, DEFAULTS), DEFAULTS, "C3")
@@ -270,6 +304,7 @@ def check(repo: Path, base: str, head: str, kind: str, actor: str = "", before: 
         if excluded_pages(config) - excluded_pages(on_main) and not by_trusted:
             findings.append(Finding("C3", "notion.backup_exclude leaves a new page out of the copy: only in a "
                                           "push of the trusted contact's own"))
+        findings += _declined_findings(repo, head, config, on_main)
 
     if config["engine"]["channel"] not in CHANNELS:
         findings.append(Finding("C3", f"engine.channel must be one of {', '.join(sorted(CHANNELS))}"))
@@ -286,6 +321,11 @@ def check(repo: Path, base: str, head: str, kind: str, actor: str = "", before: 
         if isinstance(entry, str) and not REMOVED_RE.fullmatch(entry):     # a non-string is the type's finding
             findings.append(Finding("C3", f"notion.removed_bases entry {entry!r} is not <id>@<YYYY-MM-DD>, "
                                           f"the base and the day as N3's line names them"))
+    declined = _value(config, "engine", "declined")
+    for entry in declined if isinstance(declined, list) else []:
+        if isinstance(entry, str) and not DECLINED_RE.fullmatch(entry):
+            findings.append(Finding("C3", f"engine.declined entry {entry!r} is not <routine>@<task version>, "
+                                          f"the routine and the version N7's line names"))
     number = _value(config, "alarm", "marks_issue")
     if number is not None and (isinstance(number, bool) or number <= 0):
         findings.append(Finding("C3", "alarm.marks_issue must be a positive Issue number"))

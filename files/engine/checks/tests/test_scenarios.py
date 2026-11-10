@@ -25,7 +25,7 @@ from engine.backup import run as backup_run
 from engine.backup.tests.fakenotion import FakeNotion, page, paragraph, rich, source
 from engine.backup.tests.test_workflow import copy_step
 from engine.checks.tests.test_watch_workflow import watch_step
-from engine.checks import alarm, drift, watch
+from engine.checks import alarm, behind, drift, watch
 from engine.checks import run as gate_checks
 from engine.checks.limits_check import assemble
 from engine.checks.tests.fakeapi import BOT, REPO, FakeApi
@@ -270,7 +270,11 @@ class World:
         return {p: _git(self.copy_dir, "show", f"HEAD:{p}") for p in out.splitlines()}
 
     def issues(self, state: str) -> list[dict]:
-        return [i for i in self.api.lists[ISSUES] if i["state"] == state]
+        """The Issues of the story but the bot's to-do (N7): that one is not an alarm, `todos` reads it."""
+        return [i for i in self.api.lists[ISSUES] if i["state"] == state and i.get("title") != behind.TITLE]
+
+    def todos(self, state: str) -> list[dict]:
+        return [i for i in self.api.lists[ISSUES] if i["state"] == state and i.get("title") == behind.TITLE]
 
     def alarms(self, state: str) -> list[dict]:
         """The alarm Issues only — not the «routine marks» Issue installation opened."""

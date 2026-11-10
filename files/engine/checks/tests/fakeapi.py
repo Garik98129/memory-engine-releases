@@ -94,6 +94,8 @@ class FakeApi:
             if str(issue.get("number")) == number and "state" in body:
                 issue["state"] = body["state"]
                 issue["closed_by"] = {"login": BOT} if body["state"] == "closed" else None
+            if str(issue.get("number")) == number and "body" in body:
+                issue["body"] = body["body"]
         return {}
 
     def close(self, path, number, by):

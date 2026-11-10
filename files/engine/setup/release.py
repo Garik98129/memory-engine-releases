@@ -19,6 +19,12 @@ release's files themselves under `files/` — the engine's code is public there 
 whole, so a file the release dropped is gone; `files/.github/workflows/` is not where
 GitHub runs workflows, so nothing there runs in that repository.
 
+`cut` also holds the link in the chat field (`engine/rules/fields/chat.md`): the chat
+reads its topic rules from this public repository at the tag the link names, so the link
+names a release, its files exist, and they are the release's own — a release that changes
+one of them names itself in the link, so the chat field changes with it (§10; Issue #38,
+step 3).
+
 `install` is the first installation only: it refuses a repository that already has
 `engine/`, `.github/` or `user/engine.lock`. Updates come through the update PR (§5).
 """
@@ -43,6 +49,12 @@ INSTALLED_WORKFLOWS = ".github/workflows/"
 PUBLISHED_FILES = "files"
 PUBLISHED_TAG_RE = re.compile(r"v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)")   # as the workflow `tag`
 MANIFEST_FILE = "release-manifest.json"
+CHAT_FIELD = "engine/rules/fields/chat.md"
+RULES = "engine/rules/"
+_CHAT_RULES_RE = re.compile(r"https://raw\.githubusercontent\.com/([^/\s]+/[^/\s]+)/(?:refs/tags/)?([^/\s]+)/"
+                            + PUBLISHED_FILES + "/" + RULES)
+_RULE_FILE_RE = re.compile(r"(?<![\w./-])([A-Za-z][\w-]*\.md)(?![\w/-])")
+_LINK_HINT_RE = re.compile(r"raw\.githubusercontent\.com|memory-engine-releases", re.IGNORECASE)
 
 
 def release_files(repo: Path, rev: str) -> dict[str, bytes]:
@@ -156,6 +168,62 @@ def publication_findings(files: dict[str, bytes]) -> list[str]:
     return found
 
 
+def chat_rules(files: dict[str, bytes]) -> tuple[str, str, list[str]] | None:
+    """The public folder the chat field sends the chat to for its topic rules: (repository,
+    tag, the files named on the link's line), or None when the field has no such link."""
+    try:
+        text = files.get(CHAT_FIELD, b"").decode("utf-8")
+    except UnicodeDecodeError:
+        raise ValueError(f"{CHAT_FIELD} is not valid UTF-8") from None
+    links, rest = [], []
+    for line in text.splitlines():
+        for m in _CHAT_RULES_RE.finditer(line):
+            names = sorted(set(_RULE_FILE_RE.findall(line[:m.start()] + " " + line[m.end():])))
+            links.append((m.group(1), m.group(2), names))
+        rest.append(_CHAT_RULES_RE.sub(" ", line))
+    if len(links) > 1:
+        raise ValueError(f"{CHAT_FIELD} links the public rules {len(links)} times; one link, one tag")
+    # A mention the pattern did not read — beside a link it did read, or alone — is refused,
+    # never skipped: the chat could follow it to rules no check has held (Kimi, PR #39).
+    if _LINK_HINT_RE.search("\n".join(rest)):
+        raise ValueError(f"{CHAT_FIELD} points to the public rules, but not as "
+                         f"https://raw.githubusercontent.com/<repository>/<tag>/{PUBLISHED_FILES}/{RULES}")
+    return links[0] if links else None
+
+
+def chat_rules_findings(files: dict[str, bytes], tag: str, into: Path, repository: str) -> list[str]:
+    """Why the chat field's link would send the chat to rules this release does not hold:
+    another repository, not a release tag, a newer release, a named file the release lacks,
+    or a file that changed since the release the link names. A link to this very release
+    is right by construction. The older release is read from `into`, a checkout with its
+    tags: a tag missing there is a finding too, never a pass."""
+    link = chat_rules(files)
+    if link is None:
+        return []
+    linked_repo, at, names = link
+    found = []
+    if linked_repo != repository:
+        found.append(f"{CHAT_FIELD} links {linked_repo}, not {repository}")
+    if not PUBLISHED_TAG_RE.fullmatch(at):
+        return found + [f"{CHAT_FIELD} links {at!r}, which is not a release tag"]
+    if not names:
+        found.append(f"{CHAT_FIELD} names no rules file on the line of its link")
+    found += [f"{CHAT_FIELD} names {name}, which is not in {RULES}" for name in names if RULES + name not in files]
+    if found or at == tag:
+        return found
+    if release_key(at) > release_key(tag):
+        return [f"{CHAT_FIELD} links {at}, newer than {tag}"]
+    for name in names:
+        try:
+            old = gitio.git(into, "show", f"refs/tags/{at}:{PUBLISHED_FILES}/{RULES}{name}")
+        except gitio.GitError:
+            found.append(f"{PUBLISHED_FILES}/{RULES}{name} at the tag {at} is not in {into}: fetch its tags")
+            continue
+        if old != files[RULES + name]:
+            found.append(f"{RULES}{name} changed since {at}, the copy the chat reads: link {tag} in {CHAT_FIELD}")
+    return found
+
+
 def cut(files: dict[str, bytes], tag: str, source: str, published: datetime, into: Path,
         repository: str) -> list[str]:
     """Write the release into a checkout of the public repository of releases: its files under
@@ -175,6 +243,9 @@ def cut(files: dict[str, bytes], tag: str, source: str, published: datetime, int
         raise ValueError(f"{into} is not a checkout of {repository}") from None
     if not re.fullmatch(rf"(https://github\.com/|git@github\.com:){re.escape(repository)}(\.git)?/?", origin):
         raise ValueError(f"{into} is not a checkout of {repository}: its origin is {origin}")
+    found = chat_rules_findings(files, tag, into, repository)
+    if found:
+        raise ValueError("not published, the chat would read other rules: " + "; ".join(found))
     target, staging, manifest_path = into / PUBLISHED_FILES, into / f".{PUBLISHED_FILES}.new", into / MANIFEST_FILE
     for path in (target, staging, manifest_path):
         if path.is_symlink():

@@ -307,6 +307,111 @@ class Cut(unittest.TestCase):
         self.assertEqual(release.publication_findings(release.release_files(ROOT, head)), [])
 
 
+class ChatLink(unittest.TestCase):
+    """The chat field links the public rules at one release; the cut holds that link to the
+    release's own files (Issue #38, step 3): the chat never reads rules the person's release
+    does not have."""
+
+    REPOSITORY = "Garik98129/memory-engine-releases"
+    BASE = "https://raw.githubusercontent.com/Garik98129/memory-engine-releases/{tag}/files/engine/rules/"
+
+    def setUp(self):
+        self.template = Repo({**TEMPLATE, "engine/rules/health.md": b"# Health\n",
+                              "engine/rules/shopping.md": b"# Shopping\n"})
+        self.releases = Repo({"README.md": b"Release manifests.\n"})
+        _git(self.releases.path, "remote", "add", "origin", f"https://github.com/{self.REPOSITORY}")
+
+    def tearDown(self):
+        self.template.close()
+        self.releases.close()
+
+    def files(self, line: str) -> dict[str, bytes]:
+        head = self.template.commit({"engine/rules/fields/chat.md": f"Rules.\n{line}\nMore.\n".encode()})
+        return release.release_files(self.template.path, head)
+
+    def link(self, tag: str, names: str = "health.md, shopping.md") -> str:
+        return f"Topic rules, read before answering — {names}: {self.BASE.format(tag=tag)}"
+
+    def publish(self, tag: str, health: bytes = b"# Health\n"):
+        """A release already in the public repository: its files under files/, tagged."""
+        self.releases.commit({"files/engine/rules/health.md": health,
+                              "files/engine/rules/shopping.md": b"# Shopping\n"})
+        _git(self.releases.path, "tag", tag)
+
+    def cut(self, files, tag="v0.1.9"):
+        return release.cut(files, tag, self.template.base, PUBLISHED, self.releases.path, self.REPOSITORY)
+
+    def refused(self, files, tag="v0.1.9") -> str:
+        with self.assertRaises(ValueError) as caught:
+            self.cut(files, tag)
+        self.assertFalse((self.releases.path / "release-manifest.json").exists(), "a refused cut wrote its manifest")
+        self.assertFalse((self.releases.path / "files/engine/rules/fields/chat.md").exists(), "a refused cut wrote files")
+        return str(caught.exception)
+
+    def test_the_link_is_read_with_the_files_its_line_names(self):
+        self.assertEqual(release.chat_rules(self.files(self.link("v0.1.9"))),
+                         (self.REPOSITORY, "v0.1.9", ["health.md", "shopping.md"]))
+        self.assertIsNone(release.chat_rules(self.files("No link here.")))
+
+    def test_a_link_to_the_release_being_cut_is_right(self):
+        self.assertEqual(self.cut(self.files(self.link("v0.1.9")))[-1], "release-manifest.json")
+
+    def test_a_link_to_an_older_release_with_the_same_files_is_right(self):
+        self.publish("v0.1.8")
+        self.assertEqual(self.cut(self.files(self.link("v0.1.8")))[-1], "release-manifest.json")
+
+    def test_a_file_changed_since_the_linked_release_is_refused(self):
+        self.publish("v0.1.8", health=b"# Health, older\n")
+        message = self.refused(self.files(self.link("v0.1.8")))
+        self.assertIn("engine/rules/health.md changed since v0.1.8", message)
+        self.assertIn("link v0.1.9", message)
+
+    def test_a_linked_tag_missing_from_the_checkout_is_refused_not_passed(self):
+        self.assertIn("is not in", self.refused(self.files(self.link("v0.1.8"))))
+
+    def test_a_link_to_a_newer_release_is_refused(self):
+        self.assertIn("newer than v0.1.9", self.refused(self.files(self.link("v0.2.0"))))
+
+    def test_a_link_to_another_repository_is_refused(self):
+        line = self.link("v0.1.9").replace("Garik98129/memory-engine-releases", "someone/rules")
+        self.assertIn("links someone/rules", self.refused(self.files(line)))
+
+    def test_a_link_that_is_not_a_release_tag_is_refused(self):
+        self.assertIn("not a release tag", self.refused(self.files(self.link("main"))))
+
+    def test_a_named_file_the_release_lacks_is_refused(self):
+        self.assertIn("names travel.md", self.refused(self.files(self.link("v0.1.9", "health.md, travel.md"))))
+
+    def test_a_link_naming_no_file_is_refused(self):
+        self.assertIn("names no rules file", self.refused(self.files(self.link("v0.1.9", "the topic files"))))
+
+    def test_the_tag_form_with_refs_tags_is_read_too(self):
+        line = self.link("v0.1.9").replace("/v0.1.9/", "/refs/tags/v0.1.9/")
+        self.assertEqual(release.chat_rules(self.files(line))[1], "v0.1.9")
+
+    def test_a_link_in_another_form_is_refused_not_skipped(self):
+        for line in (self.link("v0.1.8")[:-1],                                  # no trailing slash
+                     self.link("v0.1.8").replace("https://", "http://"),
+                     "Topic rules: health.md at https://github.com/Garik98129/memory-engine-releases/tree/v0.1.8/files/engine/rules"):
+            with self.subTest(line=line):
+                self.assertIn("not as https://raw.githubusercontent.com", self.refused(self.files(line)))
+
+    def test_a_broken_mention_beside_a_readable_link_is_refused_in_either_order(self):
+        good = self.link("v0.1.9")
+        broken = "Also: " + self.BASE.format(tag="v0.1.9")[:-1]          # the same folder, no trailing slash
+        for line in (good + "\n" + broken, broken + "\n" + good):
+            with self.subTest(order=line.split(":")[0]):
+                self.assertIn("not as https://raw.githubusercontent.com", self.refused(self.files(line)))
+
+    def test_a_capitalised_file_name_is_a_finding_not_ignored(self):
+        self.assertIn("names Health.md", self.refused(self.files(self.link("v0.1.9", "Health.md, shopping.md"))))
+
+    def test_two_links_are_refused(self):
+        line = self.link("v0.1.9") + " and " + self.BASE.format(tag="v0.1.8")
+        with self.assertRaises(ValueError):
+            release.chat_rules(self.files(line))
+
+
 class Cli(unittest.TestCase):
     def setUp(self):
         self.template = Repo(TEMPLATE)
@@ -358,6 +463,26 @@ class Cli(unittest.TestCase):
         finally:
             releases.close()
 
+    def test_cut_with_a_chat_link_older_than_its_files_is_exit_two_and_writes_nothing(self):
+        """Through the command the factory runs: the chat field links v0.1.8, health.md changed
+        since, and v0.1.9 is cut — refused, with nothing written into the releases checkout."""
+        link = "Topic rules — health.md: https://raw.githubusercontent.com/Garik98129/memory-engine-releases/v0.1.8/files/engine/rules/ + name."
+        self.template.commit({"engine/rules/health.md": b"# Health, new\n",
+                              "engine/rules/fields/chat.md": f"Rules.\n{link}\n".encode()})
+        releases = Repo({"README.md": b"x\n", "files/engine/rules/health.md": b"# Health, old\n"})
+        _git(releases.path, "tag", "v0.1.8")
+        _git(releases.path, "remote", "add", "origin", "https://github.com/Garik98129/memory-engine-releases.git")
+        try:
+            code, out, err = self.call("cut", "--repo", str(self.template.path), "--rev", "main",
+                                       "--tag", "v0.1.9", "--into", str(releases.path))
+            self.assertEqual(code, 2)
+            self.assertEqual(out, "")
+            self.assertIn("engine/rules/health.md changed since v0.1.8", err)
+            self.assertFalse((releases.path / "release-manifest.json").exists())
+            self.assertEqual((releases.path / "files/engine/rules/health.md").read_bytes(), b"# Health, old\n")
+        finally:
+            releases.close()
+
     def test_an_unknown_commit_or_a_bad_tag_is_exit_two_and_prints_no_manifest(self):
         for args in (("--rev", "no-such-rev", "--tag", "v0.1.0"), ("--rev", "main", "--tag", "v0.1")):
             with self.subTest(args=args):
@@ -377,6 +502,15 @@ class ThisTemplate(unittest.TestCase):
         for name in ("check.yml", "watch.yml", "backup.yml"):
             self.assertIn(f".github/workflows/{name}", files)
         self.assertIn(b'manifests = "Garik98129/memory-engine-releases"', files["engine/defaults.toml"])
+
+    def test_the_chat_fields_link_names_the_releases_repository_and_files_it_ships(self):
+        files = release.release_files(ROOT, _git(ROOT, "rev-parse", "HEAD"))
+        linked_repo, tag, names = release.chat_rules(files)
+        self.assertEqual(linked_repo, "Garik98129/memory-engine-releases")
+        self.assertRegex(tag, release.PUBLISHED_TAG_RE)
+        self.assertTrue(names)
+        for name in names:
+            self.assertIn(release.RULES + name, files)
 
 
 if __name__ == "__main__":

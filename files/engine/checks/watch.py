@@ -1,12 +1,14 @@
-"""Run the checks of main — N1, N2, N4 and N5 — and write the report the alarms read (docs/DESIGN.md §6).
+"""Run the checks of main — N1, N2, N4, N5 and the bot's to-do N7 — and write the report the alarms read (docs/DESIGN.md §6).
 
     python -m engine.checks.watch --repo . --main MAIN_SHA --manifest release-manifest.json \\
         --report report.json
 
 Reads GitHub through GITHUB_REPOSITORY, GITHUB_REPOSITORY_OWNER and GH_TOKEN. Prints
-one line per finding; writes {"N1": [...], "N2": [...], "N4": [...], "N5": [...], "error": [...], "skipped": [...]}
-for `engine.checks.alarm`. A part that could not run is an error line, and the other
-parts still report; a skipped check is one this run did not judge, and the alarms leave
+one line per finding; writes {"N1": [...], "N2": [...], "N4": [...], "N5": [...], "todo": [...], "error": [...],
+"skipped": [...]} for `engine.checks.alarm`. «todo» is N7's work list for the bot, not an alarm: it
+never turns the run red, and a run that does not judge N5, or whose record does not parse,
+leaves it out, so its Issue is left alone. A part that could not run is an error line, and
+the other parts still report; a skipped check is one this run did not judge, and the alarms leave
 its Issue alone. A run whose main is no longer main — a re-run of an old run, or main
 moved since the checkout — judges nothing: the run for the new main does. Exit code 1 if
 anything raises an alarm, 2 if a part could not run — an error is an alarm too, and a run
@@ -21,7 +23,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import backup_check, config_check, drift, integrity, lock_check, routine_check
+from . import backup_check, behind, config_check, drift, integrity, lock_check, routine_check
 from .github import GitHub
 from .report import render
 
@@ -82,6 +84,13 @@ def main(argv: list[str] | None = None, api=None, now: datetime | None = None) -
                 n5 = drift.check(args.repo, args.main, now)
             except Exception as exc:    # noqa: BLE001
                 report["error"].append(f"N5 could not run: {type(exc).__name__}: {exc}")
+            # The bot's to-do after a release (N7): judged where N5 is, on the same main.
+            try:
+                todo = behind.check(args.repo, args.main, now)
+                if todo is not None:        # None: the record does not parse (N5) — the list stays as it is
+                    report["todo"] = todo
+            except Exception as exc:    # noqa: BLE001
+                report["error"].append(f"N7 could not run: {type(exc).__name__}: {exc}")
 
     report["N1"] = [f.message for f in n1]
     report["N2"] = [f.message for f in n2]
@@ -89,6 +98,8 @@ def main(argv: list[str] | None = None, api=None, now: datetime | None = None) -
     report["N5"] = [f.message for f in n5]
     report["skipped"] = sorted(skipped)
     print(render(n1 + n2 + n4 + n5, ran, skipped, notes=notes + [f"ERROR {e}" for e in report["error"]], word="alarm"))
+    for line in report.get("todo", []):
+        print(f"TODO {line}")
     # The report goes last, in one step: watch.yml takes exit 1 as «found something» only with
     # a non-empty report, and a crash exits 1 too (Issue #18, item 1) — as engine/backup/run.py.
     part = args.report.with_name(args.report.name + ".part")

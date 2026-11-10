@@ -13,8 +13,8 @@ files in the repository: the master — for a field, the assembled text (C6's
     sha256 = "…"          # of the master without its leading and trailing newlines
 
 A master that changed more than GRACE ago and still differs from its record was not
-reinstalled — an alarm to the trusted contact, who reinstalls the chat field by hand
-(§10). A record for a routine whose master is gone means the platform may still run it.
+reinstalled — an alarm to the trusted contact; the chat field is pasted by a human, she
+with the bot's guide or the trusted contact (§10). A record for a routine whose master is gone means the platform may still run it.
 N5 catches a forgotten reinstall, not a false record: the bot writes the record itself.
 C2 (`record_check`) catches a record PR whose routine entry is not of its master; a record
 equal to its master still does not prove what the platform runs.
@@ -91,8 +91,9 @@ def record_check(repo: Path, base: str, head: str) -> list[Finding]:
     have a master. N5 is skipped on such a PR, so a wrong or stale entry (the first
     installation hashed a routine with its last newline; a master changed and not
     reinstalled) would otherwise land green and surface only as N5's alarm 36 h later. The
-    fields stay N5's: the chat field's sha256 is given by the trusted contact by hand (REPO-3),
-    and one slip in its form would block the whole record. A routine with no entry is N5's
+    fields stay N5's: the chat field's sha256 comes from outside the platform — the trusted
+    contact's, or of the text the bot gave her (REPO-3) —, and one slip in its form would block
+    the whole record. A routine with no entry is N5's
     too: the record need not list every routine to land."""
     raw = gitio.file_at(repo, head, INSTALLED)
     if raw is None or raw == gitio.file_at(repo, base, INSTALLED):

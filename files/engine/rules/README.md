@@ -10,11 +10,16 @@ says yes with are the person's part, under `user/`. Three layers:
    Installed on the AI platform word for word, in front of the person's part
    (`user/fields/chat.md`, `user/fields/bot.md`; C6 joins them, N5 checks the install).
    The safety rules nobody can drop by a PR: C1 holds them to the release.
-2. **The core and the topic files** — the full rules behind the fields, for the bot when
-   it works on that topic and for a chat that can read files: `core.md` (both AIs, every
-   turn), `health.md`, `mail.md`, `shopping.md`, `documents.md`, `notion.md`,
-   `calendar.md`, `repository.md`. Each is short enough to be read whole (F4,
-   `platform.read_budget_bytes`).
+2. **The core and the topic files** — the full rules behind the fields: `core.md`,
+   `health.md`, `mail.md`, `shopping.md`, `documents.md`, `notion.md`, `calendar.md`,
+   `repository.md`. The bot reads them in her repository. The chat cannot: its field
+   links them in the public repository of releases, at one release's tag, and names the
+   files it opens there — once a conversation, before it answers on that topic. The
+   field keeps what every answer or safety needs; topic details live only in these files
+   (Issue #38, step 3). A release that changes a file the chat opens links itself in
+   the chat field — `engine/setup/release.py` refuses the cut otherwise — so the chat
+   never reads rules her release does not hold, and she reinstalls the chat field.
+   Each file is short enough to be read whole (F4, `platform.read_budget_bytes`).
 3. **The routines** — `routines.md`: the hard rules of every routine and the tasks of the
    four standard ones — the morning calendar, the mail, the daily mark that N4 watches,
    and the invitations. The bot writes each routine itself from its task and, before turning it on,
@@ -26,14 +31,14 @@ is in this index (F2).
 
 | File | Read by | When |
 |---|---|---|
-| `core.md` | chat, bot | every turn |
-| `health.md` | chat, bot | any talk of medicines, procedures, doctors, symptoms |
-| `mail.md` | chat, bot | mail, letters, messages to others |
-| `shopping.md` | chat, bot | finding, comparing, ordering, paying |
-| `documents.md` | bot (chat reads only the first section) | document numbers, forms, PDF, her signature |
+| `core.md` | bot; chat by its link | bot: every turn; chat: a work file, app menus, a text for others |
+| `health.md` | chat by its link, bot | any talk of medicines, procedures, doctors, symptoms |
+| `mail.md` | chat by its link, bot | mail, letters, messages to others |
+| `shopping.md` | chat by its link, bot | finding, comparing, ordering, paying |
+| `documents.md` | bot (the chat: its field's line «Numbers») | document numbers, forms, PDF, her signature |
 | `notion.md` | bot | every write to Notion |
-| `calendar.md` | bot | reading her calendar, creating events, invitations to her |
-| `routines.md` | bot | writing or changing a routine; the daily mark |
+| `calendar.md` | chat by its link, bot | reading her calendar, creating events, invitations to her |
+| `routines.md` | bot | writing or changing a routine; the daily mark; updating after a release |
 | `repository.md` | bot | every pull request; a read-back the trusted contact asks for |
 | `fields/chat.md` | the platform: the chat's instruction field | — |
 | `fields/bot.md` | the platform: the bot's instruction field | — |
@@ -41,7 +46,7 @@ is in this index (F2).
 Room in the fields: the person's part gets what the hard part leaves of the platform
 limit (`platform.chat_field_limit`, `platform.bot_field_limit`), measured as a browser
 text box counts (`engine.checks.limits_check.length`); C6 refuses an assembly over the
-limit. The hard parts as released leave the person's part at least 990 (chat) and 2 900
+limit. The hard parts as released leave the person's part at least 1 030 (chat) and 2 900
 (bot) of the pilot's limits 4 000 and 10 000, after the two newlines C6 joins with — today
-they are 3 005 and 7 091 characters, so the rooms are 993 and 2 907; the test
+they are 2 967 and 7 097 characters, so the rooms are 1 031 and 2 901; the test
 `engine/checks/tests/test_rules_budget.py` holds the promise.

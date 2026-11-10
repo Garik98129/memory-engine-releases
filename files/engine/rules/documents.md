@@ -1,6 +1,6 @@
 # Documents, numbers and her signature
 
-## Numbers (the chat reads this section too)
+## Numbers (the chat follows its field's line «Numbers»)
 
 - **DOC-1 One home.** Document numbers, bank accounts, phones and addresses — hers and her
   close family's; the car's papers and insurance; visas — live in her Documents base in

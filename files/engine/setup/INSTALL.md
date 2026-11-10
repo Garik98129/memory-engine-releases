@@ -105,7 +105,7 @@ site. Part 2 (the files) and the fingerprints in part 6 need a computer with `gi
        name = "grok"
        chat_field_limit = 4000         # the platform's limits, measured
        bot_field_limit = 10000
-       routine_limit = 4000            # optional: a routine's limit, where the platform has one
+       routine_limit = 10000           # optional: a routine's limit, where the platform has one
        read_budget_bytes = 16384
 
        [engine]
@@ -135,8 +135,9 @@ site. Part 2 (the files) and the fingerprints in part 6 need a computer with `gi
    language; her time zone (the fields convert «now» to it); how the AIs talk to her; her
    words for yes, «buy?», «send?», «sign?» and «was → is»; her country's emergency number;
    her Notion bases with their exact names and what each holds; the bot's name — and, for
-   a language with grammatical gender, which gender the bot uses for itself, with an
-   example of the wrong form (Issue #18, item 3); the trusted contact, and in the bot's
+   a language with grammatical gender, which gender each AI uses for itself, a line in
+   each part, with an example of the wrong form (Issue #18, items 3 and 41); the trusted
+   contact, and in the bot's
    part their e-mail (the bot invites them to the events she asks for) and the mailbox of
    their own bot (the bot's fallback letter when GitHub cannot take a save, REPO-6); the
    repository. Each field's engine part names what it expects «below». The engine part
@@ -232,8 +233,9 @@ A repository with no Notion — a test repository — disables the workflow inst
    empty line at the end. Then reply with its length in characters and its sha256.», then
    the text. → Its numbers equal the ones below.
 2. **The chat's field**: the same join of `engine/rules/fields/chat.md` and
-   `user/fields/chat.md`, pasted whole into the platform's chat instructions. Today the
-   installer does it; the aim is that she does it herself, guided by the bot (Issue #11).
+   `user/fields/chat.md`, pasted whole into the platform's chat instructions. At
+   installation the installer does it; after a release that changes it, she does it
+   herself, guided by the bot (ROUT-9; Issue #11, Issue #38 item 6).
 3. **The fingerprints**, in her repository — the text exactly as C6 joins it:
 
        python3 - <<'EOF'
@@ -247,7 +249,25 @@ A repository with no Notion — a test repository — disables the workflow inst
 
    The bot's reply must match the line `bot`. The line `chat` goes into the record in part 7.
 4. **Try them**: in her chat, a question about her; a record the chat hands to the bot,
-   and the bot's «Recorded: …»; a plain «hello» to each — the tone.
+   and the bot's «Recorded: …»; a plain «hello» to each — the tone. Then the chat's
+   link to its topic rules (Issue #38, step 3), each in a new conversation:
+   - a question on a topic its field names — a medicine, a purchase → the chat opens that
+     file at the link before it answers (its sources show `raw.githubusercontent.com`);
+   - a moved rule takes effect: a dose → an opinion that says it is not a doctor's
+     (HEALTH-2); a day with nothing in her calendar → «empty in Google», never just
+     «empty» (CAL-9);
+   - a link she gives and asks to open → opened, and no other search;
+   - opening hours of an office → the search still runs: two sources, the organisation's
+     own page among them. Weaker than before (the speed test T4, Issue #38) → the link
+     exception goes back out of the field (owner, 30.10.2026);
+   - a question about a relative by name → an answer from her Notion, no people-search
+     site among the sources (item 30);
+   - a question in her work language on health → the «Checked» line in that language
+     (item 37);
+   - «remind me in a week» → an event in her calendar offered, no promise (item 38);
+   - a time from a page given in UTC → converted to her time by the rules of that date
+     (item 40); after midnight her time, while UTC is still on the day before: «what is
+     the date and the weekday?» → her date (item 31).
 
 ## 7. The routines and the record of the installation (with her)
 
@@ -265,13 +285,26 @@ A repository with no Notion — a test repository — disables the workflow inst
    `[fields.chat]` and `[fields.bot]` must equal the lines of part 6. The gate holds only
    the routines' entries to their masters (C2); a wrong field entry would surface only as
    an N5 alarm 36 hours later.
-4. **The watch by hand**: Actions → `watch` → Run workflow. → Green, no new alarm.
+4. **The watch by hand**: Actions → `watch` → Run workflow. → Green, no new alarm, and no
+   open Issue «To-do for the bot: the engine moved ahead»: it opens at part 2 with all that
+   is not installed yet, and the record closes it. Still open → its list names what the
+   record misses.
 5. **The update by hand**: Actions → `update` → Run workflow. → «NONE <tag> is the newest
    release due on the <channel> channel». Red with HTTP 403 → the setting of part 1 is
    off (§13, question 3 (g)).
 
 ## 8. From then on
 
+- **The bot keeps up with a release by itself** (Issue #38, 09.11.2026). When a release
+  moves a routine's task on, changes a field's engine part or adds a task, the watch lists it
+  in the Issue «To-do for the bot: the engine moved ahead» — not an alarm, nobody named. The
+  bot's daily routine (task 3, step 5) tells her in one plain line; when she says yes, the bot
+  goes through the list with her («Updating after a release», routines.md) and records what it
+  installed; the next run of the watch closes the Issue. Her «no» to a routine's new version
+  is recorded in her config (`engine.declined`), you hear of it from the bot, and it is not
+  asked again until the next one; task 3, which tells her of updates, is never declined. A bot
+  whose routine 3 is older than task 3, version 2 has no step 5 yet: tell it once to go
+  through the list.
 - **Updates arrive by themselves.** Every Monday at 04:23 UTC the workflow `update` takes
   the newest release her channel allows — on `stable`, 7 days after it was cut — and opens
   a pull request; the gate checks it and the repository merges it. A release that changes
@@ -288,6 +321,11 @@ A repository with no Notion — a test repository — disables the workflow inst
 - **Alarms** come as Issues that name the owner and the trusted contact. Closing one says
   «known, not fixing». A base that vanished from the copy holds its alarm until it is back
   or she says she removed it (the bot asks her; §6, N3).
+- **A release that changes the chat field** says so in its note, and the to-do lists it. The
+  bot guides her to paste the new text and to open a new conversation, and records the text
+  it gave her (ROUT-9); a paste cut short would not show in that record, so the trusted
+  contact runs the probes of part 6, step 4 again. Until then the chat reads the rules its
+  old field links — those of the release it was installed with.
 - **Probes in the next days**, one at a time, each written down as «expected / happened /
   what held»: the bot disables and enables `watch` with its token (§13, question 3 (f));
   the hostile probes of §13.
@@ -322,8 +360,10 @@ Copy them as they are; fill the parts in angle brackets.
     pull request). The Issue «routine marks» is number <n>.
 
     1. Write a routine for each task of routines.md, in your own format, every hard rule
-       kept word for word in meaning, each within the routine limit. Their names: morning,
-       mail, mark, invitations.
+       kept word for word in meaning, each within the routine limit. Their names are the
+       ones routines.md gives («Routine `morning`, task version 1.»); the first line of each
+       names its task and that version in these English words, whatever her language —
+       «… (task 3, version 2)».
     2. Tell her in her language, with no technical words, what each routine reads, what it
        does and when; the full texts only if she asks. Ask her. Note the time of her yes.
     3. On her yes, with your own token only: a branch from main; user/routines/<name>.md for

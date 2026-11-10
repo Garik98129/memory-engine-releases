@@ -38,6 +38,13 @@ workflow closed itself («Clean») counts for nothing: that close meant «clean�
 there opens a new Issue (owner, 23.10.2026). An Issue anybody else opens under the same
 title is ignored.
 
+The bot's to-do after a release (N7, `behind.py`) is kept here too, but it is not an alarm:
+one Issue «To-do for the bot: …», no one named in it, its body always the whole current list
+(the bot reads the body); a body that is not the list — the list changed, or somebody edited
+it — is written again, an empty list closes the Issue, and a run that left the list out of
+its report — the copy's run, a record PR, a stale run, a record that does not parse — or
+that had an error in the checks leaves it alone. It never turns the run red, not even when GitHub refuses to keep it.
+
 The exit code says whether the checks found something not acknowledged — the gate goes
 red on it.
 
@@ -54,7 +61,7 @@ import re
 import sys
 from pathlib import Path
 
-from . import config_check
+from . import behind, config_check
 from .github import ApiError, GitHub
 from .integrity import BOT
 
@@ -231,6 +238,57 @@ def sync(api, findings: dict[str, list[str]], owner: str, contact: str, run_url:
     return done, red
 
 
+RUN_LINE_RE = re.compile(r"^Run: \S+$", re.M)
+
+
+def _todo_text(body: str) -> str:
+    """A to-do body as compared: its Run line only says which run wrote it."""
+    return RUN_LINE_RE.sub("Run:", body.replace("\r\n", "\n")).strip()
+
+
+def todo_sync(api, lines: list[str], run_url: str) -> list[str]:
+    """Bring the bot's to-do Issue in line with the list: open it, write its body again when
+    it is not the list — the list changed, or somebody edited the body —, close it when
+    nothing is left. Only Issues the workflow opened under the title count; of two (two runs
+    at once) the older stays and the other is closed. The bot closing it by hand only means
+    a new one opens while work is left."""
+    own = sorted((i for i in api.pages(f"repos/{api.repository}/issues", {"state": "open", "creator": BOT})
+                  if _own(i) and i.get("title") == behind.TITLE), key=lambda i: i["number"])
+    done: list[str] = []
+    for extra in own[1:]:
+        api.post(f"repos/{api.repository}/issues/{extra['number']}/comments",
+                 {"body": f"A second list; #{own[0]['number']} is the one. Closing."})
+        api.patch(f"repos/{api.repository}/issues/{extra['number']}", {"state": "closed", "state_reason": "not_planned"})
+        done.append(f"closed #{extra['number']} todo, a second one")
+    open_issue = own[0] if own else None
+    text = behind.body(lines, run_url)
+    if lines and open_issue is None:
+        made = api.post(f"repos/{api.repository}/issues", {"title": behind.TITLE, "body": text})
+        return done + [f"opened #{made['number']} todo"]
+    if lines:
+        if _todo_text(open_issue.get("body") or "") != _todo_text(text):
+            api.patch(f"repos/{api.repository}/issues/{open_issue['number']}", {"body": text})
+            return done + [f"updated #{open_issue['number']} todo"]
+        return done
+    if open_issue is not None:
+        api.post(f"repos/{api.repository}/issues/{open_issue['number']}/comments",
+                 {"body": f"Nothing left in {run_url}. Closing."})
+        api.patch(f"repos/{api.repository}/issues/{open_issue['number']}",
+                  {"state": "closed", "state_reason": "completed"})
+        return done + [f"closed #{open_issue['number']} todo"]
+    return done
+
+
+def todo_from_report(path: Path) -> list[str] | None:
+    """The run's to-do list, or None when the run did not judge it (or the report is unreadable:
+    from_report raises that as an alarm)."""
+    try:
+        report = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return _lines(report.get("todo")) if isinstance(report, dict) else None
+
+
 def _lines(value: object) -> list[str] | None:
     return [str(x) for x in value] if isinstance(value, list) else None
 
@@ -288,6 +346,12 @@ def main(argv: list[str] | None = None, api=None) -> int:
         if api is None:
             api = GitHub(os.environ.get("GITHUB_REPOSITORY", ""), os.environ.get("GH_TOKEN", ""))
         done, red = sync(api, findings, owner, contact, args.run_url, skipped, titles_for(args.what), ABOUT[args.what])
+        todo = todo_from_report(args.report)
+        if todo is not None and not findings.get("ERROR"):   # an error in the run proves nothing about the list
+            try:
+                done += todo_sync(api, todo, args.run_url)
+            except Exception as exc:    # noqa: BLE001 — the to-do is not an alarm: the next run keeps it
+                done.append(f"TODO ERROR the to-do could not be kept: {type(exc).__name__}: {exc}")
         for line in done:
             print(line)
     except ApiError as exc:

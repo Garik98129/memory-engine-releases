@@ -224,6 +224,32 @@ class Config(unittest.TestCase):
             self.assertIn(f"notion.removed_bases entry {entry!r} is not <id>@<YYYY-MM-DD>, the base and the day "
                           f"as N3's line names them", msgs, entry)
 
+    ROUTINES = {"engine/rules/routines.md": b"## Task 3 \xe2\x80\x94 mark\n\nRoutine `mark`, task version 2; never declined.\n\n"
+                                            b"## Task 5 \xe2\x80\x94 walk\n\nRoutine `walk-2`, task version 1.\n"}
+
+    def test_a_declined_task_version_is_recorded_as_its_routine_and_version(self):
+        good = self.run_with(VALID_CONFIG + b'declined = ["walk-2@1"]\n', self.ROUTINES)
+        self.assertFalse([m for m in good if "declined" in m], good)
+        for entry in ("mark", "mark@v2", "Mark@2", "mark@0", "mark@2 "):
+            msgs = self.run_with(VALID_CONFIG + f'declined = ["{entry}"]\n'.encode())
+            self.assertIn(f"engine.declined entry {entry!r} is not <routine>@<task version>, the routine and the "
+                          f"version N7's line names", msgs, entry)
+        self.assertIn("engine.declined must be a list of strings",
+                      self.run_with(VALID_CONFIG + b'declined = [2]\n'))
+
+    def test_only_a_version_on_her_list_now_can_be_declined_and_never_task_3(self):
+        for entry in ("walk-2@2", "nosuch@1"):                      # a future version, a routine that is no task
+            self.assertEqual(self.run_with(VALID_CONFIG + f'declined = ["{entry}"]\n'.encode(), self.ROUTINES),
+                             [f"engine.declined entry {entry!r} is not a task's current version in "
+                              f"engine/rules/routines.md: only a version on her list now can be declined"])
+        self.assertEqual(self.run_with(VALID_CONFIG + b'declined = ["mark@2"]\n', self.ROUTINES),
+                         ["engine.declined entry 'mark@2': task 3 says \u00abnever declined\u00bb"])
+        # One she has is not judged again: the task moved on, the entry stops counting, nothing is red.
+        main = self.repo.commit({"user/config.toml": VALID_CONFIG + b'declined = ["walk-2@1"]\n', **self.ROUTINES})
+        head = self.repo.commit({"engine/rules/routines.md": self.ROUTINES["engine/rules/routines.md"].replace(
+            b"`walk-2`, task version 1", b"`walk-2`, task version 2")})
+        self.assertEqual(messages(config_check.check(self.repo.path, main, head, PERSON)), [])
+
     def test_bad_channel_is_red(self):
         msgs = self.run_with(VALID_CONFIG.replace(b'channel = "stable"', b'channel = "beta"'))
         self.assertIn("engine.channel must be one of canary, stable", msgs)

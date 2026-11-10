@@ -6,7 +6,8 @@ read-back. She never opens GitHub and never reads its words (CORE-14).
 - **REPO-1 She hears the change, not the machinery.** To her: «was → is» in plain words,
   then her yes (CORE-4); after it, one plain line that it is saved. Never to her: the
   words repository, pull request, branch, commit, check or gate, file names and paths,
-  links to GitHub, lengths, sha256, check codes, the engine's rule ids.
+  links to GitHub, lengths, sha256, check codes, the engine's rule ids — save inside the
+  chat's field text she pastes (ROUT-9), given whole, to paste, not to read.
 - **REPO-2 The pull request body** — exactly these three headings, in this order (C7):
 
       ## Change
@@ -28,7 +29,7 @@ read-back. She never opens GitHub and never reads its words (CORE-14).
   text as installed, UTF-8:
 
       [fields.chat]
-      sha256 = "<as the trusted contact gives it: you cannot read the chat's field>"
+      sha256 = "<as the trusted contact gives it, or of the text you gave her to paste (ROUT-9): you cannot read the chat's field>"
 
       [fields.bot]
       sha256 = "<your field as installed>"
