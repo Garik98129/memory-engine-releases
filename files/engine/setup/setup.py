@@ -8,8 +8,8 @@ Writes the text of the Issue «Your assistant's instructions» into `--issue` fi
 `user/config.toml` and her part of the field, `user/fields/chat.md`, into the checkout. The
 Issue holds the field to paste, where her platform keeps it, the plan it needs, the first
 message to her AI — with the link to `install.md` in the release her repository holds
-(`user/engine.lock`), through jsDelivr where her chat reads the rules there — and what works on
-her platform and what does not. Refuses — exit 2,
+(`user/engine.lock`), GitHub's page of it where her chat reads the rules there — and what works
+on her platform and what does not. Refuses — exit 2,
 nothing written — a platform the table does not support, a choice C3 would refuse, a name C5 would
 hold red every night (C4 scans her part too), a repository that already has her part, or a field
 over the limit. No emergency number is asked: her part names her country, and the AI names its
@@ -34,14 +34,14 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from ..checks import limits_check, numbers_check, text_check
 from ..checks.config_check import COUNTRY_RE, LANGUAGE_RE
 from ..checks.lock_check import LOCK_FILE, release_key
-from . import cdn
+from . import blob
 from .release import PUBLISHED_FILES, PUBLISHED_TAG_RE, RULES
 
 ENGINE = Path(__file__).resolve().parents[1]
 PLATFORMS = ENGINE / "platforms.toml"
 DEFAULTS = ENGINE / "defaults.toml"
 SOLO = ENGINE / "rules" / "fields" / "solo.md"
-SOLO_CDN = ENGINE / "rules" / "fields" / "solo-cdn.md"       # the same, the rules through jsDelivr
+SOLO_BLOB = ENGINE / "rules" / "fields" / "solo-blob.md"     # the same, the rules on GitHub's pages
 CONFIG = "user/config.toml"
 PART = "user/fields/chat.md"
 INSTALLABLE = ("supported", "beta")
@@ -202,26 +202,26 @@ def build(platform: str, language: str, country: str, timezone: str, name: str, 
     return {CONFIG: config, PART: part}
 
 
-def reads_cdn(platform: str) -> bool:
-    """Whether her chat reads the rules through jsDelivr, not by the raw GitHub link (on the owner's
-    tests, 12.11.2026, ChatGPT did not open the raw link, with its GitHub app on or off, and opened
-    the same file through jsDelivr)."""
-    return platform in limits_check.CDN_RULES
+def reads_pages(platform: str) -> bool:
+    """Whether her chat reads the rules on GitHub's pages, not by the raw link (on the owner's tests,
+    12.11.2026, ChatGPT did not open the raw link, with its GitHub app on or off, and with the app
+    off opened GitHub's page of the same file)."""
+    return platform in limits_check.BLOB_RULES
 
 
 def field_text(part: str, solo: str | None = None, platform: str = "") -> str:
     if solo is None:
-        solo = (SOLO_CDN if reads_cdn(platform) else SOLO).read_text(encoding="utf-8")
+        solo = (SOLO_BLOB if reads_pages(platform) else SOLO).read_text(encoding="utf-8")
     return limits_check.assemble(solo, part)
 
 
 def install_link(repo: Path, platform: str = "") -> str:
     """install.md in the public repository of releases, at the release her repository holds —
-    a file of that very release, so it exists there; never the field's own older link. Through
-    jsDelivr where her chat reads the rules there."""
+    a file of that very release, so it exists there; never the field's own older link. GitHub's
+    page of it where her chat reads the rules there."""
     manifests, tag = _release(repo)
-    if reads_cdn(platform):
-        return cdn.link(manifests, tag, "install.md")
+    if reads_pages(platform):
+        return blob.link(manifests, tag, "install.md")
     return f"https://raw.githubusercontent.com/{manifests}/{tag}/{PUBLISHED_FILES}/{RULES}install.md"
 
 

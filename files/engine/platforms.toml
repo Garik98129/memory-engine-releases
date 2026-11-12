@@ -35,10 +35,10 @@ status = "supported"
 title = "ChatGPT"
 field_limit = 5000                  # Plus and above; Free and Go: 1 500 (OpenAI help; the owner saw 1 500 on Free,
                                     # and about 3 800 went in on Plus, 12.11.2026)
-field = "ChatGPT app: Settings, Customize ChatGPT"
+field = "ChatGPT app: Personalization"            # where the owner put it, 12.11.2026
 notion = "yes"                      # seen 12.11.2026 in a test workspace: pages and the two bases (owner's check)
-# its chat did not open the rules' raw link, with its GitHub app on or off, and opened the same file
-# through jsDelivr (owner's tests, 12.11.2026): engine/checks/limits_check.py, CDN_RULES
+# its chat did not open the rules' raw link, with its GitHub app on or off; with the app off it opened
+# GitHub's page of the same file (owner's tests, 12.11.2026): engine/checks/limits_check.py, BLOB_RULES
 schedule = "yes"
 plan = "Plus"
 status = "beta"

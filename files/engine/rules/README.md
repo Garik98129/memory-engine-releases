@@ -13,10 +13,10 @@ says yes with are the person's part, under `user/`. Three layers:
    writes itself (`platform.writer = "chat"` — the way out if the bot's field is gone,
    docs/DESIGN_PHASE3.md §6a), there is one field: `fields/solo.md` in front of
    `user/fields/chat.md`, and no bot's field. On a platform whose chat did not open the rules'
-   raw GitHub link (`CDN_RULES` in `engine/checks/limits_check.py` — ChatGPT), `fields/solo-cdn.md`
-   stands in its place: the same text, the same repository, release and files, the link on
-   jsDelivr's host. It is built by `python -m engine.setup.cdn --write`, never by hand; a test
-   holds it to `solo.md`.
+   raw link (`BLOB_RULES` in `engine/checks/limits_check.py` — ChatGPT), `fields/solo-blob.md`
+   stands in its place: the same text, the same repository, release and files, the link to
+   GitHub's own pages of them. It is built by `python -m engine.setup.blob --write`, never by
+   hand; a test holds it to `solo.md`.
 2. **The core and the topic files** — the full rules behind the fields: `core.md`,
    `health.md`, `mail.md`, `shopping.md`, `documents.md`, `notion.md`, `calendar.md`,
    `repository.md`. The bot reads them in her repository. The chat cannot: its field
@@ -51,7 +51,7 @@ is in this index (F2).
 | `fields/chat.md` | the platform: the chat's instruction field | — |
 | `fields/bot.md` | the platform: the bot's instruction field | — |
 | `fields/solo.md` | the platform: the chat's instruction field when the chat writes | — |
-| `fields/solo-cdn.md` | the platform: the same, where the chat reads the rules through jsDelivr | — |
+| `fields/solo-blob.md` | the platform: the same, where the chat reads the rules on GitHub's pages | — |
 
 Room in the fields: the person's part gets what the hard part leaves of the platform
 limit (`platform.chat_field_limit`, `platform.bot_field_limit`), measured as a browser
@@ -60,5 +60,5 @@ limit. The hard parts as released leave the person's part at least 1 030 (chat) 
 (bot) of the platform's limits 4 000 and 10 000, after the two newlines C6 joins with — today
 they are 2 967 and 7 097 characters, so the rooms are 1 031 and 2 901; `solo.md` promises
 the same 1 030 of 4 000, and at least the room `chat.md` leaves, so her part moves over whole; it is
-2 964, a room of 1 034 (`solo-cdn.md`, 2 958, leaves more); the test
+2 964, a room of 1 034 (`solo-blob.md`, 2 954, leaves more); the test
 `engine/checks/tests/test_rules_budget.py` holds the promise.

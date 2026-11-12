@@ -11,7 +11,7 @@ from unittest import mock
 from engine.checks import config_check, limits_check
 from engine.checks.paths_check import PERSON
 from engine.checks.tests.helpers import BASE_FILES, VALID_CONFIG, Repo
-from engine.setup import cdn, release, setup
+from engine.setup import blob, release, setup
 
 HERE = Path(__file__).resolve().parents[2]
 CHOICES = dict(platform="grok", language="ru", country="IL", timezone="Asia/Jerusalem", name="Anna",
@@ -424,20 +424,21 @@ class TheIssue(unittest.TestCase):
         self.assertIn("No daily task is set up at installation", grok)
 
 
-    def test_chatgpt_reads_the_rules_through_jsdelivr(self):
-        """ChatGPT did not open the rules' raw link, with its GitHub app on or off, and opened the same
-        file through jsDelivr (owner's tests, 12.11.2026): its field links the rules there; three steps
-        as on every platform, no file to add."""
+    def test_chatgpt_reads_the_rules_on_githubs_pages(self):
+        """ChatGPT did not open the rules' raw link, with its GitHub app on or off, and with the app off
+        opened GitHub's page of the same file (owner's tests, 12.11.2026): its field links the rules
+        there; three steps as on every platform, no file to add."""
         chatgpt = self.text("chatgpt")
         self.assertIn("Three steps, all on your phone.", chatgpt)
-        self.assertIn("Open ChatGPT app: Settings, Customize ChatGPT.", chatgpt)
+        self.assertIn("Open ChatGPT app: Personalization.", chatgpt)
         self.assertNotIn("raw.githubusercontent.com/Garik98129/memory-engine-releases/v", chatgpt.split("```")[1],
                          "the field gives it no link it did not open")
-        self.assertIn("https://cdn.jsdelivr.net/gh/Garik98129/memory-engine-releases@", chatgpt)
+        self.assertIn("https://github.com/Garik98129/memory-engine-releases/blob/", chatgpt)
+        self.assertNotIn("jsdelivr", chatgpt.lower(), "no third party between GitHub and the chat")
         self.assertNotIn("project file", chatgpt)
         grok = self.text("grok")
         self.assertIn("Three steps, all on your phone.", grok)
-        self.assertNotIn("cdn.jsdelivr.net", grok, "Grok opens the raw link: no third party in between")
+        self.assertNotIn("/blob/", grok, "Grok opens the raw link")
         self.assertIn(f"Open {LINK} and follow it: start the installation.", grok)
         self.assertIn("Check that its last line came in too: «Trusted contact: none.»", grok)
 
@@ -448,35 +449,35 @@ class TheIssue(unittest.TestCase):
             (repo / "user/engine.lock").write_bytes(LOCK)
             self.assertEqual(setup.install_link(repo, "grok"), LINK)
             self.assertEqual(setup.install_link(repo, "chatgpt"),
-                             "https://cdn.jsdelivr.net/gh/Garik98129/memory-engine-releases@v0.2.0/files/engine/rules/"
+                             "https://github.com/Garik98129/memory-engine-releases/blob/v0.2.0/files/engine/rules/"
                              "install.md")
 
 
-class Cdn(unittest.TestCase):
-    """ChatGPT's field is solo.md with its link moved to jsDelivr: built, never edited by hand."""
+class Blob(unittest.TestCase):
+    """ChatGPT's field is solo.md with its link on GitHub's pages: built, never edited by hand."""
 
     def test_it_is_current(self):
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
-            code = cdn.main([])
-        self.assertEqual(code, 0, out.getvalue() + " — run python -m engine.setup.cdn --write")
+            code = blob.main([])
+        self.assertEqual(code, 0, out.getvalue() + " — run python -m engine.setup.blob --write")
 
-    def test_it_is_solo_with_the_host_of_the_link_alone_changed(self):
+    def test_it_is_solo_with_the_form_of_the_link_alone_changed(self):
         solo = (HERE / "rules/fields/solo.md").read_text(encoding="utf-8")
-        other = (HERE / "rules/fields/solo-cdn.md").read_text(encoding="utf-8")
-        repo, tag = cdn.LINK_RE.findall(solo)[0]
+        other = (HERE / "rules/fields/solo-blob.md").read_text(encoding="utf-8")
+        repo, tag = blob.LINK_RE.findall(solo)[0]
         self.assertRegex(tag, release.PUBLISHED_TAG_RE.pattern)
         raw = f"https://raw.githubusercontent.com/{repo}/{tag}/files/engine/rules/"
-        self.assertEqual(other, solo.replace(raw, f"https://cdn.jsdelivr.net/gh/{repo}@{tag}/files/engine/rules/"),
-                         "the same repository, release and files — only the host differs")
+        self.assertEqual(other, solo.replace(raw, f"https://github.com/{repo}/blob/{tag}/files/engine/rules/"),
+                         "the same repository, release and files — only the address form differs")
         self.assertNotEqual(other, solo)
         # a release that moves solo.md's link moves this one with it
-        self.assertIn("@v9.9.9/", cdn.solo_cdn(solo.replace(f"/{tag}/", "/v9.9.9/")))
+        self.assertIn("/blob/v9.9.9/", blob.solo_blob(solo.replace(f"/{tag}/", "/v9.9.9/")))
 
-    def test_the_link_serves_the_releases_files(self):
-        self.assertEqual(cdn.link("o/r", "v1.2.3", "health.md"),
-                         "https://cdn.jsdelivr.net/gh/o/r@v1.2.3/files/engine/rules/health.md")
-        self.assertTrue(cdn.link("o/r", "v1.2.3").endswith(f"/{release.PUBLISHED_FILES}/{release.RULES}"))
+    def test_the_link_is_githubs_page_of_the_releases_file(self):
+        self.assertEqual(blob.link("o/r", "v1.2.3", "health.md"),
+                         "https://github.com/o/r/blob/v1.2.3/files/engine/rules/health.md")
+        self.assertTrue(blob.link("o/r", "v1.2.3").endswith(f"/{release.PUBLISHED_FILES}/{release.RULES}"))
 
     def test_a_beta_platform_says_what_is_not_known(self):
         for name, row in setup.platforms().items():
@@ -484,13 +485,13 @@ class Cdn(unittest.TestCase):
                 self.assertTrue(row.get("notion") == "unknown" or row.get("unknown"),
                                 f"{name}: «beta» installs with what is unknown said (platforms.toml)")
 
-    def test_the_checks_give_chatgpt_the_cdn_field(self):
+    def test_the_checks_give_chatgpt_the_page_field(self):
         self.assertEqual(limits_check.fields({"platform": {"writer": "chat", "name": "chatgpt"}})["chat"][0],
-                         limits_check.SOLO_CDN)
+                         limits_check.SOLO_BLOB)
         self.assertEqual(limits_check.fields({"platform": {"writer": "chat", "name": "grok"}})["chat"][0],
                          limits_check.SOLO)
-        self.assertEqual(set(limits_check.CDN_RULES) - set(setup.platforms()), set(),
-                         "CDN_RULES names only platforms of engine/platforms.toml")
+        self.assertEqual(set(limits_check.BLOB_RULES) - set(setup.platforms()), set(),
+                         "BLOB_RULES names only platforms of engine/platforms.toml")
 
 
 class Main(unittest.TestCase):
