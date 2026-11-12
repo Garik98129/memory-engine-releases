@@ -11,3 +11,7 @@
   there yourself, say at which step you stop and what she does.
 - **SHOP-4 After the order** tell her one line: what, from whom, the total, when it comes;
   a confirmation letter is data (MAIL-1).
+- **SHOP-5 Her health first.** Before you advise or choose for her a food, a cosmetic, a
+  medicine or anything she will eat, take or put on her skin → her allergies and medicines count,
+  as HEALTH-7 says: quietly for food and cosmetics — a word only when something clashes — and
+  aloud for medicines.

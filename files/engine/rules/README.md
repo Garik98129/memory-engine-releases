@@ -3,7 +3,7 @@
 The behaviour of a person's two AIs — the chat that talks and the bot that writes —
 written once, for everyone, in English (the machine layer; the person is answered in her
 own language, `person.language` in `user/config.toml`). Nothing personal lives here: who
-the person is, her bases, her languages, her country's emergency number and the words she
+the person is, her bases or her map of Notion, her languages, her country and the words she
 says yes with are the person's part, under `user/`. Three layers:
 
 1. **The hard part of each instruction field** — `fields/chat.md`, `fields/bot.md`.
@@ -37,13 +37,13 @@ is in this index (F2).
 | `core.md` | bot; chat by its link | bot: every turn; chat: a work file, app menus, a text for others |
 | `health.md` | chat by its link, bot | any talk of medicines, procedures, doctors, symptoms |
 | `mail.md` | chat by its link, bot | mail, letters, messages to others |
-| `shopping.md` | chat by its link, bot | finding, comparing, ordering, paying |
+| `shopping.md` | chat by its link, bot | finding, comparing, ordering, paying; advising a food or a cosmetic |
 | `documents.md` | bot (the chat: its field's line «Numbers»); the chat that writes, by its link | document numbers, forms, PDF, her signature |
-| `notion.md` | bot; the chat that writes, by its link | every write to Notion |
+| `notion.md` | bot; the chat that writes, by its link | every write to Notion; «continue setup» (NOTION-12) |
 | `calendar.md` | chat by its link, bot | reading her calendar, creating events, invitations to her |
 | `routines.md` | bot | writing or changing a routine; the daily mark; updating after a release |
 | `repository.md` | bot | every pull request; a read-back the trusted contact asks for |
-| `install.md` | the chat that writes, by the link its installation Issue gives | the first conversation after `setup`: what it makes in her Notion |
+| `install.md` | the chat that writes, by the link its installation Issue gives | the first conversation after `setup`, and again when she connects or changes her Notion: the map of her anchors, then a few questions |
 | `fields/chat.md` | the platform: the chat's instruction field | — |
 | `fields/bot.md` | the platform: the bot's instruction field | — |
 | `fields/solo.md` | the platform: the chat's instruction field when the chat writes | — |
@@ -55,5 +55,5 @@ limit. The hard parts as released leave the person's part at least 1 030 (chat) 
 (bot) of the platform's limits 4 000 and 10 000, after the two newlines C6 joins with — today
 they are 2 967 and 7 097 characters, so the rooms are 1 031 and 2 901; `solo.md` promises
 the same 1 030 of 4 000, and at least the room `chat.md` leaves, so her part moves over whole; it is
-2 963, a room of 1 035; the test
+2 964, a room of 1 034; the test
 `engine/checks/tests/test_rules_budget.py` holds the promise.
