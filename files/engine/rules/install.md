@@ -127,8 +127,9 @@ language has one.
   wants it.
 - **INSTALL-11 No routine yet.** Set up no scheduled task at installation, even if her platform
   runs them and she asks: the tasks of `routines.md` are written for a bot that keeps a
-  repository, and a later release brings tasks for her platform's own scheduler. Offer a
-  calendar event instead when she wants a reminder (CORE-3).
+  repository, and a later release brings tasks for her platform's own scheduler. Offer a calendar
+  event instead when she wants a reminder (CORE-3), and never describe what you made as reminding
+  her of anything: a «valid until» date reminds nobody.
 - **INSTALL-12 What works here.** End with what works on her platform and what does not, in
   plain words, as the line «Her platform: …» of her part says it — never a promise the platform
   cannot keep. Nothing about the repository, files or checks (CORE-14).

@@ -12,7 +12,11 @@ says yes with are the person's part, under `user/`. Three layers:
    The safety rules nobody can drop by a PR: C1 holds them to the release. When the chat
    writes itself (`platform.writer = "chat"` — the way out if the bot's field is gone,
    docs/DESIGN_PHASE3.md §6a), there is one field: `fields/solo.md` in front of
-   `user/fields/chat.md`, and no bot's field.
+   `user/fields/chat.md`, and no bot's field. On a platform whose chat cannot open the rules'
+   link (`FILE_RULES` in `engine/checks/limits_check.py` — ChatGPT), `fields/solo-file.md`
+   stands in its place: the same text, the link replaced by the project file
+   `memory-engine-rules.md` — every topic file in one, which she adds to her project's files.
+   Both are built by `python -m engine.setup.bundle --write`, never by hand; a test holds them.
 2. **The core and the topic files** — the full rules behind the fields: `core.md`,
    `health.md`, `mail.md`, `shopping.md`, `documents.md`, `notion.md`, `calendar.md`,
    `repository.md`. The bot reads them in her repository. The chat cannot: its field
@@ -47,6 +51,8 @@ is in this index (F2).
 | `fields/chat.md` | the platform: the chat's instruction field | — |
 | `fields/bot.md` | the platform: the bot's instruction field | — |
 | `fields/solo.md` | the platform: the chat's instruction field when the chat writes | — |
+| `fields/solo-file.md` | the platform: the same, where the chat reads the rules from the project file | — |
+| `memory-engine-rules.md` | the chat that writes, as a file in her project, where it cannot open the link | every topic, as `fields/solo-file.md` sends it there |
 
 Room in the fields: the person's part gets what the hard part leaves of the platform
 limit (`platform.chat_field_limit`, `platform.bot_field_limit`), measured as a browser
@@ -55,5 +61,5 @@ limit. The hard parts as released leave the person's part at least 1 030 (chat) 
 (bot) of the platform's limits 4 000 and 10 000, after the two newlines C6 joins with — today
 they are 2 967 and 7 097 characters, so the rooms are 1 031 and 2 901; `solo.md` promises
 the same 1 030 of 4 000, and at least the room `chat.md` leaves, so her part moves over whole; it is
-2 964, a room of 1 034; the test
+2 964, a room of 1 034 (`solo-file.md`, 2 935, leaves more); the test
 `engine/checks/tests/test_rules_budget.py` holds the promise.

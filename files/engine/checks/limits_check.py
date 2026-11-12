@@ -29,6 +29,11 @@ FIELDS = {
 }
 # The chat's hard part when the chat writes itself: one field, no bot's field.
 SOLO = "engine/rules/fields/solo.md"
+# The same, for a platform whose chat cannot open the rules' link: it reads them from the project
+# file engine/rules/memory-engine-rules.md (built by engine/setup/bundle.py; ChatGPT did not open
+# the raw link on 12.11.2026).
+SOLO_FILE = "engine/rules/fields/solo-file.md"
+FILE_RULES = ("chatgpt",)               # platform.name of those platforms
 WRITERS = ("bot", "chat")               # platform.writer: who writes her Notion, mail and calendar
 CONFIG = "user/config.toml"
 
@@ -56,7 +61,8 @@ def fields(config: dict | None) -> dict[str, tuple[str, str, str, str]]:
     """The instruction fields of this installation, as FIELDS reads them."""
     if writer(config) == "chat":
         _engine, person, key, floor = FIELDS["chat"]
-        return {"chat": (SOLO, person, key, floor)}
+        solo = SOLO_FILE if _platform(config).get("name") in FILE_RULES else SOLO
+        return {"chat": (solo, person, key, floor)}
     return dict(FIELDS)
 
 

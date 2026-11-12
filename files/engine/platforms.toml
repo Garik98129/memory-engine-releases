@@ -30,9 +30,11 @@ status = "supported"
 
 [chatgpt]
 title = "ChatGPT"
-field_limit = 5000                  # Plus and above; Free and Go: 1 500
-field = "ChatGPT app: Settings, Customize ChatGPT"
-notion = "unknown"                  # the help says «may be able to create or update»; not tried
+field_limit = 5000                  # Customize ChatGPT: Plus and above, Free and Go 1 500; a project's own limit not measured
+field = "ChatGPT app: a new project, its instructions; talk to the AI inside that project"
+notion = "yes"                      # seen 12.11.2026 in a test workspace: pages and the two bases (owner's check)
+# its chat did not open the rules' raw link, with its GitHub app on or off (12.11.2026): it reads the
+# rules from the project file — engine/checks/limits_check.py, FILE_RULES
 schedule = "yes"
 plan = "Plus"
 status = "beta"

@@ -11,7 +11,7 @@ from unittest import mock
 from engine.checks import config_check, limits_check
 from engine.checks.paths_check import PERSON
 from engine.checks.tests.helpers import BASE_FILES, VALID_CONFIG, Repo
-from engine.setup import setup
+from engine.setup import bundle, setup
 
 HERE = Path(__file__).resolve().parents[2]
 CHOICES = dict(platform="grok", language="ru", country="IL", timezone="Asia/Jerusalem", name="Anna",
@@ -90,7 +90,7 @@ class Build(unittest.TestCase):
                 for gender in setup.GENDERS:
                     with self.subTest(name=name[:1], platform=platform, gender=gender):
                         part = setup.build(platform=platform, gender=gender, name=name, **longest)[setup.PART]
-                        self.assertLessEqual(limits_check.length(setup.field_text(part)) + margin,
+                        self.assertLessEqual(limits_check.length(setup.field_text(part, platform=platform)) + margin,
                                              setup.limit_of(row, floor))
 
     def test_names_with_marks_and_initials(self):
@@ -178,7 +178,8 @@ class InstallRules(unittest.TestCase):
                      "write nothing of your own into her pages at installation", "add them only with that yes",
                      "under no page of hers", "file (files)", "one row\n  «Signature» with an empty file",
                      "the other goes only on «Delete?» and her yes", "open each item and the map again",
-                     "Set up no scheduled task at installation", "never a promise the platform\n  cannot keep"):
+                     "Set up no scheduled task at installation", "never a promise the platform\n  cannot keep",
+                     "never describe what you made as reminding her of anything: a «valid until» date reminds nobody"):
             self.assertIn(flat(line), flat(self.TEXT))
         self.assertNotIn("emergency", self.TEXT, "no number is checked with her any more")
         text = flat(self.TEXT)
@@ -265,6 +266,8 @@ class InstallRules(unittest.TestCase):
                      "A name never lets you write to that person, or to anyone, on her behalf",
                      "Outside «continue setup» ask no block on your own",
                      "Three kinds of «no», kept apart",
+                     "and stop there. These five blocks are all it asks: never «Documents», a document, a number, a "
+                     "file or a scan — she adds those herself when a task needs one",
                      "«don't keep this» → use her answer in this chat only and write nothing",
                      "ask whether you may note just that on the map, with no reason",
                      "even when its block is `not-wanted`: that is one question for the task at hand",
@@ -392,7 +395,8 @@ class TheIssue(unittest.TestCase):
 
     def text(self, platform: str) -> str:
         files = setup.build(**{**CHOICES, "platform": platform})
-        return setup.issue(self.table[platform], setup.field_text(files[setup.PART]), LINK)
+        return setup.issue(self.table[platform], setup.field_text(files[setup.PART], platform=platform), LINK,
+                           "BUNDLE-LINK" if setup.reads_file(platform) else "")
 
     def test_it_promises_what_install_md_does(self):
         text = self.text("grok")
@@ -413,11 +417,68 @@ class TheIssue(unittest.TestCase):
         self.assertIn("a new project, its instructions", claude)
         chatgpt = self.text("chatgpt")
         self.assertIn("You need the Plus plan.", chatgpt, "on Free and Go the field cuts her part off")
-        self.assertIn("not known yet", chatgpt)
+        self.assertIn("Your AI writes your records into Notion itself.", chatgpt, "seen 12.11.2026 (owner's check)")
         grok = self.text("grok")
         self.assertNotIn("You need the", grok)
         self.assertIn("not confirmed yet", grok, "Automations on a free account: a probe (§8)")
         self.assertIn("No daily task is set up at installation", grok)
+
+
+    def test_chatgpt_reads_the_rules_from_the_project_file(self):
+        """ChatGPT did not open the rules' raw link, with its GitHub app on or off (12.11.2026): its
+        field points to the project file, and the Issue gives the file and a first message to it."""
+        chatgpt = self.text("chatgpt")
+        self.assertIn("Four steps, all on your phone.", chatgpt)
+        self.assertIn("**2. The rules file.** Download memory-engine-rules.md from BUNDLE-LINK and add it to the "
+                      "files of the same project.", chatgpt)
+        self.assertIn("Open the project file memory-engine-rules.md, its section «=== FILE: install.md ===», and "
+                      "follow it: start the installation.", chatgpt)
+        self.assertNotIn(LINK, chatgpt)
+        self.assertNotIn("raw.githubusercontent.com", chatgpt, "no link it cannot open")
+        self.assertIn("the project file memory-engine-rules.md, its section «=== FILE: name ===»", chatgpt)
+        grok = self.text("grok")
+        self.assertIn("Three steps, all on your phone.", grok)
+        self.assertNotIn("The rules file", grok)
+        self.assertIn(f"Open {LINK} and follow it: start the installation.", grok)
+        self.assertIn("Check that its last line came in too: «Trusted contact: none.»", grok)
+
+
+class Bundle(unittest.TestCase):
+    """The rules file and the field that points to it are built, never edited by hand."""
+
+    def test_both_are_current(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = bundle.main([])
+        self.assertEqual(code, 0, out.getvalue() + " — run python -m engine.setup.bundle --write")
+
+    def test_the_file_holds_every_topic_the_field_names_and_install(self):
+        text = bundle.BUNDLE.read_text(encoding="utf-8")
+        solo = (HERE / "rules/fields/solo.md").read_text(encoding="utf-8")
+        topic_line = next(line for line in solo.splitlines() if line.startswith("Topic rules:"))
+        for name in ("install.md", *[n for n in bundle.ORDER if n in topic_line]):
+            self.assertIn(f"=== FILE: {name} ===", text)
+        for name in ("health.md", "shopping.md", "mail.md", "calendar.md", "notion.md", "documents.md", "core.md"):
+            self.assertIn(name, topic_line)
+            self.assertIn(name, bundle.ORDER, f"{name} is named on the field's line, so the file must hold it")
+
+    def test_solo_file_is_solo_with_the_link_alone_replaced(self):
+        solo = (HERE / "rules/fields/solo.md").read_text(encoding="utf-8").splitlines()
+        other = (HERE / "rules/fields/solo-file.md").read_text(encoding="utf-8").splitlines()
+        self.assertEqual(len(solo), len(other))
+        differ = [i for i, (a, b) in enumerate(zip(solo, other)) if a != b]
+        self.assertEqual(len(differ), 1, "only the «Topic rules» line differs")
+        self.assertTrue(solo[differ[0]].startswith("Topic rules:"))
+        self.assertIn("raw.githubusercontent.com", solo[differ[0]])
+        self.assertNotIn("raw.githubusercontent.com", other[differ[0]])
+
+    def test_the_checks_give_chatgpt_the_file_field(self):
+        self.assertEqual(limits_check.fields({"platform": {"writer": "chat", "name": "chatgpt"}})["chat"][0],
+                         limits_check.SOLO_FILE)
+        self.assertEqual(limits_check.fields({"platform": {"writer": "chat", "name": "grok"}})["chat"][0],
+                         limits_check.SOLO)
+        self.assertEqual(set(limits_check.FILE_RULES) - set(setup.platforms()), set(),
+                         "FILE_RULES names only platforms of engine/platforms.toml")
 
 
 class Main(unittest.TestCase):

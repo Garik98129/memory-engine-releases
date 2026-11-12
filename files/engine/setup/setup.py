@@ -39,6 +39,8 @@ ENGINE = Path(__file__).resolve().parents[1]
 PLATFORMS = ENGINE / "platforms.toml"
 DEFAULTS = ENGINE / "defaults.toml"
 SOLO = ENGINE / "rules" / "fields" / "solo.md"
+SOLO_FILE = ENGINE / "rules" / "fields" / "solo-file.md"     # the chat reads the rules from the project file
+BUNDLE = "memory-engine-rules.md"                             # engine/setup/bundle.py builds it
 CONFIG = "user/config.toml"
 PART = "user/fields/chat.md"
 INSTALLABLE = ("supported", "beta")
@@ -199,14 +201,33 @@ def build(platform: str, language: str, country: str, timezone: str, name: str, 
     return {CONFIG: config, PART: part}
 
 
-def field_text(part: str, solo: str | None = None) -> str:
-    solo = SOLO.read_text(encoding="utf-8") if solo is None else solo
+def reads_file(platform: str) -> bool:
+    """Whether her chat reads the rules from the project file, not by the link (ChatGPT did not
+    open the raw link, with its GitHub app on or off, 12.11.2026)."""
+    return platform in limits_check.FILE_RULES
+
+
+def field_text(part: str, solo: str | None = None, platform: str = "") -> str:
+    if solo is None:
+        solo = (SOLO_FILE if reads_file(platform) else SOLO).read_text(encoding="utf-8")
     return limits_check.assemble(solo, part)
 
 
 def install_link(repo: Path) -> str:
     """install.md in the public repository of releases, at the release her repository holds —
     a file of that very release, so it exists there; never the field's own older link."""
+    manifests, tag = _release(repo)
+    return f"https://raw.githubusercontent.com/{manifests}/{tag}/{PUBLISHED_FILES}/{RULES}install.md"
+
+
+def bundle_link(repo: Path) -> str:
+    """The rules file on GitHub's own page, at the release her repository holds: she downloads it
+    there and adds it to her project's files."""
+    manifests, tag = _release(repo)
+    return f"https://github.com/{manifests}/blob/{tag}/{PUBLISHED_FILES}/{RULES}{BUNDLE}"
+
+
+def _release(repo: Path) -> tuple[str, str]:
     raw = (repo / LOCK_FILE).read_bytes() if (repo / LOCK_FILE).is_file() else None
     try:
         tag = tomllib.loads(raw.decode("utf-8")).get("release") if raw else None
@@ -215,12 +236,13 @@ def install_link(repo: Path) -> str:
     if not isinstance(tag, str) or not PUBLISHED_TAG_RE.fullmatch(tag):
         raise SetupError(f"{LOCK_FILE} names no release: setup runs in a repository made from the template")
     release_key(tag)
-    manifests = _toml(DEFAULTS)["release"]["manifests"]
-    return f"https://raw.githubusercontent.com/{manifests}/{tag}/{PUBLISHED_FILES}/{RULES}install.md"
+    return _toml(DEFAULTS)["release"]["manifests"], tag
 
 
-def issue(row: dict, field: str, link: str) -> str:
-    """The Issue she reads: steps 3 to 5 of DESIGN_PHASE3 §5, in plain English."""
+def issue(row: dict, field: str, link: str, rules_file: str = "") -> str:
+    """The Issue she reads: steps 3 to 5 of DESIGN_PHASE3 §5, in plain English. With `rules_file`
+    — the link to the rules file — the chat reads the rules from her project's files: one step
+    more, and the first message points to the file instead of the link."""
     notion = {"yes": "Your AI writes your records into Notion itself.",
               "unknown": "Whether this AI can create pages in Notion is not known yet: if it cannot, "
                          "your records cannot be kept there — that is why it is in beta.",
@@ -232,17 +254,25 @@ def issue(row: dict, field: str, link: str) -> str:
     plan = "" if row["plan"] == "any" else (
         f"**You need the {row['plan']} plan.** On a smaller plan the instructions field is too short or the "
         "AI cannot do what this needs: the end of the text — your own part — would be cut off.\n\n")
+    steps = ["**{n}. The instructions.** " + f"Open {row['field']}. Paste the whole text below, exactly as "
+             "it is, and save. Check that its last line came in too: «Trusted contact: none.»\n\n"
+             f"```\n{field}\n```\n\n"]
+    if rules_file:
+        steps.append("**{n}. The rules file.** " + f"Download {BUNDLE} from {rules_file} and add it to the "
+                     "files of the same project. This AI cannot open the rules by a link, so it reads them "
+                     "there.\n\n")
+    steps.append("**{n}. Connections.** In the same app, connect Notion — and Google, if you want your mail "
+                 "and calendar.\n\n")
+    first = (f"Open the project file {BUNDLE}, its section «=== FILE: install.md ===», and follow it: "
+             "start the installation." if rules_file else f"Open {link} and follow it: start the installation.")
+    steps.append("**{n}. The first message.** Send your AI, in a new conversation" +
+                 (" inside the project" if rules_file else "") + f":\n\n```\n{first}\n```\n\n")
+    count = {3: "Three", 4: "Four"}[len(steps)]
     return (
         f"# Your assistant's instructions — {row['title']}\n\n"
         f"{plan}"
-        "Three steps, all on your phone.\n\n"
-        f"**1. The instructions.** Open {row['field']}. Paste the whole text below, exactly as it is, "
-        "and save.\n\n"
-        f"```\n{field}\n```\n\n"
-        "**2. Connections.** In the same app, connect Notion — and Google, if you want your mail and "
-        "calendar.\n\n"
-        "**3. The first message.** Send your AI, in a new conversation:\n\n"
-        f"```\nOpen {link} and follow it: start the installation.\n```\n\n"
+        f"{count} steps, all on your phone.\n\n"
+        + "".join(s.replace("{n}", str(i), 1) for i, s in enumerate(steps, 1)) +
         "It answers in your language, first tells you what it can do — and that it shows you and asks "
         "before it sends, buys or deletes anything (short e-mails you dictate can go without the question, if "
         "you choose) — then looks at what you already have in Notion and asks "
@@ -274,11 +304,12 @@ def main(argv: list[str] | None = None) -> int:
         table, floor = platforms(), _floor()
         files = build(args.platform, args.language, args.country, args.timezone, args.name, args.gender,
                       work_languages_of(args.work_languages), table, floor)
-        field = field_text(files[PART])
+        field = field_text(files[PART], platform=args.platform)
         limit = limit_of(table[args.platform], floor)
         if (size := limits_check.length(field)) > limit:
             raise SetupError(f"the field would be {size} characters, the limit is {limit}")
-        text = issue(table[args.platform], field, install_link(args.repo))
+        text = issue(table[args.platform], field, install_link(args.repo),
+                     bundle_link(args.repo) if reads_file(args.platform) else "")
     except SetupError as exc:
         print(f"ERROR setup refused: {exc}")
         return 2
