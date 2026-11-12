@@ -11,7 +11,7 @@ from unittest import mock
 from engine.checks import config_check, limits_check
 from engine.checks.paths_check import PERSON
 from engine.checks.tests.helpers import BASE_FILES, VALID_CONFIG, Repo
-from engine.setup import bundle, release, setup
+from engine.setup import cdn, release, setup
 
 HERE = Path(__file__).resolve().parents[2]
 CHOICES = dict(platform="grok", language="ru", country="IL", timezone="Asia/Jerusalem", name="Anna",
@@ -395,8 +395,7 @@ class TheIssue(unittest.TestCase):
 
     def text(self, platform: str) -> str:
         files = setup.build(**{**CHOICES, "platform": platform})
-        return setup.issue(self.table[platform], setup.field_text(files[setup.PART], platform=platform), LINK,
-                           "BUNDLE-LINK" if setup.reads_file(platform) else "")
+        return setup.issue(self.table[platform], setup.field_text(files[setup.PART], platform=platform), LINK)
 
     def test_it_promises_what_install_md_does(self):
         text = self.text("grok")
@@ -416,7 +415,7 @@ class TheIssue(unittest.TestCase):
         self.assertIn("You need the Pro plan.", claude)
         self.assertIn("a new project, its instructions", claude)
         chatgpt = self.text("chatgpt")
-        self.assertIn("You need the Plus plan.", chatgpt, "on Free a project's instructions hold 1 500 (owner, 12.11.2026)")
+        self.assertIn("You need the Plus plan.", chatgpt, "on Free its field holds 1 500 (owner, 12.11.2026)")
         self.assertIn("In beta — not known yet: how it keeps to its rules day to day", chatgpt)
         self.assertIn("Your AI writes your records into Notion itself.", chatgpt, "seen 12.11.2026 (owner's check)")
         grok = self.text("grok")
@@ -425,69 +424,59 @@ class TheIssue(unittest.TestCase):
         self.assertIn("No daily task is set up at installation", grok)
 
 
-    def test_chatgpt_reads_the_rules_from_the_project_file(self):
-        """ChatGPT did not open the rules' raw link, with its GitHub app on or off (12.11.2026): its
-        field points to the project file, and the Issue gives the file and a first message to it."""
+    def test_chatgpt_reads_the_rules_through_jsdelivr(self):
+        """ChatGPT did not open the rules' raw link, with its GitHub app on or off, and opened the same
+        file through jsDelivr (owner's tests, 12.11.2026): its field links the rules there; three steps
+        as on every platform, no file to add."""
         chatgpt = self.text("chatgpt")
-        self.assertIn("Four steps, all on your phone.", chatgpt)
-        self.assertIn("**2. The rules file.** Download memory-engine-rules.md from BUNDLE-LINK and add it to the "
-                      "files of the same project.", chatgpt)
-        self.assertIn("Open the project file memory-engine-rules.md, its section «=== FILE: install.md ===», and "
-                      "follow it: start the installation.", chatgpt)
-        self.assertNotIn(LINK, chatgpt)
-        self.assertNotIn("raw.githubusercontent.com", chatgpt, "no link it cannot open")
-        _repo, tag = bundle.link((HERE / "rules/fields/solo.md").read_text(encoding="utf-8"))
-        self.assertIn(f"the project file memory-engine-rules.md ({tag}), its section «=== FILE: name ===»", chatgpt)
+        self.assertIn("Three steps, all on your phone.", chatgpt)
+        self.assertIn("Open ChatGPT app: Settings, Customize ChatGPT.", chatgpt)
+        self.assertNotIn("raw.githubusercontent.com/Garik98129/memory-engine-releases/v", chatgpt.split("```")[1],
+                         "the field gives it no link it did not open")
+        self.assertIn("https://cdn.jsdelivr.net/gh/Garik98129/memory-engine-releases@", chatgpt)
+        self.assertNotIn("project file", chatgpt)
         grok = self.text("grok")
         self.assertIn("Three steps, all on your phone.", grok)
-        self.assertNotIn("The rules file", grok)
+        self.assertNotIn("cdn.jsdelivr.net", grok, "Grok opens the raw link: no third party in between")
         self.assertIn(f"Open {LINK} and follow it: start the installation.", grok)
         self.assertIn("Check that its last line came in too: «Trusted contact: none.»", grok)
 
+    def test_the_first_message_links_install_md_where_her_chat_reads_the_rules(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "user").mkdir()
+            (repo / "user/engine.lock").write_bytes(LOCK)
+            self.assertEqual(setup.install_link(repo, "grok"), LINK)
+            self.assertEqual(setup.install_link(repo, "chatgpt"),
+                             "https://cdn.jsdelivr.net/gh/Garik98129/memory-engine-releases@v0.2.0/files/engine/rules/"
+                             "install.md")
 
-class Bundle(unittest.TestCase):
-    """The rules file and the field that points to it are built, never edited by hand."""
 
-    def test_both_are_current(self):
+class Cdn(unittest.TestCase):
+    """ChatGPT's field is solo.md with its link moved to jsDelivr: built, never edited by hand."""
+
+    def test_it_is_current(self):
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
-            code = bundle.main([])
-        self.assertEqual(code, 0, out.getvalue() + " — run python -m engine.setup.bundle --write")
+            code = cdn.main([])
+        self.assertEqual(code, 0, out.getvalue() + " — run python -m engine.setup.cdn --write")
 
-    def test_the_file_holds_every_topic_the_field_names_and_install(self):
-        text = bundle.BUNDLE.read_text(encoding="utf-8")
+    def test_it_is_solo_with_the_host_of_the_link_alone_changed(self):
         solo = (HERE / "rules/fields/solo.md").read_text(encoding="utf-8")
-        topic_line = next(line for line in solo.splitlines() if line.startswith("Topic rules:"))
-        named = set(release._RULE_FILE_RE.findall(topic_line))
-        self.assertGreaterEqual(len(named), 7, "the line names the topic files")
-        for name in sorted(named | {"install.md"}):
-            self.assertIn(name, bundle.ORDER, f"{name} is named on the field's line, so the file must hold it")
-            self.assertIn(f"=== FILE: {name} ===", text)
-
-    def test_the_field_and_the_file_carry_the_release_of_the_link(self):
-        solo = (HERE / "rules/fields/solo.md").read_text(encoding="utf-8")
-        repo, tag = bundle.link(solo)
+        other = (HERE / "rules/fields/solo-cdn.md").read_text(encoding="utf-8")
+        repo, tag = cdn.LINK_RE.findall(solo)[0]
         self.assertRegex(tag, release.PUBLISHED_TAG_RE.pattern)
-        other = (HERE / "rules/fields/solo-file.md").read_text(encoding="utf-8")
-        self.assertIn(f"the project file memory-engine-rules.md ({tag}), its section", other)
-        head = bundle.BUNDLE.read_text(encoding="utf-8").split("\n=== FILE: install.md ===", 1)[0]
-        self.assertIn(f"Version: {tag}.", head)
-        self.assertIn(f"If it is not {tag}, tell her", head, "the chat holds the two versions together")
-        self.assertIn(f"https://github.com/{repo}/blob/<the version your instructions name>/files/engine/rules/"
-                      "memory-engine-rules.md", head)
-        # a release that moves solo.md's link changes the field she pastes, not the file alone
-        moved = solo.replace(f"/{tag}/", "/v9.9.9/")
-        self.assertIn("(v9.9.9)", bundle.solo_file(moved))
+        raw = f"https://raw.githubusercontent.com/{repo}/{tag}/files/engine/rules/"
+        self.assertEqual(other, solo.replace(raw, f"https://cdn.jsdelivr.net/gh/{repo}@{tag}/files/engine/rules/"),
+                         "the same repository, release and files — only the host differs")
+        self.assertNotEqual(other, solo)
+        # a release that moves solo.md's link moves this one with it
+        self.assertIn("@v9.9.9/", cdn.solo_cdn(solo.replace(f"/{tag}/", "/v9.9.9/")))
 
-    def test_solo_file_is_solo_with_the_link_alone_replaced(self):
-        solo = (HERE / "rules/fields/solo.md").read_text(encoding="utf-8").splitlines()
-        other = (HERE / "rules/fields/solo-file.md").read_text(encoding="utf-8").splitlines()
-        self.assertEqual(len(solo), len(other))
-        differ = [i for i, (a, b) in enumerate(zip(solo, other)) if a != b]
-        self.assertEqual(len(differ), 1, "only the «Topic rules» line differs")
-        self.assertTrue(solo[differ[0]].startswith("Topic rules:"))
-        self.assertIn("raw.githubusercontent.com", solo[differ[0]])
-        self.assertNotIn("raw.githubusercontent.com", other[differ[0]])
+    def test_the_link_serves_the_releases_files(self):
+        self.assertEqual(cdn.link("o/r", "v1.2.3", "health.md"),
+                         "https://cdn.jsdelivr.net/gh/o/r@v1.2.3/files/engine/rules/health.md")
+        self.assertTrue(cdn.link("o/r", "v1.2.3").endswith(f"/{release.PUBLISHED_FILES}/{release.RULES}"))
 
     def test_a_beta_platform_says_what_is_not_known(self):
         for name, row in setup.platforms().items():
@@ -495,13 +484,13 @@ class Bundle(unittest.TestCase):
                 self.assertTrue(row.get("notion") == "unknown" or row.get("unknown"),
                                 f"{name}: «beta» installs with what is unknown said (platforms.toml)")
 
-    def test_the_checks_give_chatgpt_the_file_field(self):
+    def test_the_checks_give_chatgpt_the_cdn_field(self):
         self.assertEqual(limits_check.fields({"platform": {"writer": "chat", "name": "chatgpt"}})["chat"][0],
-                         limits_check.SOLO_FILE)
+                         limits_check.SOLO_CDN)
         self.assertEqual(limits_check.fields({"platform": {"writer": "chat", "name": "grok"}})["chat"][0],
                          limits_check.SOLO)
-        self.assertEqual(set(limits_check.FILE_RULES) - set(setup.platforms()), set(),
-                         "FILE_RULES names only platforms of engine/platforms.toml")
+        self.assertEqual(set(limits_check.CDN_RULES) - set(setup.platforms()), set(),
+                         "CDN_RULES names only platforms of engine/platforms.toml")
 
 
 class Main(unittest.TestCase):

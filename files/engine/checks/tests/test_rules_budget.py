@@ -10,7 +10,7 @@ FIELDS = Path(__file__).resolve().parents[2] / "rules" / "fields"
 JOIN = 2
 PROMISED = {"chat.md": (4000, 1030), "bot.md": (10000, 2900),     # the platform's limit, the room promised
             "solo.md": (4000, 1030),      # the chat that writes: the same field, the same room (DESIGN_PHASE3 §6a)
-            "solo-file.md": (4000, 1030)}  # the same, the rules from the project file (ChatGPT)
+            "solo-cdn.md": (4000, 1030)}   # the same, the rules through jsDelivr (ChatGPT)
 # chat 1 030: the chat's own part needs it with its line 1 «(v5)» and the chat's gender line
 
 
@@ -27,7 +27,7 @@ class ReleasedHardParts(unittest.TestCase):
         beside solo.md too — the switch never asks her to shorten it."""
         room = lambda name: 4000 - limits_check.length((FIELDS / name).read_text(encoding="utf-8").strip("\n")) - JOIN
         self.assertGreaterEqual(room("solo.md"), room("chat.md"))
-        self.assertGreaterEqual(room("solo-file.md"), room("chat.md"))
+        self.assertGreaterEqual(room("solo-cdn.md"), room("chat.md"))
 
 
 if __name__ == "__main__":

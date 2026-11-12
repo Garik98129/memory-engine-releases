@@ -38,7 +38,7 @@ from typing import NamedTuple
 
 from . import config_check, gitio
 from .drift import INSTALLED, _record, _recorded, _shown, digest, routine_text
-from .limits_check import ROUTINES, SOLO, SOLO_FILE, assemble, fields
+from .limits_check import ROUTINES, SOLO, SOLO_CDN, assemble, fields
 
 RULES = "engine/rules/routines.md"
 GRACE = timedelta(hours=12)
@@ -118,8 +118,8 @@ def check(repo: Path, main: str, now: datetime) -> list[str] | None:
         except UnicodeDecodeError:
             continue        # N1 reports it (C5)
         if _recorded(record, "fields", name) != digest(text):
-            if engine_path in (SOLO, SOLO_FILE):
-                # The chat writes itself: its field is joined from solo.md (or solo-file.md), and the trusted contact
+            if engine_path in (SOLO, SOLO_CDN):
+                # The chat writes itself: its field is joined from solo.md (or solo-cdn.md), and the trusted contact
                 # gives it to her and records it — not the bot, whose ROUT-9 joins chat.md.
                 lines.append(f"field {name}: the installed text is not its master ({engine_path} and her part) — "
                              f"the trusted contact installs it and records it")
