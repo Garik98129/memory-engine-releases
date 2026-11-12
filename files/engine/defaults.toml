@@ -3,9 +3,9 @@
 # A person's user/config.toml may tighten these values, never loosen them (C3).
 
 [floors]
-chat_field_limit_max = 4000          # the hard limit of the grok.com instructions field (flagship tools/README)
-bot_field_limit_max = 10000          # lower bound measured on the owner's bot: 10 039 accepted whole (28.10.2026)
-routine_limit_max = 10000            # lower bound measured on the owner's bot: 10 000 saved whole (09.11.2026)
+chat_field_limit_max = 4000          # the hard limit of the grok.com instructions field
+bot_field_limit_max = 10000          # lower bound measured on a real bot: 10 039 accepted whole
+routine_limit_max = 10000            # lower bound measured on a real bot: 10 000 saved whole
 payment_patterns_min = ["card"]      # payment data never goes into git (C4, N6)
 backup_shrink_alarm_max = 0.2        # the person's alarm threshold may not exceed a 20 % drop
 

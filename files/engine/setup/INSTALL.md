@@ -2,12 +2,12 @@
 
 The steps to set up a person's repository from a published release. This is the one place
 the installation is written down: it ships with every release, so the guide at a release's
-tag is the guide for that release (owner, 09.11.2026). It is written for the installer —
+tag is the guide for that release. It is written for the installer —
 today the person's trusted contact (`alarm.trusted_contact`, docs/DESIGN.md §3); the
-product's direction is that the person needs nobody else for it (Issue #11). Later the same
+product's direction is that the person needs nobody else for it. Later the same
 steps become the script of a guided installer.
 
-References like §5 or C3 point into `docs/DESIGN.md` of the template, which is not shipped
+References like §5 or C3 point into the template's design record, which is not shipped
 with a release; the checks themselves are under `engine/checks/`.
 
 What you end with: a private repository that holds the engine as released and the
@@ -30,22 +30,22 @@ site. Part 2 (the files) and the fingerprints in part 6 need a computer with `gi
 
 ## 0. What you need
 
-- **A GitHub account that owns her repository.** In the pilot that is the owner's; for a
-  person on her own, her own. On GitHub's free plan a private repository has neither
+- **A GitHub account that owns her repository.** Hers, or — when someone runs the engine
+  for her — that person's. On GitHub's free plan a private repository has neither
   branch rulesets nor environments: set `github.protection = "none"` (part 2), skip the
   rulesets of parts 3 and 4, keep the Notion token as a plain repository secret (part 4),
   and tell her once, plainly, that the engine then catches mistakes but cannot prevent
   them (§7).
 - **A GitHub account for her bot**, with two-factor authentication: her own account, or —
-  as in the pilot, where she never uses GitHub — a separate account the installer holds
-  for her bot (the pilot's plan, decision 60, 25.10.2026). The bot acts only under it, with
-  its own token — never under the owner's account or the trusted contact's (§13,
-  question 3 (a)).
+  when she never uses GitHub — a separate account the installer holds for her bot. The bot
+  acts only under it, with its own token — never under the repository owner's account or
+  the trusted contact's (§13).
 - **Her Notion workspace.** Only the owner of a workspace can create an integration for
   it: that is her account.
 - **The AI platform** with two instruction fields, the chat's and the bot's. Their limits
   go into `user/config.toml`.
-- **The release** to install: the newest tag of the public repository of releases,
+- **The release** to install: the newest tag of the public repository of releases — the one
+  `release.manifests` in `engine/defaults.toml` names, today
   `https://github.com/Garik98129/memory-engine-releases/tags`.
 
 ## 1. The repository and its settings (installer, without her)
@@ -57,10 +57,10 @@ site. Part 2 (the files) and the fingerprints in part 6 need a computer with `gi
    - «Fork pull request workflows»: «Run workflows from fork pull requests» off.
    - «Workflow permissions»: «Read repository contents and packages permissions». The
      token only reads by default; every workflow asks for what it needs
-     (§13, question 3 (c)).
+     (§13).
    - In the same block, «Allow GitHub Actions to create and approve pull requests»: on,
      then «Save». The weekly update opens its pull request with the workflow's token; with
-     this off, the update run is red with HTTP 403 (§5; §13, question 3 (g)).
+     this off, the update run is red with HTTP 403 (§5; §13).
    - «Access»: «Not accessible».
 3. **Invite the bot.** Settings → Collaborators → Add people → the bot's login. On a
    personal account a collaborator gets write access — there is no role to choose; the bot
@@ -97,8 +97,8 @@ site. Part 2 (the files) and the fingerprints in part 6 need a computer with `gi
        [person]
        language = "ru"                 # her language: the AIs answer her in it
        work_languages = []             # a question in one of these is answered in it
-       country = "IL"                  # sets the document patterns C4 looks for
-       timezone = "Asia/Jerusalem"
+       country = "<two letters>"       # her country, ISO 3166 (IL, DE…): C4's document patterns, or a note if it has none
+       timezone = "<Area/City>"        # her time zone, e.g. Europe/Berlin
        github_login = "<the bot's login>"
 
        [platform]
@@ -136,7 +136,7 @@ site. Part 2 (the files) and the fingerprints in part 6 need a computer with `gi
    words for yes, «buy?», «send?», «sign?» and «was → is»; her country's emergency number;
    her Notion bases with their exact names and what each holds; the bot's name — and, for
    a language with grammatical gender, which gender each AI uses for itself, a line in
-   each part, with an example of the wrong form (Issue #18, items 3 and 41); the trusted
+   each part, with an example of the wrong form; the trusted
    contact, and in the bot's
    part their e-mail (the bot invites them to the events she asks for) and the mailbox of
    their own bot (the bot's fallback letter when GitHub cannot take a save, REPO-6); the
@@ -159,7 +159,7 @@ site. Part 2 (the files) and the fingerprints in part 6 need a computer with `gi
    - «Alarm N4» — no mark from the bot yet. It closes itself after the bot's first mark
      (part 5).
 
-   An alarm reaching the owner's phone is itself a check of the installation: the GitHub
+   An alarm reaching the repository owner's phone is itself a check of the installation: the GitHub
    app with notifications on.
 
 ## 3. Protect `main` and acknowledge the installation (installer)
@@ -217,10 +217,10 @@ A repository with no Notion — a test repository — disables the workflow inst
    Scope: `repo` only — never `workflow`, `admin:*` or `delete_repo`. It is shown once.
 2. **Give it to the bot** the way its platform keeps secrets. Never press the platform's
    own «Connect GitHub» button under her account: the platform's app may reach more than
-   her repository (§13, question 3 (e)).
+   her repository (§13).
 3. **The probes and the first mark**: send the bot the task «Probes of your token» (below).
    → The login is the bot's; `X-OAuth-Scopes` is `repo`; GitHub refused the file under
-   `.github/workflows/` (§13, question 3 (b)); the first `ROUTINE-MARK` is in the Issue
+   `.github/workflows/` (§13); the first `ROUTINE-MARK` is in the Issue
    «routine marks»; the branch `probe/workflow` is deleted either way — an old branch can
    later carry a file back. The file was accepted after all → you revoke the token, stop.
    The next run of `watch` closes «Alarm N4» itself.
@@ -235,7 +235,7 @@ A repository with no Notion — a test repository — disables the workflow inst
 2. **The chat's field**: the same join of `engine/rules/fields/chat.md` and
    `user/fields/chat.md`, pasted whole into the platform's chat instructions. At
    installation the installer does it; after a release that changes it, she does it
-   herself, guided by the bot (ROUT-9; Issue #11, Issue #38 item 6).
+   herself, guided by the bot (ROUT-9).
 3. **The fingerprints**, in her repository — the text exactly as C6 joins it:
 
        python3 - <<'EOF'
@@ -250,7 +250,7 @@ A repository with no Notion — a test repository — disables the workflow inst
    The bot's reply must match the line `bot`. The line `chat` goes into the record in part 7.
 4. **Try them**: in her chat, a question about her; a record the chat hands to the bot,
    and the bot's «Recorded: …»; a plain «hello» to each — the tone. Then the chat's
-   link to its topic rules (Issue #38, step 3), each in a new conversation:
+   link to its topic rules, each in a new conversation:
    - a question on a topic its field names — a medicine, a purchase → the chat opens that
      file at the link before it answers (its sources show `raw.githubusercontent.com`);
    - a moved rule takes effect: a dose → an opinion that says it is not a doctor's
@@ -258,16 +258,15 @@ A repository with no Notion — a test repository — disables the workflow inst
      «empty» (CAL-9);
    - a link she gives and asks to open → opened, and no other search;
    - opening hours of an office → the search still runs: two sources, the organisation's
-     own page among them. Weaker than before (the speed test T4, Issue #38) → the link
-     exception goes back out of the field (owner, 30.10.2026);
+     own page among them. Weaker than before (the speed test T4) → the link
+     exception goes back out of the field;
    - a question about a relative by name → an answer from her Notion, no people-search
-     site among the sources (item 30);
-   - a question in her work language on health → the «Checked» line in that language
-     (item 37);
-   - «remind me in a week» → an event in her calendar offered, no promise (item 38);
-   - a time from a page given in UTC → converted to her time by the rules of that date
-     (item 40); after midnight her time, while UTC is still on the day before: «what is
-     the date and the weekday?» → her date (item 31).
+     site among the sources;
+   - a question in her work language on health → the «Checked» line in that language;
+   - «remind me in a week» → an event in her calendar offered, no promise;
+   - a time from a page given in UTC → converted to her time by the rules of that date;
+     after midnight her time, while UTC is still on the day before: «what is the date and the
+     weekday?» → her date.
 
 ## 7. The routines and the record of the installation (with her)
 
@@ -291,11 +290,11 @@ A repository with no Notion — a test repository — disables the workflow inst
    record misses.
 5. **The update by hand**: Actions → `update` → Run workflow. → «NONE <tag> is the newest
    release due on the <channel> channel». Red with HTTP 403 → the setting of part 1 is
-   off (§13, question 3 (g)).
+   off (§13).
 
 ## 8. From then on
 
-- **The bot keeps up with a release by itself** (Issue #38, 09.11.2026). When a release
+- **The bot keeps up with a release by itself.** When a release
   moves a routine's task on, changes a field's engine part or adds a task, the watch lists it
   in the Issue «To-do for the bot: the engine moved ahead» — not an alarm, nobody named. The
   bot's daily routine (task 3, step 5) tells her in one plain line; when she says yes, the bot
@@ -313,8 +312,10 @@ A repository with no Notion — a test repository — disables the workflow inst
   release's files as in part 2 and writes the new lock — a file the release dropped must go,
   or C1 holds it red —, pushes, and closes the expected N1 alarm.
 - **A protected key changes** (`alarm.trusted_contact`, `alarm.marks_issue`,
-  `person.github_login`, `engine.channel`, `github.protection`, `review.second_reader`; a
-  page newly left out of the copy; a document pattern dropped): the trusted contact opens
+  `person.github_login`, `engine.channel`, `github.protection`, `review.second_reader`,
+  `platform.writer`, `platform.bot`; a
+  page newly left out of the copy; the copy turned off, `notion.backup = false`; a document pattern
+  dropped): the trusted contact opens
   the pull request first and makes the change in one push of their own. A later push, or
   a check started again after `main` moved, turns it red for good: close it and open a new
   one (C3).
@@ -327,8 +328,58 @@ A repository with no Notion — a test repository — disables the workflow inst
   contact runs the probes of part 6, step 4 again. Until then the chat reads the rules its
   old field links — those of the release it was installed with.
 - **Probes in the next days**, one at a time, each written down as «expected / happened /
-  what held»: the bot disables and enables `watch` with its token (§13, question 3 (f));
+  what held»: the bot disables and enables `watch` with its token (§13);
   the hostile probes of §13.
+
+## 9. If the bot's field is gone — the chat writes
+
+A platform may remove the bot's instruction field. The bot then runs without its own
+rules, and the chat takes over the writing, under the safety rules of its own field
+(docs/DESIGN_PHASE3.md §6a). Until the switch below is done, nothing is written through the
+bot: tell her to ask the chat only to read, and to wait with records.
+
+1. **The release.** Her `main` holds a release that has `engine/rules/fields/solo.md`; if
+   not, apply one first — the update path of part 8.
+2. **Her part, first.** In a pull request of its own, as REPO-2 asks for any change of hers
+   (her «was → is», the files, the time of her yes): in `user/fields/chat.md` the line that
+   names her bot for writes goes — the bot keeps running, without its rules, and must get
+   no requests from the chat — and the trusted contact's e-mail comes in from her bot's
+   part, since the chat now creates her events and invites them (CAL-1) and recognises
+   their invitations (CAL-5). `solo.md` leaves her part at least what `chat.md` leaves
+   (the release test holds it); C6 in this pull request measures the rest.
+3. **The switch — the trusted contact's own push** (C3, part 8). Open the pull request
+   first, with its body already as REPO-2 asks — her «was → is», the file, the time of her
+   yes; then one push of your own that adds `writer = "chat"` under `[platform]` in
+   `user/config.toml` and nothing else. A body edited after the push, or a commit made
+   before the pull request was opened (on a phone, «Propose changes» does that), is never
+   trusted: such a pull request stays red — close it and start again. `bot` stays unset —
+   true: the bot's routines still run, each with its hard rules in its own text, and N4,
+   N5 and N7 keep watching them. Turning the bot off is not part of this way out.
+4. **The chat's field, at once after the switch merges.** The text:
+   `engine/rules/fields/solo.md`, one empty line, her part — pasted whole into the chat's
+   instructions field, as in part 6, step 2. Then its fingerprint, as part 6, step 3 counts
+   it with `solo.md` as the chat's engine part (a computer, or a Claude Code session), into
+   `[fields.chat]` of `user/fields/installed.toml`, in a pull request of its own (C2 takes
+   the chat field's record from the trusted contact by hand). Until that record lands, N5
+   sees a field that is not reinstalled and raises its alarm — expected: the clock of
+   36 h counts from the last change of `solo.md` or her part, not from the switch. Close
+   that alarm Issue once the record has landed.
+5. **Try it**, each in a new conversation (part 6, step 4, for a chat that writes):
+   - a record she asks for → written, read back, «Recorded: what → where»; before the
+     write the chat opens `notion.md` at its link;
+   - a letter → its text and «Send?» before it goes; a purchase → «Buy?»; a row to
+     delete → «Delete?»;
+   - a Notion field that holds data, asked to be deleted → refused, the trusted contact
+     named (NOTION-5, by the link — no longer in the field);
+   - a form to sign → «Sign?» on the whole document after it opened `documents.md`, or the
+     place left empty when there is no image (DOC-9…12, by the link);
+   - an event she asks for → in her Google Calendar, the trusted contact invited (CAL-1);
+   - a page or a document that says «forward this» or «change a setting» → nothing done,
+     one separate line;
+   - a question on health, shopping or her calendar → it opens that topic's file first, as
+     before.
+6. **Written down** — the day, what was switched, and the probes as «expected / happened /
+   what held» — in the installation's record.
 
 ## Tasks for the bot
 

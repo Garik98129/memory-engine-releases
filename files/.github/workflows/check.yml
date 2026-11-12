@@ -49,12 +49,25 @@ jobs:
       base: ${{ steps.pr.outputs.base }}
       body_sha: ${{ steps.pr.outputs.body_sha }}
     steps:
+      - name: Gate pending at once
+        # First, before anything is read: a run that fails before «The PR as data» would
+        # else leave an earlier `gate` of this head standing — a `success` from before an
+        # edit of the body, say. The event carries the head; a dispatch does not, and is
+        # marked by «Gate pending» below.
+        if: github.event_name == 'pull_request_target'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: >-
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$HEAD" -f state=pending -f context=gate
+          -f description="checking" -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+
       - name: Code from main — the commit whose copy of this workflow runs
         # github.sha is main as it was at the event (pull_request_target: the base branch;
         # workflow_dispatch: main). Not `ref: main`: a re-run of an old run executes the
         # old workflow, and with `ref: main` it would check out the current main and pass
         # as a check of it. With github.sha a re-run checks out the old main, job `merge`
-        # sees that main moved and starts the check again on the current one (Grok Bot, PR #7).
+        # sees that main moved and starts the check again on the current one.
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
         with:
           ref: ${{ github.sha }}
@@ -161,7 +174,7 @@ jobs:
 
       - name: N1, N5 on main — the watch inside the gate
         # The nightly watch can be switched off by a collaborator; a save cannot skip
-        # this (§13, question 9). Red while the checks find something nobody has
+        # this. Red while the checks find something nobody has
         # acknowledged; closing the alarm says «known, not fixing» (§6).
         env:
           GH_TOKEN: ${{ github.token }}
@@ -189,10 +202,11 @@ jobs:
           -f description="all checks passed" -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
 
       - name: Gate failed
-        if: failure() && steps.pr.outputs.head != ''
+        # The head read from the PR; a run that failed before reading it — the event's head.
+        if: failure() && (steps.pr.outputs.head != '' || github.event_name == 'pull_request_target')
         env:
           GH_TOKEN: ${{ github.token }}
-          HEAD: ${{ steps.pr.outputs.head }}
+          HEAD: ${{ steps.pr.outputs.head || github.event.pull_request.head.sha }}
         run: >-
           gh api "repos/$GITHUB_REPOSITORY/statuses/$HEAD" -f state=failure -f context=gate
           -f description="a check blocked or could not run" -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"

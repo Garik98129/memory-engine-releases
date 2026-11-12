@@ -13,9 +13,9 @@ under «Change» is what the person was shown, in her language:
     ## Approved
     2026-10-23T11:08+03:00
 
-Every changed file is named, and nothing else (flagship B23). A master of 40 or
+Every changed file is named, and nothing else. A master of 40 or
 more lines with more than 40 % of its lines changed carries «(full rewrite)»; the
-bot tells the person so in her words (flagship B14). The approval time has a UTC offset, is
+bot tells the person so in her words. The approval time has a UTC offset, is
 not in the future and not more than a day older than the PR's head commit. The
 check reads presence and form, not truth: it is the bot's self-report, never a
 review.

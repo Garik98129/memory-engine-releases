@@ -27,7 +27,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from . import gitio
-from .limits_check import FIELDS, ROUTINES, assemble
+from .limits_check import ROUTINES, assemble, config_at, fields
 from .paths_check import ROUTINE_RE
 from .report import ALARM, Finding
 
@@ -84,7 +84,7 @@ def _shown(name: str) -> str:
 
 
 def record_check(repo: Path, base: str, head: str) -> list[Finding]:
-    """C2's part for a PR that writes the read-back record (Issue #18, item 33): every routine
+    """C2's part for a PR that writes the read-back record: every routine
     entry of the record it lands — added, changed or left as it was — must be the sha256 of
     its master as the PR would land it (`head` is the merge of the PR with main the gate
     checks), without the master's leading and trailing newlines, and a routine it records must
@@ -136,7 +136,7 @@ def check(repo: Path, main: str, now: datetime) -> list[Finding]:
     if found:
         return found
 
-    for name, (engine_path, person_path, _key, _floor) in FIELDS.items():
+    for name, (engine_path, person_path, _key, _floor) in fields(config_at(repo, main)).items():
         engine_part = gitio.file_at(repo, main, engine_path)
         person_part = gitio.file_at(repo, main, person_path)
         if engine_part is None or person_part is None:

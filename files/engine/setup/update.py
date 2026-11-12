@@ -1,4 +1,4 @@
-"""The engine update of a person's repository (docs/DESIGN.md §5; step 3 of the update plan).
+"""The engine update of a person's repository (docs/DESIGN.md §5).
 
     python -m engine.setup.update --repo . --main MAIN_SHA --run-url URL
 

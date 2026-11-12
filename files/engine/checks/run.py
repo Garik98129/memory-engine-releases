@@ -75,12 +75,12 @@ def main(argv: list[str] | None = None, now: datetime | None = None) -> int:
             return 0
         manifest = lock_check.load_manifest(args.manifest)
         body = args.body.read_text(encoding="utf-8")
-        findings = []
+        findings, notes = [], []
         findings += lock_check.check(repo, base, result, kind, manifest, now)
         findings += paths_check.check(repo, base, result, kind)
         findings += drift.record_check(repo, base, result)        # C2: a record's routine entries, against their masters
         findings += config_check.check(repo, base, result, kind, args.actor, args.before)
-        findings += numbers_check.check(repo, base, result, body)
+        findings += numbers_check.check(repo, base, result, body, notes)
         findings += text_check.check(repo, base, result)
         findings += limits_check.check(repo, base, result)
         ran = ["C1", "C2", "C3", "C4", "C5", "C6"]
@@ -96,7 +96,7 @@ def main(argv: list[str] | None = None, now: datetime | None = None) -> int:
         print("SUMMARY block=? ran=none")
         return 2
 
-    print(render(findings, ran, skipped))
+    print(render(findings, ran, skipped, notes))
     return 1 if findings else 0
 
 

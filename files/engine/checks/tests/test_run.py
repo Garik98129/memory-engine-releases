@@ -101,7 +101,7 @@ class Runner(unittest.TestCase):
         self.assertIn("ran=C1,C2,C3,C4,C5,C6\n", out + "\n")
 
     def test_a_record_pr_is_held_to_its_masters_at_once(self):
-        # Issue #18, item 33: the first installation's record PR hashed a routine with its last
+        # A record PR once hashed a routine with its last
         # newline; N5 would have said so 36 h later. The gate says it on the PR (C2).
         from engine.checks import drift
         routine = b"Every morning: the calendar.\n"
@@ -118,7 +118,7 @@ class Runner(unittest.TestCase):
                                   "of its master", out)
 
     def test_an_address_in_a_routine_master_blocks(self):
-        # Issue #18, item 35: the routines hold no e-mail address (DOC-1).
+        # The routines hold no e-mail address (DOC-1).
         head = self.repo.commit({"user/routines/invitations.md": b"Accept from alex.trusted@example.com.\n"})
         code, out = self.call("--head", head, "--manifest", str(self.repo.manifest_file(self.repo.base)),
                               text=body("user/routines/invitations.md"))

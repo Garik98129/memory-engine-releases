@@ -7,7 +7,7 @@
 # that did not come through the gate. Findings become alarm Issues for the repository
 # owner and the trusted contact; they never pass through the bot. The same checks run
 # inside the gate on every save (check.yml): this nightly run is the supplement for
-# days without saves, because a collaborator can switch it off (§13, question 9).
+# days without saves, because a collaborator can switch it off.
 name: watch
 
 on:
@@ -21,7 +21,7 @@ permissions: {}
 
 concurrency:
   # One group with backup.yml: this watch does not read the copy's branch while the copy
-  # pushes to it, or N2 would see a head GitHub had not recorded yet (Issue #18, item 48).
+  # pushes to it, or N2 would see a head GitHub had not recorded yet.
   # The gate's own run of the watch is outside the group, and so is a re-run of a run made
   # before this change: a re-run takes its first run's commit.
   # `queue: max` keeps up to 100 waiting runs: by default a newer run cancels the one
@@ -81,7 +81,7 @@ jobs:
         # Exit 1 is «found something»: whether that is red is the alarm step's call — a finding
         # someone closed as known is green. A crash exits 1 too, but the report is the watch's
         # last write, made in one step, so 1 counts only with a non-empty report; an error (2)
-        # or a crash stays red here (Issue #18, item 1).
+        # or a crash stays red here.
         run: >-
           python3 -m engine.checks.watch --main "$MAIN"
           --manifest "$RUNNER_TEMP/manifest.json" --report "$RUNNER_TEMP/report.json"

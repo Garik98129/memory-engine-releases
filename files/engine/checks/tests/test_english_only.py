@@ -1,9 +1,9 @@
-"""The template is English for everyone (docs/DESIGN.md §11; decision 44 of the plan): no
+"""The template is English for everyone (docs/DESIGN.md §11): no
 Cyrillic or Hebrew anywhere in the tracked files but docs/, with three exceptions, each
 for a reason — C5 catches Latin/Cyrillic look-alike swaps, so its comments and its tests
 show Cyrillic words; C4's tests hold an Israeli ID written the Israeli way and Russian
-lines that must not trip the number patterns. docs/ is the design record: it quotes the
-owner's decisions in his own words and is not checked here. The person's language lives
+lines that must not trip the number patterns. docs/ is the design record and is not
+checked here. The person's language lives
 in her part, under user/, never in the engine."""
 import re
 import subprocess

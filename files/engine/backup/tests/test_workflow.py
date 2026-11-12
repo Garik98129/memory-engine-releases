@@ -1,10 +1,10 @@
 """The step «Copy Notion» of engine/workflows/backup.yml, run the way GitHub runs it — its own
 text, in `bash -e`, the shell of a step with no `shell:` — with `python3` replaced by a
-stand-in that exits as told (Issue #18, item 42). Exit 1 is «N3 or N6 found something» and
+stand-in that exits as told. Exit 1 is «N3 or N6 found something» and
 goes on to the commit; a crash exits 1 too, so 1 counts only with a non-empty report.
 `copy_step` is also what the scenario nights (engine/checks/tests/test_scenarios.py) decide
 their commit with; `run_step` runs another step the same way — one whose `run: >-` calls
-`python3 -m …` (the nightly watch's step «N1, N5», Issue #18, item 1)."""
+`python3 -m …` (the nightly watch's step «N1, N5»)."""
 from __future__ import annotations
 
 import os
@@ -99,7 +99,7 @@ class CopyStep(unittest.TestCase):
         self.assertEqual(self.step(1, "full"), 0)
 
     def test_a_crash_stops_before_the_commit(self):
-        # Issue #18, item 42: an uncaught exception exits 1 — with no report, or with the
+        # An uncaught exception exits 1 — with no report, or with the
         # empty file a full disk leaves when a report write fails half-way.
         self.assertNotEqual(self.step(1, ""), 0)
         self.assertNotEqual(self.step(1, "empty"), 0)

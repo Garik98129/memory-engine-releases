@@ -10,7 +10,7 @@ Which kind a PR is does not open the engine to arbitrary content: an update PR
 still has to match the release manifest of its release (C1).
 
 The other half of C2 — the routine entries of a read-back record against their masters —
-is `drift.record_check` (Issue #18, item 33).
+is `drift.record_check`.
 """
 from __future__ import annotations
 
@@ -133,7 +133,7 @@ def check(repo: Path, base: str, head: str, kind: str) -> list[Finding]:
             findings.append(Finding("C2", f"{path} collides by letter case with {', '.join(others)}"))
     # The read-back record is written after the master landed and the text was installed:
     # in a PR of its own. In the same PR as a master it would match it by construction
-    # and N5 could never see a forgotten reinstall (Grok Bot, PR #7).
+    # and N5 could never see a forgotten reinstall.
     paths = {ch.path.decode("utf-8", "replace") for ch in changes}
     if INSTALLED in paths and len(paths) > 1:
         findings.append(Finding("C2", f"{INSTALLED} is the record of an installation: a PR of its own, "

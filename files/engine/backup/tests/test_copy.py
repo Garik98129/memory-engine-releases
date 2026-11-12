@@ -71,8 +71,7 @@ class Collect(unittest.TestCase):
         self.assertNotIn("pages/child.md", got.files)
         self.assertIn(f"pages/{ROOT}.md", got.files)
 
-    # Issue #18, item 45 (Kimi's review of the owner's own copy, notion-backup PR #1): with
-    # exclusions set, a page whose place cannot be followed to the top may hang under an
+    # With exclusions set, a page whose place cannot be followed to the top may hang under an
     # excluded one, so it is not copied «just in case» — the night is an error instead.
 
     def test_an_unreadable_block_chain_stops_the_copy(self):
@@ -187,8 +186,7 @@ class Shrink(unittest.TestCase):
         self.assertIsNone(copying.shrink({"records": 10}, 12, 0.2))     # growth
 
 class HeldBases(unittest.TestCase):
-    """A base's loss is held night after night until the cause is gone (Issue #18, item 43;
-    owner, 09.11.2026: variant 2 with variant 3)."""
+    """A base's loss is held night after night until the cause is gone."""
 
     BEFORE = {"bases": {"docs": {"rows": 10}, "big": {"rows": 990}}}
     SAME = {"docs": {"rows": 10}, "big": {"rows": 990}}
@@ -392,7 +390,7 @@ class Run(unittest.TestCase):
         return mock.patch.object(Path, "write_text", write_text)
 
     def test_a_write_that_fails_is_the_copys_error_not_a_finding(self):
-        # Issue #18, item 42: `write` stood outside the try and the crash exited 1 —
+        # `write` stood outside the try and the crash exited 1 —
         # «N3 or N6 found something» — and the workflow committed the half tree.
         self.call(world())
         for rel in ("pages/child.md", "copy.json"):          # a page; the stamp, after every page
@@ -469,7 +467,7 @@ class Run(unittest.TestCase):
         self.assertEqual(json.loads((self.wt / "copy.json").read_text(encoding="utf-8"))["records"], 4)   # untouched
 
     def test_a_broken_or_missing_config_stops_the_run_and_writes_nothing(self):
-        # Issue #18, item 46: a config the copy cannot read whole was read as «exclude nothing».
+        # A config the copy cannot read whole was read as «exclude nothing».
         self.call(world())
         for files in ({"user/config.toml": b"[notion\n"}, {"user/config.toml": None},
                       {"user/config.toml": VALID_CONFIG + b'\n[notion]\nbackup_exlude = ["child"]\n'}):   # a typo in a key

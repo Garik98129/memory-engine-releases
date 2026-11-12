@@ -50,7 +50,7 @@ class FieldLimits(unittest.TestCase):
                       messages(limits_check.check(self.repo.path, self.repo.base, head)))
 
     def test_a_routine_at_the_measured_limit_passes_one_more_blocks(self):
-        """10 000: a routine of that length was saved whole on the owner's bot (09.11.2026)."""
+        """10 000: a routine of that length was saved whole on a real bot."""
         head = self.repo.commit({"user/routines/morning.md": b"x" * 10000})
         self.assertEqual(limits_check.check(self.repo.path, self.repo.base, head), [])
         head = self.repo.commit({"user/routines/morning.md": b"x" * 10001})

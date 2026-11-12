@@ -1,10 +1,9 @@
-"""The installation evening as a scenario (Issue #18, item 6).
+"""The installation evening as a scenario.
 
-The first live installation (evening B, 25.10.2026, release v0.1.2), as Issue #18 records it:
-N1 reported the push «not through the gate», the creation of main among its lines (item 2),
-and the trusted contact closed that Issue as known; the bot opened its record PR with its own
-token, the gate let it in and it merged; the record matched all five fingerprints; the watch
-ended with no open alarm. Here the same evening runs through the real entry points: the
+A live installation, as it went: N1 reported the push «not through the gate», the creation
+of main among its lines, and the trusted contact closed that Issue as known; the bot opened
+its record PR with its own token, the gate let it in and it merged; the record matched all
+five fingerprints; the watch ended with no open alarm. Here the same evening runs through the real entry points: the
 factory cuts the release with `engine.setup.release manifest`; main is created with only the
 person's part; the trusted contact installs the release with `engine.setup.release install`
 and pushes it; every run after that is `engine.checks.watch` and `engine.checks.alarm`
@@ -12,17 +11,16 @@ against the published manifest; the record PR goes through `engine.checks.run` (
 the watch inside the gate, then job `merge`.
 
 The person's part is a fixture: two fields and three routine masters — mail, mark and morning,
-the routines of 25.10 (invitations came on 28.10, #18 comment 6477549902); five fingerprints.
-The texts are not the pilot's. #18 counts three N1 lines on the evening and names one of
-them, the creation of main; here there are two: the creation of main and the installation
-push.
+the routines of that day; five fingerprints.
+The texts are not a real installation's. The real evening had three N1 lines; here there are
+two: the creation of main and the installation push.
 
 What the fixtures cannot see: GitHub itself (branch protection, the bot's token, job
 `merge`'s timing, the gate's `--manifest-url` step and its record-PR test on the merge
 result — both held in engine/setup/tests/test_release_scenarios.py and check.yml), the
 platform where the fields and routines are installed, the Notion copy and the daily mark
-(N2–N4) — #18 does not describe them for the evening, and this run notes N4 as «before
-installation» — and the nightly job's colour, which is the alarm step's after item 1 (the
+(N2–N4) — this run notes N4 as «before
+installation» — and the nightly job's colour, which is the alarm step's (the
 watch itself still exits 1 on a known line).
 """
 from __future__ import annotations
@@ -167,7 +165,7 @@ class InstallationEvening(unittest.TestCase):
         self.assertIn("SUMMARY block=0", out)
 
         # The watch after the merge and the next two nights: no open alarm. The watch itself
-        # still finds the two known lines until they leave N1's 36 h (Issue #18, item 1).
+        # still finds the two known lines until they leave N1's 36 h.
         found = []
         for hours in (0, 24, 24):
             w.advance(hours)
@@ -180,7 +178,7 @@ class InstallationEvening(unittest.TestCase):
 
     def test_a_record_that_misses_one_routine_is_n5s_alarm_after_the_grace(self):
         # The record PR lands: the gate holds the routine entries a record has to their
-        # masters (C2, item 33), not that every routine has one. N5 finds the routine with no
+        # masters (C2), not that every routine has one. N5 finds the routine with no
         # record once the masters are 36 h old.
         e, w = self.e, self.e.w
         e.install()

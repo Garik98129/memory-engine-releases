@@ -67,9 +67,9 @@ Why: the repository's watch cannot see the platform. Once a day you tell it that
 alive and that your GitHub token still has only what it was given. If this mark stops,
 or names a right it should not have, the watch raises an alarm to the owner and the
 trusted contact (N4). And once a day you ask her about a base the nightly copy has lost:
-only she knows whether she removed it (N3; Issue #18, item 43). And when a release changes
+only she knows whether she removed it (N3). And when a release changes
 how you work, the watch lists it (N7): you tell her, and go through it with her when she
-says (Issue #38, 09.11.2026).
+says.
 
 When: every day, right after task 2.
 Do, with your own GitHub token:

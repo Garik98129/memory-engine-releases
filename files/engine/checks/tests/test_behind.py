@@ -1,4 +1,4 @@
-"""N7: the bot's to-do after a release (docs/DESIGN.md §5, §6; Issue #38, the owner's word of 09.11.2026)."""
+"""N7: the bot's to-do after a release (docs/DESIGN.md §5, §6)."""
 import contextlib
 import io
 import json
@@ -236,7 +236,7 @@ class TodoIssue(unittest.TestCase):
 
     def test_an_issue_somebody_else_opened_under_the_title_is_not_the_list(self):
         self.api.lists[ISSUES].append({"number": 9, "title": behind.TITLE, "body": "mine", "state": "open",
-                                       "user": {"login": "marina-bot"}, "closed_by": None})
+                                       "user": {"login": "person-bot"}, "closed_by": None})
         self.api.lists[f"{ISSUES}/9/comments"] = []
         self.assertEqual(alarm.todo_sync(self.api, ["routine mark: x"], RUN), ["opened #101 todo"])
         self.assertEqual(alarm.todo_sync(self.api, [], RUN), ["closed #101 todo"])

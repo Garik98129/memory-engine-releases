@@ -28,4 +28,4 @@
   - she did not → tell her in plain words where it can come back from: Notion's Trash; or
     the base's connections, if the nightly copy's own integration was removed from it.
   Never restore, share or delete anything in Notion yourself for this, and never record a
-  base she has not confirmed (Issue #18, item 43).
+  base she has not confirmed.

@@ -1,0 +1,47 @@
+# The AI platforms a person can install the engine for (docs/DESIGN_PHASE3.md §3).
+# Facts of one day, 11.11.2026, from three reports, the platforms' own pages and checks in the
+# apps; a release changes them, never a person's config. `setup` reads this file (§5).
+#
+# field_limit  the instruction field as C6 counts it (UTF-16 units), on the plan named;
+#              C6 never goes above the floor chat_field_limit_max in defaults.toml
+# field        where the field is, in the platform's own app
+# notion       whether its AI creates pages and bases in Notion itself: "yes", "unknown", "no"
+# schedule     whether it runs a task on its own at a time: "yes", "paid", "unconfirmed", "no"
+# plan         the plan the engine needs there
+# status       "supported", "beta" (installs, with what is unknown said), "not-supported"
+
+[grok]
+title = "Grok"
+field_limit = 4000                  # the limit the app shows
+field = "Grok app: the instructions field"
+notion = "yes"                      # seen: the chat created a base and a row (11.11.2026)
+schedule = "unconfirmed"            # Automations «available to everyone» (x.ai), not yet seen on a free account
+plan = "any"
+status = "supported"
+
+[claude]
+title = "Claude"
+field_limit = 4000                  # one text for all; the project holds more (19 931 seen)
+field = "Claude app: a new project, its instructions; talk to the AI inside that project"
+notion = "yes"                      # the Notion connector creates and updates pages and bases
+schedule = "paid"                   # scheduled tasks need Pro; projects may need it too (one report)
+plan = "Pro"
+status = "supported"
+
+[chatgpt]
+title = "ChatGPT"
+field_limit = 5000                  # Plus and above; Free and Go: 1 500
+field = "ChatGPT app: Settings, Customize ChatGPT"
+notion = "unknown"                  # the help says «may be able to create or update»; not tried
+schedule = "yes"
+plan = "Plus"
+status = "beta"
+
+[gemini]
+title = "Gemini"
+field_limit = 0                     # several entries; no limit found
+field = ""
+notion = "no"                       # Notion not found among its apps; own servers only in the US
+schedule = "yes"
+plan = "AI Pro"
+status = "not-supported"

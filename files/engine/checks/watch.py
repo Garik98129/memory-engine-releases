@@ -23,7 +23,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import backup_check, behind, config_check, drift, integrity, lock_check, routine_check
+from . import backup_check, behind, config_check, drift, integrity, limits_check, lock_check, routine_check
 from .github import GitHub
 from .report import render
 
@@ -65,21 +65,43 @@ def main(argv: list[str] | None = None, api=None, now: datetime | None = None) -
                                             os.environ.get("GITHUB_REPOSITORY_OWNER", ""), args.branches)
         report["error"] += errors
         try:
-            n2, notes2 = backup_check.check(api, args.repo, args.branches, now)
-            notes += notes2
-        except Exception as exc:    # noqa: BLE001
-            report["error"].append(f"N2 could not run: {type(exc).__name__}: {exc}")
-        try:
-            n4, notes4 = routine_check.check(api, config_check.read(args.repo, args.main), now)
-            notes += notes4
-        except Exception as exc:    # noqa: BLE001
-            report["error"].append(f"N4 could not run: {type(exc).__name__}: {exc}")
-        if args.record_pr:
+            config = config_check.read(args.repo, args.main)
+        except Exception as exc:    # noqa: BLE001 — loud, and N2 and N4 run on {} as they did before (P5)
+            report["error"].append(f"the config could not be read: {type(exc).__name__}: {exc}")
+            config = {}
+        if not config_check.copy_on(config):
+            # The copy is off (DESIGN_PHASE3 §7): no branch to watch. Said, never a silent green;
+            # skipped, so the alarms leave N2's Issue alone.
+            ran = [c for c in ran if c != "N2"]
+            skipped["N2"] = "the nightly copy is off (notion.backup = false)"
+            notes.append("N2 NOTE the nightly copy is off (notion.backup = false): nothing to watch")
+        else:
+            try:
+                n2, notes2 = backup_check.check(api, args.repo, args.branches, now)
+                notes += notes2
+            except Exception as exc:    # noqa: BLE001
+                report["error"].append(f"N2 could not run: {type(exc).__name__}: {exc}")
+        bot = limits_check.has_bot(config)
+        if not bot:
+            # No bot (docs/DESIGN_PHASE3.md §2): no daily mark to watch, no bot's field or
+            # routine record to compare, no to-do for a bot. Said in a line, never a silent
+            # green (P5); skipped, so the alarms leave those Issues alone.
+            reason = "this installation has no bot (platform.bot = false)"
+            ran = [c for c in ran if c not in ("N4", "N5")]
+            skipped.update({"N4": reason, "N5": reason})
+            notes.append("N4 NOTE N4, N5 and N7 do not run: this installation has no bot (platform.bot = false)")
+        else:
+            try:
+                n4, notes4 = routine_check.check(api, config, now)
+                notes += notes4
+            except Exception as exc:    # noqa: BLE001
+                report["error"].append(f"N4 could not run: {type(exc).__name__}: {exc}")
+        if bot and args.record_pr:
             # The record this PR brings is what N5 would ask for: judging main without it
             # would hold the record out forever. Skipped, not «clean»: the alarms leave N5 alone.
             ran.remove("N5")
             skipped["N5"] = "this PR records an installation"
-        else:
+        elif bot:
             try:
                 n5 = drift.check(args.repo, args.main, now)
             except Exception as exc:    # noqa: BLE001
@@ -101,7 +123,7 @@ def main(argv: list[str] | None = None, api=None, now: datetime | None = None) -
     for line in report.get("todo", []):
         print(f"TODO {line}")
     # The report goes last, in one step: watch.yml takes exit 1 as «found something» only with
-    # a non-empty report, and a crash exits 1 too (Issue #18, item 1) — as engine/backup/run.py.
+    # a non-empty report, and a crash exits 1 too — as engine/backup/run.py.
     part = args.report.with_name(args.report.name + ".part")
     try:
         part.write_text(json.dumps(report, ensure_ascii=False), encoding="utf-8")

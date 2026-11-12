@@ -86,7 +86,7 @@ class Config(unittest.TestCase):
             self.repo.path, main, self.repo.commit({"user/config.toml": cfg}), PERSON, actor, before))
         dropped = "C4 would stop looking for il_id, il_phone (person.country or personal.patterns): " \
                   "only in a push of the trusted contact's own"
-        moved = on_main.replace(b'country = "IL"', b'country = "US"')
+        moved = on_main.replace(b'country = "IL"', b'country = "NZ"')
         self.assertEqual(check(moved), [dropped])                        # the first of two PRs: country, then the number
         self.assertEqual(check(moved, "contact"), [])                   # she moved: the trusted contact writes it
         self.assertEqual(check(moved, "contact", ""), [dropped])         # a dispatch or an open trusts nobody
@@ -103,15 +103,15 @@ class Config(unittest.TestCase):
         main_card = self.repo.commit({"user/config.toml": on_main + b'\n[personal]\npatterns = ["card"]\n'})
         msgs = messages(config_check.check(self.repo.path, main_card, self.repo.commit({"user/config.toml": on_main}),
                                            PERSON, "alex", main_card))
-        self.assertEqual(msgs, [])                                      # the payment floor applies anyway (Kimi, PR #16)
-        main2 = self.repo.commit({"user/config.toml": VALID_CONFIG.replace(b'country = "IL"', b'country = "US"')
+        self.assertEqual(msgs, [])                                      # the payment floor applies anyway
+        main2 = self.repo.commit({"user/config.toml": VALID_CONFIG.replace(b'country = "IL"', b'country = "NZ"')
                                   + b'\n[personal]\npatterns = ["il_id"]\n'})
         msgs = messages(config_check.check(self.repo.path, main2, self.repo.commit(
-            {"user/config.toml": VALID_CONFIG.replace(b'country = "IL"', b'country = "US"')}), PERSON, "alex", main2))
+            {"user/config.toml": VALID_CONFIG.replace(b'country = "IL"', b'country = "NZ"')}), PERSON, "alex", main2))
         self.assertEqual(msgs, ["C4 would stop looking for il_id (person.country or personal.patterns): "
                                 "only in a push of the trusted contact's own"])
         self.repo.checkout(main2)
-        back = VALID_CONFIG + b'\n[personal]\npatterns = ["il_id"]\n'    # US → IL: tightens, no one is asked
+        back = VALID_CONFIG + b'\n[personal]\npatterns = ["il_id"]\n'    # NZ → IL: tightens, no one is asked
         self.assertEqual(messages(config_check.check(self.repo.path, main2, self.repo.commit(
             {"user/config.toml": back}), PERSON, "alex", main2)), [])
 
@@ -185,7 +185,7 @@ class Config(unittest.TestCase):
         self.assertIn("platform.bot_field_limit must be int", msgs)
 
     def test_the_exclusions_hold_strings_only(self):
-        # Kimi, review of PR #23: the copy keeps only strings, so [123] read as «exclude
+        # The copy keeps only strings, so [123] read as «exclude
         # nothing». The other lists name each wrong item themselves (the tests around).
         for items in (b"[123]", b'["aaaa-1111", 2]'):
             with self.subTest(items=items):
@@ -273,7 +273,7 @@ class Config(unittest.TestCase):
 
 
 class ReadForCopy(unittest.TestCase):
-    """Issue #18, item 46 (Kimi's review of the owner's own copy, notion-backup PR #1): the
+    """The
     copy never reads a config it cannot read whole as «exclude nothing»."""
 
     def setUp(self):
@@ -310,7 +310,7 @@ class ReadForCopy(unittest.TestCase):
         self.assertIn("unknown key notion.backup_exlude", self.refused(VALID_CONFIG + b'\n[notion]\nbackup_exlude = ["aaaa"]\n'))
         self.assertIn("unknown section [notoin]", self.refused(VALID_CONFIG + b'\n[notoin]\nbackup_exclude = ["aaaa"]\n'))
         self.assertIn("notion.backup_exclude must be a list of strings", self.refused(VALID_CONFIG + b'\n[notion]\nbackup_exclude = "aaaa"\n'))
-        for items in (b"[123]", b'["aaaa-1111", 2]', b'[["aaaa"]]'):                 # Kimi, review of PR #23
+        for items in (b"[123]", b'["aaaa-1111", 2]', b'[["aaaa"]]'):
             with self.subTest(items=items):
                 self.assertIn("notion.backup_exclude must be a list of strings",
                               self.refused(VALID_CONFIG + b"\n[notion]\nbackup_exclude = " + items + b"\n"))

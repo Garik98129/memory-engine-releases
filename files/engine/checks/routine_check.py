@@ -10,13 +10,13 @@ N4 reads the newest mark by the person's account (`person.github_login`; any acc
 the workflow's when the key is unset) and alarms when: there is no mark at all; the
 newest is older than 36 h by GitHub's clock (the comment's created_at — the time in the
 text is the bot's word); it names no scopes, or `unknown`; or the scopes hold `workflow`,
-`admin:*` or `delete_repo` — more than the `repo` the token was given (§13, question 3).
+`admin:*` or `delete_repo` — more than the `repo` the token was given.
 
 Which Issue: the one `alarm.marks_issue` names — a protected key installation sets, so a
 collaborator who closes or renames the Issue silences nothing: a closed, renamed, missing
 or moved Issue is an alarm. With the key unset (before installation) the oldest open Issue
-titled «routine marks» is used, and none at all is a note, never a silent green; the
-pilot does not start before this check runs (§14, item 5). N1 holds no copy of the
+titled «routine marks» is used, and none at all is a note, never a silent green; an
+installation does not start before this check runs. N1 holds no copy of the
 token; the scopes are the bot's own report, and a bot that lies about them is seen by
 N1's branches part and the monthly audit, not here.
 """

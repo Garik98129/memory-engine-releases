@@ -1,10 +1,9 @@
 """N7 behind: what the bot still has to bring up to the engine after a release (docs/DESIGN.md §5, §6).
 
 Not an alarm. A release can change a routine's task, the hard part of a field, or add a
-task. The bot keeps up by itself (the owner, 09.11.2026, Issue #38): the machine lists
-what is behind, the bot's daily routine tells her there is an update to go through, and in
-a live chat, on her yes, the bot follows «Updating after a release» in
-`engine/rules/routines.md`. The lines:
+task. The bot keeps up by itself: the machine lists what is behind, the bot's daily routine
+tells her there is an update to go through, and in a live chat, on her yes, the bot follows
+«Updating after a release» in `engine/rules/routines.md`. The lines:
 
 - a routine written from another version of its task, or a task with no routine yet:
   each task in `routines.md` names its routine and its version
@@ -39,7 +38,7 @@ from typing import NamedTuple
 
 from . import config_check, gitio
 from .drift import INSTALLED, _record, _recorded, _shown, digest, routine_text
-from .limits_check import FIELDS, ROUTINES, assemble
+from .limits_check import ROUTINES, SOLO, assemble, fields
 
 RULES = "engine/rules/routines.md"
 GRACE = timedelta(hours=12)
@@ -97,18 +96,19 @@ def declined(config: dict) -> set[str]:
 def check(repo: Path, main: str, now: datetime) -> list[str] | None:
     """The bot's work list on main, in a fixed order: fields, then routines by name — or None
     when the record does not parse: N5 raises that, and a list judged without the record
-    would read «unreadable» as «nothing left» and close the Issue (Kimi, review of PR #41).
+    would read «unreadable» as «nothing left» and close the Issue.
     None leaves the Issue as it is."""
     rules = gitio.file_at(repo, main, RULES)
     listed = task_list(rules.decode("utf-8")) if rules is not None else {}     # a missing file is N1's (C1)
     wanted = {name: (t.number, t.version) for name, t in listed.items()}
-    said_no = declined(config_check.read(repo, main))
+    config = config_check.read(repo, main)
+    said_no = declined(config)
     record, broken = _record(repo, main)
     if broken:
         return None
     lines: list[str] = []
 
-    for name, (engine_path, person_path, _key, _floor) in FIELDS.items():
+    for name, (engine_path, person_path, _key, _floor) in fields(config).items():
         engine_part = gitio.file_at(repo, main, engine_path)
         person_part = gitio.file_at(repo, main, person_path)
         if engine_part is None or person_part is None:
@@ -118,7 +118,13 @@ def check(repo: Path, main: str, now: datetime) -> list[str] | None:
         except UnicodeDecodeError:
             continue        # N1 reports it (C5)
         if _recorded(record, "fields", name) != digest(text):
-            lines.append(f"field {name}: the installed text is not its master — install it and record it")
+            if engine_path == SOLO:
+                # The chat writes itself: its field is joined from solo.md, and the trusted contact
+                # gives it to her and records it — not the bot, whose ROUT-9 joins chat.md.
+                lines.append(f"field {name}: the installed text is not its master ({SOLO} and her part) — "
+                             f"the trusted contact installs it and records it")
+            else:
+                lines.append(f"field {name}: the installed text is not its master — install it and record it")
 
     masters = {path[len(ROUTINES):-len(".md")]: raw
                for path, raw in gitio.files_under(repo, main, ROUTINES) if path.endswith(".md")}

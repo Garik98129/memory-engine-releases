@@ -55,7 +55,7 @@ class NoContent(unittest.TestCase):
 
 class Reason(unittest.TestCase):
     """GitHub's own words come with the error as `reason`, not in its text: «HTTP 403» alone
-    did not say why the update's PR was refused (canary test repository, 09.11.2026), and an
+    did not say why the update's PR was refused (on a test repository), and an
     alarm line that carried GitHub's wording would change whenever that wording does."""
 
     MESSAGE = "GitHub Actions is not permitted to create or approve pull requests."

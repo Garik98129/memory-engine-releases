@@ -1,7 +1,7 @@
 """Scenarios: a release from the factory to a person's gate, on fixtures (F1).
 
 Each test is a story docs/DESIGN.md §5 tells. The factory cuts a release with the same
-command the owner's word starts (`engine.setup.release manifest`) and publishes it to a
+command that starts (`engine.setup.release manifest`) and publishes it to a
 stand-in of the public repository of releases; installation runs `engine.setup.release
 install`; the gate runs the two calls of the workflow — `engine.checks.run --manifest-url`,
 a fetch of that URL that fails like `curl -f` on anything not published, then
@@ -158,7 +158,7 @@ class ReleaseScenarios(unittest.TestCase):
         self.assertEqual(code, 0, out)
 
     def test_on_canary_a_release_lands_the_day_it_is_cut(self):
-        # A test repository of the owner's: the trusted contact moves it to `canary` in a
+        # A test repository: the trusted contact moves it to `canary` in a
         # push of their own (C3), and from then on a release is due the moment it is cut.
         config = PERSON_PART["user/config.toml"] + b'\n[alarm]\ntrusted_contact = "helper"\n'
         self.w.land(self.w.pr({"user/config.toml": config}))               # installation writes the contact
@@ -216,7 +216,7 @@ class ReleaseScenarios(unittest.TestCase):
 
 
 class GuardedSettings(unittest.TestCase):
-    """The pre-installation run on the pilot's tree (25.10.2026): settings through which the
+    """The pre-installation run on a real installation's tree: settings through which the
     bot could loosen a check in a PR of its own — C4's patterns in two PRs, a base out of the
     Notion copy, the account N4 counts — pass only in the trusted contact's own push."""
 
@@ -262,7 +262,7 @@ class GuardedSettings(unittest.TestCase):
         self.assertIn("C3 BLOCK person.github_login changes only in a push of the trusted contact's own", out)
 
     def test_tightening_needs_no_one(self):
-        abroad = self.config.replace(b'country = "IL"', b'country = "US"')
+        abroad = self.config.replace(b'country = "IL"', b'country = "NZ"')
         self.w.land(self.w.pr({"user/config.toml": abroad}))               # she lived abroad when installed
         code, out = self.bot_pr({"user/config.toml": self.config})           # back to IL: C4 looks for more
         self.assertEqual(code, 0, out)

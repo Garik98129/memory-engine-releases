@@ -108,7 +108,7 @@ class Sync(unittest.TestCase):
         self.assertEqual(self.sync({"N1": ["a"]}), (["opened #101 N1"], True))
 
     def test_findings_in_a_closed_issue_do_not_come_back_whoever_closed_it(self):
-        # Owner, 23.10.2026 (DESIGN §7): whoever closed it, the bot or the person, judged it known; the machine does not reopen.
+        # Whoever closed it, the bot or the person, judged it known; the machine does not reopen.
         self.closed_issue("N1", ["a"], 5, by="alex")
         self.assertEqual(self.sync({"N1": ["a"]}), (["acknowledged N1"], False))
         self.assertEqual(self.api.writes, [])
@@ -116,7 +116,7 @@ class Sync(unittest.TestCase):
 
     def test_acknowledgement_is_per_finding_not_per_list(self):
         # The trusted contact pushed a release in two pushes A and B and closed the Issue;
-        # 36 h later A left the window and only B is found: still acknowledged (Grok Bot, PR #7).
+        # 36 h later A left the window and only B is found: still acknowledged.
         self.closed_issue("N1", ["A"], 5, by="owner")
         self.comment(5, alarm._text(["A", "B"], "owner", "", RUN))
         self.assertEqual(self.sync({"N1": ["B"]}), (["acknowledged N1"], False))
@@ -146,7 +146,7 @@ class Sync(unittest.TestCase):
         self.assertEqual(self.sync({"N5": ["x"]})[0][0], "opened #102 N5")
 
     def test_an_old_machine_close_without_a_digest_is_an_empty_list_too(self):
-        # Before PR #36 «Clean … Closing.» carried no digest (Kimi, review of #36): an old Issue
+        # Before it, «Clean … Closing.» carried no digest: an old Issue
         # reopened and closed by a person after it acknowledges nothing.
         self.closed_issue("N5", ["x"], 5, by="owner")
         self.comment(5, f"Clean in {RUN}. Closing.")
@@ -176,7 +176,7 @@ class Sync(unittest.TestCase):
         self.assertEqual(len([p for m, p, _ in self.api.writes if p.endswith("/5/comments")]), 1)
 
     def test_a_closed_error_comes_back_on_the_next_run(self):
-        # Owner, 23.10.2026: an acknowledged error is silenced only until the next run.
+        # An acknowledged error is silenced only until the next run.
         self.closed_issue("ERROR", ["N1 settings could not run: ApiError: x"], 5, by="owner")
         self.assertEqual(self.sync({"ERROR": ["N1 settings could not run: ApiError: x"]}), (["opened #101 ERROR"], True))
 

@@ -187,7 +187,7 @@ class Install(unittest.TestCase):
 
 class Cut(unittest.TestCase):
     """The release as the public repository of releases holds it: the manifest and the
-    files, so an update can fetch the engine without a token (owner, 09.11.2026)."""
+    files, so an update can fetch the engine without a token."""
 
     REPOSITORY = "Garik98129/memory-engine-releases"
 
@@ -279,8 +279,20 @@ class Cut(unittest.TestCase):
         self.assert_nothing_written(kept)
         self.cut(files={**self.files, "engine/rules/extra.md": b"card 4111 1111 1111 1111, t@example.invalid\n"})
 
+    def test_a_national_number_that_is_not_a_test_value_stops_the_publication(self):
+        kept = self.keep()
+        # Built from parts, so that this file itself holds none of them whole.
+        ssn = "-".join(("123", "45", "6788"))
+        idnr = next(c for c in ("1234567892" + d for d in "0123456789") if numbers_check._de_idnr_ok(c))
+        for text, kind in (("SSN " + ssn, "a US Social Security number"), ("IdNr " + idnr, "a German tax ID")):
+            with self.subTest(kind=kind):
+                files = {**self.files, "engine/rules/extra.md": (text + "\n").encode()}
+                with self.assertRaisesRegex(ValueError, f"engine/rules/extra.md line 1: {kind}"):
+                    self.cut(files=files)
+        self.assert_nothing_written(kept)
+
     def test_a_file_that_cannot_be_checked_stops_the_publication(self):
-        # Kimi, review of PR #29: a file that is not UTF-8 was passed over unchecked.
+        # A file that is not UTF-8 was passed over unchecked.
         kept = self.keep()
         with self.assertRaisesRegex(ValueError, "engine/rules/latin1.md: not valid UTF-8, so it cannot be checked"):
             self.cut(files={**self.files, "engine/rules/latin1.md": "addressed to caf\u00e9 ".encode("latin-1")})
@@ -309,7 +321,7 @@ class Cut(unittest.TestCase):
 
 class ChatLink(unittest.TestCase):
     """The chat field links the public rules at one release; the cut holds that link to the
-    release's own files (Issue #38, step 3): the chat never reads rules the person's release
+    release's own files: the chat never reads rules the person's release
     does not have."""
 
     REPOSITORY = "Garik98129/memory-engine-releases"
