@@ -4,17 +4,20 @@
   adds under user/ and in the PR body. The nightly copy cuts it out of Notion (N6).
 - Document numbers, bank accounts and phones — the person's and her family's —
   live in one home, the Documents base in Notion, and reach git through the
-  nightly copy (owner, 23.10.2026). In the lines a PR adds under user/ and in the
+  nightly copy. In the lines a PR adds under user/ and in the
   PR body — which becomes the merge commit's message — they are blocked with a
   pointer to that home: a renewed passport is changed once, no field needs
   reinstalling, and the bot writes «updated», not the number.
 
 Which document numbers and phone formats are recognised follows person.country —
 main's and the PR's together, so a PR cannot loosen C4 for itself; cards, IBAN
-and international phone numbers are recognised everywhere. The
+and international phone numbers are recognised everywhere. BY_COUNTRY has IL, RU,
+UA, US, CA, DE, GB, KR, JP, FR and BR; any other country gets that universal layer
+only, and C4's output says so in a NOTE. A number with a check digit counts only when
+it passes; one without counts only in its written form, separators included. The
 engine is not scanned here: C1 holds it to the release, the factory checks it (F7).
 
-Under user/routines/ an e-mail address is a finding too (Issue #18, item 35: a routine
+Under user/routines/ an e-mail address is a finding too (a routine
 master once held the trusted contact's, and the gate did not see it). DOC-1 keeps hers, her
 family's and the trusted contact's out of the routines — his two live in the bot field's
 part; a machine cannot tell whose an address is, so any address under user/routines/ is
@@ -27,6 +30,8 @@ from __future__ import annotations
 
 import re
 import tomllib
+from collections import Counter
+from datetime import date
 from pathlib import Path
 from typing import Callable
 
@@ -72,7 +77,7 @@ def _digits(s: str) -> str:
 # hash or a code (user/fields/installed.toml holds sha256 values).
 IL_ID_RE = re.compile(r"(?<![\w-])(?:\d{9}|\d{8}-\d)(?![\w-])")
 # A card number: 13–19 digits passing Luhn. Never right after a digit and a decimal point
-# or comma, or the fraction of a long price would be one. Two forms (Issue #18, item 44):
+# or comma, or the fraction of a long price would be one. Two forms:
 # - free: any grouping, a single plain space or a single dash between digits — the whole
 #   run is the number;
 # - as banks print it: a first group of four most payment cards start with (2200–2799,
@@ -146,6 +151,185 @@ def _has_il_phone(line: str) -> bool:
     return PHONE_RES[1].search(line) is not None
 
 
+# The rest of the country table (BY_COUNTRY). A form with no check digit counts only as it is
+# written, with its separators; a bare run of digits counts only with its check digit. A number
+# stands alone: not glued to a word, a plus or a dash, and not part of a longer row — not right
+# after or before a digit with a space, a dot or a comma between (a row of amounts, a decimal).
+_LONE = r"(?<![\w+-])(?<!\d[ .,])"
+_DONE = r"(?![\w-])(?![ .,]\d)"
+_MONTH_DAYS = (31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)    # February: up to the 29th
+
+
+def _weighted(digits: str, weights) -> int:
+    return sum(w * int(d) for w, d in zip(weights, digits))
+
+
+def _any(regex: re.Pattern, line: str, ok: Callable[[str], bool]) -> bool:
+    return any(ok(m.group()) for m in regex.finditer(line))
+
+
+RU_INN_RE = re.compile(_LONE + r"\d{12}" + _DONE)
+RU_SNILS_RE = re.compile(_LONE + r"\d{3}-\d{3}-\d{3}[ -]\d\d" + _DONE)
+RU_PASSPORT_RE = re.compile(_LONE + r"\d\d \d\d \d{6}" + _DONE)
+UA_UNZR_RE = re.compile(_LONE + r"(?:19|20)\d{6}-\d{5}" + _DONE)
+US_SSN_RE = re.compile(_LONE + r"\d{3}-\d\d-\d{4}" + _DONE)
+CA_SIN_RE = re.compile(_LONE + r"\d{3}([ -])\d{3}\1\d{3}" + _DONE)
+DE_IDNR_RE = re.compile(_LONE + r"(?:\d{11}|\d\d \d{3} \d{3} \d{3})" + _DONE)
+GB_NINO_RE = re.compile(_LONE + r"(?:[A-Za-z]{2}\d{6}[A-Da-d]|[A-Za-z]{2} \d\d \d\d \d\d [A-Da-d])" + _DONE)
+GB_NHS_RE = re.compile(_LONE + r"\d{3}([ -])\d{3}\1\d{4}" + _DONE)
+KR_RRN_RE = re.compile(_LONE + r"\d{6}-\d{7}" + _DONE)
+JP_MYNUMBER_RE = re.compile(_LONE + r"(?:\d{12}|\d{4}([ -])\d{4}\1\d{4})" + _DONE)
+FR_NIR_RE = re.compile(_LONE + r"(?:[1-478]\d{4}(?:\d\d|2[AB])\d{8}"
+                               r"|[1-478] \d\d \d\d (?:\d\d|2[AB]) \d{3} \d{3} \d\d)" + _DONE)
+BR_CPF_RE = re.compile(_LONE + r"(?:\d{3}\.\d{3}\.\d{3}|\d{9})-\d\d" + _DONE)
+
+_UA = r"(?:39|50|63|66|67|68|73|9[1-9]|3[1-8]|4[13-8]|5[1-7]|6[12459])"     # the code after the 0
+_NANP = r"[2-9][0-8]\d", r"[2-9](?!11)\d\d"                                  # area code, exchange
+RU_PHONE_RE = re.compile(_LONE + r"8(?:[ -][3489]\d\d|[ -]\([3489]\d\d\))[ -]\d{3}[ -]\d\d[ -]\d\d" + _DONE)
+UA_PHONE_RE = re.compile(_LONE + rf"(?:0{_UA} \d{{3}} \d\d \d\d|0{_UA}-\d{{3}}-\d\d-\d\d"
+                                 rf"|\(0{_UA}\) \d{{3}}-\d\d-\d\d)" + _DONE)
+NANP_PHONE_RE = re.compile(_LONE + rf"(?:1[ -])?(?:\({_NANP[0]}\) {_NANP[1]}-\d{{4}}"
+                                   rf"|{_NANP[0]}-{_NANP[1]}-\d{{4}}|{_NANP[0]}\.{_NANP[1]}\.\d{{4}})" + _DONE)
+DE_PHONE_RE = re.compile(_LONE + r"01(?:5[1-9]|6[023]|7\d)[ /-]\d{7,8}" + _DONE)
+GB_PHONE_RE = re.compile(_LONE + r"07[1-57-9]\d\d (?:\d{6}|\d{3} \d{3})" + _DONE)
+KR_PHONE_RE = re.compile(_LONE + r"(?:01[016789]([ -])\d{3,4}\1\d{4}|(?:02|0[3-6][1-5])-\d{3,4}-\d{4})" + _DONE)
+JP_PHONE_RE = re.compile(_LONE + r"(?:0[5789]0-\d{4}-\d{4}|0\d-\d{4}-\d{4}|0\d\d-\d{3}-\d{4})" + _DONE)
+FR_PHONE_RE = re.compile(_LONE + r"0[1-9]([ .-])\d\d(?:\1\d\d){3}" + _DONE)
+BR_PHONE_RE = re.compile(_LONE + r"\(\d\d\) (?:9\d{4}|[2-5]\d{3})-\d{4}" + _DONE)
+
+
+def _ru_inn_ok(text: str) -> bool:
+    d = _digits(text)
+    n11 = _weighted(d, (7, 2, 4, 10, 3, 5, 9, 4, 6, 8)) % 11 % 10
+    n12 = _weighted(d, (3, 7, 2, 4, 10, 3, 5, 9, 4, 6, 8)) % 11 % 10
+    return d[10:] == f"{n11}{n12}"
+
+
+def _ru_snils_ok(text: str) -> bool:
+    d = _digits(text)
+    s = _weighted(d, range(9, 0, -1))
+    control = s if s < 100 else 0 if s in (100, 101) else s % 101
+    return int(d[9:]) == (0 if control in (100, 101) else control)
+
+
+def _ua_unzr_ok(text: str) -> bool:
+    try:
+        date(int(text[:4]), int(text[4:6]), int(text[6:8]))
+    except ValueError:
+        return False
+    return True
+
+
+def _us_ssn_ok(text: str) -> bool:
+    d = _digits(text)
+    area = int(d[:3])
+    return (area not in (0, 666) and area < 900 and d[3:5] != "00" and d[5:] != "0000"
+            and d not in ("078051120", "457555462", "219099999"))
+
+
+def _ca_sin_ok(text: str) -> bool:
+    d = _digits(text)
+    return d[0] not in "08" and _luhn(d)
+
+
+def _de_idnr_ok(text: str) -> bool:
+    d = _digits(text)
+    repeated = [n for n in Counter(d[:10]).values() if n > 1]
+    if d[0] == "0" or repeated not in ([2], [3]):     # one digit twice or three times, the rest once
+        return False
+    p = 10
+    for ch in d[:10]:                       # ISO 7064 MOD 11,10
+        s = (int(ch) + p) % 10 or 10
+        p = 2 * s % 11
+    return (11 - p) % 10 == int(d[10])
+
+
+def _gb_nino_ok(text: str) -> bool:
+    prefix = text[:2].upper()
+    return (not set(prefix) & set("DFIQUV") and prefix[1] != "O"
+            and prefix not in ("BG", "GB", "KN", "NK", "NT", "TN", "ZZ"))
+
+
+def _gb_nhs_ok(text: str) -> bool:
+    d = _digits(text)
+    check = 11 - _weighted(d, range(10, 1, -1)) % 11
+    return check != 10 and check % 11 == int(d[9])
+
+
+def _kr_rrn_ok(text: str) -> bool:
+    month, day = int(text[2:4]), int(text[4:6])
+    return 1 <= month <= 12 and 1 <= day <= _MONTH_DAYS[month - 1]
+
+
+def _jp_mynumber_ok(text: str) -> bool:
+    d = _digits(text)
+    r = _weighted(d, (6, 5, 4, 3, 2, 7, 6, 5, 4, 3, 2)) % 11
+    return int(d[11]) == (0 if r <= 1 else 11 - r)
+
+
+def _fr_nir_ok(text: str) -> bool:
+    s = text.replace(" ", "")
+    month = int(s[3:5])
+    if not (1 <= month <= 12 or 20 <= month <= 99):
+        return False
+    number = int(s[:5] + {"2A": "19", "2B": "18"}.get(s[5:7], s[5:7]) + s[7:13])
+    return int(s[13:]) == 97 - number % 97
+
+
+def _br_cpf_ok(text: str) -> bool:
+    d = _digits(text)
+    if len(set(d)) == 1:                    # 111.111.111-11 passes the arithmetic
+        return False
+    for n in (9, 10):
+        r = _weighted(d, range(n + 1, 1, -1)) % 11
+        if int(d[n]) != (0 if r < 2 else 11 - r):
+            return False
+    return True
+
+
+# The national patterns of BY_COUNTRY: the regex, the test of its check digit (None for a form
+# with no check digit, which counts as written) and the kind a finding names.
+NATIONAL: dict[str, tuple[re.Pattern, Callable[[str], bool] | None, str]] = {
+    "ru_inn": (RU_INN_RE, _ru_inn_ok, "a Russian INN"),
+    "ru_snils": (RU_SNILS_RE, _ru_snils_ok, "a Russian SNILS number"),
+    "ru_passport": (RU_PASSPORT_RE, None, "a Russian passport number"),
+    "ru_phone": (RU_PHONE_RE, None, "a phone number"),
+    "ua_unzr": (UA_UNZR_RE, _ua_unzr_ok, "a Ukrainian UNZR number"),
+    "ua_phone": (UA_PHONE_RE, None, "a phone number"),
+    "us_ssn": (US_SSN_RE, _us_ssn_ok, "a US Social Security number"),
+    "nanp_phone": (NANP_PHONE_RE, None, "a phone number"),
+    "ca_sin": (CA_SIN_RE, _ca_sin_ok, "a Canadian Social Insurance Number"),
+    "de_idnr": (DE_IDNR_RE, _de_idnr_ok, "a German tax ID"),
+    "de_phone": (DE_PHONE_RE, None, "a phone number"),
+    "gb_nino": (GB_NINO_RE, _gb_nino_ok, "a UK National Insurance number"),
+    "gb_nhs": (GB_NHS_RE, _gb_nhs_ok, "an NHS number"),
+    "gb_phone": (GB_PHONE_RE, None, "a phone number"),
+    "kr_rrn": (KR_RRN_RE, _kr_rrn_ok, "a Korean resident registration number"),
+    "kr_phone": (KR_PHONE_RE, None, "a phone number"),
+    "jp_mynumber": (JP_MYNUMBER_RE, _jp_mynumber_ok, "a Japanese My Number"),
+    "jp_phone": (JP_PHONE_RE, None, "a phone number"),
+    "fr_nir": (FR_NIR_RE, _fr_nir_ok, "a French social security number"),
+    "fr_phone": (FR_PHONE_RE, None, "a phone number"),
+    "br_cpf": (BR_CPF_RE, _br_cpf_ok, "a Brazilian CPF"),
+    "br_phone": (BR_PHONE_RE, None, "a phone number"),
+}
+
+
+def _compact(text: str) -> str:
+    """A number without its separators, letters upper-cased: how a test value is listed."""
+    return re.sub(r"[ ()./-]", "", text).upper()
+
+
+def national_values(line: str) -> list[tuple[str, str]]:
+    """(kind, compact value) of every national number in a line — for the release check."""
+    return [(kind, _compact(m.group())) for regex, ok, kind in NATIONAL.values()
+            for m in regex.finditer(line) if ok is None or ok(m.group())]
+
+
+def _national(regex: re.Pattern, ok: Callable[[str], bool] | None) -> Callable[[str], bool]:
+    return lambda line: any(ok is None or ok(m.group()) for m in regex.finditer(line))
+
+
 # Payment kinds the copy can cut out of a text (N6): the regexes in order, each with how
 # much of its match is the number, and the marker that replaces it.
 REDACTORS: dict[str, tuple[tuple[tuple[re.Pattern, Callable[[re.Match], int]], ...], str]] = {
@@ -181,9 +365,26 @@ PATTERNS: dict[str, tuple[Callable[[str], bool], str]] = {
     "phone_intl": (_has_intl_phone, "a phone number"),
     "il_id": (_has_il_id, "an Israeli ID number"),
     "il_phone": (_has_il_phone, "a phone number"),
+    **{name: (_national(regex, ok), kind) for name, (regex, ok, kind) in NATIONAL.items()},
 }
 EVERYWHERE = ("iban", "phone_intl")
-BY_COUNTRY = {"IL": ("il_id", "il_phone")}
+BY_COUNTRY = {
+    "IL": ("il_id", "il_phone"),
+    "RU": ("ru_inn", "ru_snils", "ru_passport", "ru_phone"),
+    "UA": ("ua_unzr", "ua_phone"),
+    "US": ("us_ssn", "nanp_phone"),
+    "CA": ("ca_sin", "nanp_phone"),
+    "DE": ("de_idnr", "de_phone"),
+    "GB": ("gb_nino", "gb_nhs", "gb_phone"),
+    "KR": ("kr_rrn", "kr_phone"),
+    "JP": ("jp_mynumber", "jp_phone"),
+    "FR": ("fr_nir", "fr_phone"),
+    "BR": ("br_cpf", "br_phone"),
+}
+# A country with no row: the universal layer only, and C4 says so (P5: never a silent green).
+NO_TABLE = ("no national document patterns for person.country {}: cards, IBAN and "
+            "international phone numbers are still checked")
+NO_TABLE_NOTE = "C4 NOTE " + NO_TABLE
 
 
 def scan(text: str, patterns: list[str]) -> list[tuple[int, str]]:
@@ -211,6 +412,19 @@ def _names(value: object) -> list[str]:
     return [n for n in value if isinstance(n, str)] if isinstance(value, list) else []
 
 
+def _country(config: dict) -> object:
+    person = config.get("person", {})
+    return person.get("country") if isinstance(person, dict) else None
+
+
+def untabled_countries(repo: Path, base: str, head: str) -> list[str]:
+    """main's and the PR's person.country, each once, when it is a two-letter code with no row
+    in BY_COUNTRY; anything that is no such code is C3's finding."""
+    countries = [_country(_toml(repo, rev, "user/config.toml")) for rev in (base, head)]
+    return [c for c in dict.fromkeys(countries)
+            if isinstance(c, str) and re.fullmatch(r"[A-Z]{2}", c) and c not in BY_COUNTRY]
+
+
 def active_patterns(repo: Path, base: str, head: str) -> tuple[list[str], list[str]]:
     """(payment patterns, document patterns) for this repository."""
     floors = _toml(repo, base, "engine/defaults.toml").get("floors", {})
@@ -220,9 +434,8 @@ def active_patterns(repo: Path, base: str, head: str) -> tuple[list[str], list[s
     document = list(EVERYWHERE)
     for rev in (base, head):      # main's config and the PR's: a PR cannot loosen C4 for itself
         config = _toml(repo, rev, "user/config.toml")
-        person, personal = config.get("person", {}), config.get("personal", {})
-        country = person.get("country") if isinstance(person, dict) else None
-        document += BY_COUNTRY.get(country, ())
+        personal = config.get("personal", {})
+        document += BY_COUNTRY.get(_country(config), ())
         document += _names(personal.get("patterns")) if isinstance(personal, dict) else []
     document = [n for n in dict.fromkeys(document) if n in PATTERNS and n not in payment]
     return payment, document      # C3 reports unknown names in the config
@@ -233,8 +446,11 @@ def email_lines(text: str) -> list[int]:
     return [no for no, line in enumerate(text.splitlines(), start=1) if EMAIL_RE.search(line)]
 
 
-def check(repo: Path, base: str, head: str, body: str) -> list[Finding]:
+def check(repo: Path, base: str, head: str, body: str, notes: list[str] | None = None) -> list[Finding]:
+    """The findings; `notes`, when given, gets C4's NOTE lines, which do not block."""
     payment, document = active_patterns(repo, base, head)
+    if notes is not None and (countries := untabled_countries(repo, base, head)):
+        notes.append(NO_TABLE_NOTE.format(", ".join(countries)))
     findings: list[Finding] = []
     for path, old_raw, new_raw in gitio.changed_files(repo, base, head, USER_PREFIX):
         try:
@@ -259,10 +475,13 @@ def check(repo: Path, base: str, head: str, body: str) -> list[Finding]:
     return findings
 
 
-def check_tree(repo: Path, rev: str) -> list[Finding]:
+def check_tree(repo: Path, rev: str, notes: list[str] | None = None) -> list[Finding]:
     """C4 over every line of every file under user/ at rev — for N1 on main, which a
-    direct push may have reached without a PR."""
+    direct push may have reached without a PR. `notes`, when given, gets what C4 cannot
+    see — a country with no row — without a prefix: the caller names its check."""
     payment, document = active_patterns(repo, rev, rev)
+    if notes is not None and (countries := untabled_countries(repo, rev, rev)):
+        notes.append(NO_TABLE.format(", ".join(countries)))
     findings: list[Finding] = []
     for path, raw in gitio.files_under(repo, rev, USER_PREFIX):
         try:

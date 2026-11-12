@@ -2,8 +2,8 @@
 
 Over the files a PR changes under user/: a NUL byte or bytes that are not UTF-8
 block the PR; in the lines the PR adds, a word that mixes Latin and Cyrillic
-letters blocks it — a look-alike swap such as Latin «a» inside a Russian word
-(flagship B1, B13). A Latin name with a Russian ending is not a swap.
+letters blocks it — a look-alike swap such as Latin «a» inside a Russian word.
+A Latin name with a Russian ending is not a swap.
 """
 from __future__ import annotations
 

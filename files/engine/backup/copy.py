@@ -15,7 +15,7 @@ Ids are the file names, so a renamed page is a changed file, not a moved one.
 
 With exclusions set, a page or data source whose place in Notion cannot be followed to the
 top of the workspace stops the copy instead of being copied: it may sit under an excluded
-page (Issue #18, item 45 — Kimi's review of the owner's own copy).
+page.
 """
 from __future__ import annotations
 
@@ -79,8 +79,7 @@ class _Exclusion:
     With exclusions set, every chain is walked to the top of the workspace, and a chain
     that cannot be followed stops the copy: a block that cannot be read, an ancestor not
     shared with the integration, a parent of no known kind. Such an item may hang under an
-    excluded page, and copying it «just in case» would put it in git (Kimi's review of the
-    owner's own copy, notion-backup PR #1; Issue #18, item 45). Before, such an item
+    excluded page, and copying it «just in case» would put it in git. Before, such an item
     was copied: with a note when a block could not be read, silently when an ancestor was
     not shared."""
 
@@ -272,13 +271,12 @@ def held_bases(previous: dict | None, bases: dict[str, dict], excluded: set[str]
                today: str) -> tuple[list[str], dict[str, dict]]:
     """N3, per base, whatever the total did: a data source gone from the copy, emptied, or —
     at 10 rows or more — down by more than half. A small base is a small share of the
-    total: the Documents base is ten rows in a thousand, and its loss moves the total by 1 %
-    (Kimi's review, 23.10.2026); a clean-up of a few rows in a small base is not an alarm.
+    total: the Documents base is ten rows in a thousand, and its loss moves the total by 1 %;
+    a clean-up of a few rows in a small base is not an alarm.
 
-    Such a loss is held night after night until the cause is gone (Issue #18, item 43;
-    owner, 09.11.2026). Before, the next night compared with a stamp that already lacked
-    the rows, the finding disappeared and the alarm closed itself: a loss nobody saw in a
-    day was silent for good. The stamp keeps the base under `held` — its rows before and
+    Such a loss is held night after night until the cause is gone. Before, the next night
+    compared with a stamp that already lacked the rows, the finding disappeared and the
+    alarm closed itself: a loss nobody saw in a day was silent for good. The stamp keeps the base under `held` — its rows before and
     the day it went — and every night reports it in the same words, so the alarm stays
     open and the held lines bring no new comment. It ends when the base has its rows back
     (any, for a small base; at least half, for a big one), or when `notion.removed_bases`

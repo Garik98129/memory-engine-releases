@@ -3,7 +3,7 @@
 Pinned to API version 2025-09-03 — the version that introduced data sources (a database
 holds one or more; the search lists data sources, a database id and a data source id are
 not interchangeable); the official JavaScript SDK (5.28) defaults to it, and Notion keeps
-older versions working (Notion reference and upgrade guide, read 23.10.2026). Search
+older versions working (Notion reference and upgrade guide). Search
 lists what is shared with the integration; a data source is read with its query
 endpoint, a page's content with the block-children endpoint, one level at a time; every
 list is paged by 100, the maximum Notion serves.

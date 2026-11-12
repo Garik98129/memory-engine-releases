@@ -66,7 +66,7 @@ class Base(unittest.TestCase):
             {"number": number, "merge_commit_sha": after, "base": {"ref": "main"}}]
         self.api.objects[f"repos/{REPO}/pulls/{number}"] = {"merged_by": {"login": BOT}, "head": {"sha": head}}
         self.api.lists[f"repos/{REPO}/commits/{head}/statuses"] = [self.status(run)]
-        # GitHub reports a pull_request_target run on the PR head (seen live, PR #7 review).
+        # GitHub reports a pull_request_target run on the PR head (seen live).
         self.api.objects[f"repos/{REPO}/actions/runs/{run}"] = {
             "path": ".github/workflows/check.yml", "repository": {"full_name": REPO},
             "event": "pull_request_target", "head_sha": head, "head_branch": "bot/change"}
@@ -215,7 +215,7 @@ class History(Base):
                           f"{self.main[:12]}: a change GitHub did not record"])
 
     def test_the_trusted_contacts_release_by_hand_is_an_expected_alarm(self):
-        # Owner, 23.10.2026: no exception in the code; the trusted contact closes the alarm.
+        # No exception in the code; the trusted contact closes the alarm.
         with_contact = self.repo.commit({"user/config.toml": CONTACT_CONFIG})
         self.merged(self.main, with_contact, 2, number=8, run=556)
         applied = self.repo.commit({".github/workflows/check.yml": b"name: check v2\n",

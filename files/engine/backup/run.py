@@ -12,7 +12,7 @@ could not be made — the config or the floors, Notion or `user/engine.lock` not
 copy, its stamp or the report not written (an alarm too) — 0 otherwise. The report is the
 night's last write, made in one step (a file beside it, renamed): a night that crashes
 before it leaves none, and the workflow takes exit 1 without a non-empty report for a
-crash — nothing is committed (Issue #18, item 42).
+crash — nothing is committed.
 """
 from __future__ import annotations
 
@@ -42,7 +42,7 @@ def settings(repo: Path, main: str) -> tuple[set[str], float, list[str], set[tup
     as (id, day)) from the config and the floors.
     The threshold never exceeds the floor: C3 keeps the config under it, and this run
     does not trust a config C3 has not seen. A config the copy cannot read whole stops the
-    night (`config_check.read_for_copy`, Issue #18, item 46)."""
+    night (`config_check.read_for_copy`)."""
     floors = _floors(repo, main)
     ceiling = floors.get("backup_shrink_alarm_max")
     if isinstance(ceiling, bool) or not isinstance(ceiling, (int, float)):
@@ -101,6 +101,21 @@ def main(argv: list[str] | None = None, api=None, now: datetime | None = None) -
 
     report: dict = {"N3": [], "N6": [], "error": [], "skipped": []}
     findings: list[Finding] = []
+    try:
+        off = not config_check.copy_on(config_check.read_for_copy(args.repo, args.main))
+    except FAILS:
+        off = False                 # a config or a revision it cannot read stops the night just below, as before
+    if off:
+        # The copy is off (DESIGN_PHASE3 §7): Notion is not read, nothing is written, and the
+        # workflow commits nothing — it reads «off» in this report. Said, not silent (P5).
+        reason = "the nightly copy is off (notion.backup = false)"
+        report.update({"skipped": ["N3", "N6"], "off": True})
+        print(render([], [], {"N3": reason, "N6": reason}, notes=[f"NOTE {reason}"], word="alarm"))
+        try:
+            _write_report(args.report, report)
+        except OSError as exc:
+            return _not_made(args.report, report, exc)
+        return 0
     try:
         exclude, threshold, payment, removed = settings(args.repo, args.main)
         previous = copying.read_stamp(args.worktree)

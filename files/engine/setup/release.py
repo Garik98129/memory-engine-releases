@@ -14,16 +14,14 @@ the release in the public repository `release.manifests` names (`engine/defaults
 where the gate reads it without a token.
 
 `cut` writes a release into a checkout of that public repository: the manifest, and the
-release's files themselves under `files/` — the engine's code is public there (owner,
-09.11.2026, §13 item 7), so an update can fetch it without a token. `files/` is replaced
-whole, so a file the release dropped is gone; `files/.github/workflows/` is not where
-GitHub runs workflows, so nothing there runs in that repository.
+release's files themselves under `files/` — the engine's code is public there, so an update can
+fetch it without a token. `files/` is replaced whole, so a file the release dropped is gone;
+`files/.github/workflows/` is not where GitHub runs workflows, so nothing there runs in that repository.
 
-`cut` also holds the link in the chat field (`engine/rules/fields/chat.md`): the chat
+`cut` also holds the link in each chat field (`engine/rules/fields/chat.md`, `solo.md`): the chat
 reads its topic rules from this public repository at the tag the link names, so the link
 names a release, its files exist, and they are the release's own — a release that changes
-one of them names itself in the link, so the chat field changes with it (§10; Issue #38,
-step 3).
+one of them names itself in the link, so the chat field changes with it (§10).
 
 `install` is the first installation only: it refuses a repository that already has
 `engine/`, `.github/` or `user/engine.lock`. Updates come through the update PR (§5).
@@ -50,6 +48,8 @@ PUBLISHED_FILES = "files"
 PUBLISHED_TAG_RE = re.compile(r"v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)")   # as the workflow `tag`
 MANIFEST_FILE = "release-manifest.json"
 CHAT_FIELD = "engine/rules/fields/chat.md"
+SOLO_FIELD = "engine/rules/fields/solo.md"       # the chat that writes itself (DESIGN_PHASE3 §6a)
+CHAT_FIELDS = (CHAT_FIELD, SOLO_FIELD)
 RULES = "engine/rules/"
 _CHAT_RULES_RE = re.compile(r"https://raw\.githubusercontent\.com/([^/\s]+/[^/\s]+)/(?:refs/tags/)?([^/\s]+)/"
                             + PUBLISHED_FILES + "/" + RULES)
@@ -108,7 +108,7 @@ def dumps(data: dict) -> str:
     return json.dumps(data, indent=2, sort_keys=True, ensure_ascii=True) + "\n"
 
 
-# What `cut` lets go public (owner, 09.11.2026: the engine's code is public). Every number of
+# What `cut` lets go public. Every number of
 # the kinds C4 knows and every e-mail address in the release must be one of these test
 # values; anything else stops the publication — a public tag cannot be taken back. A new
 # test value goes in here on purpose, never a real one.
@@ -121,6 +121,18 @@ PUBLIC_TEST_NUMBERS = frozenset({
     "123456782", "000000018",                                         # IDs that pass their check digit
     "0501234567", "031234567", "972501234567", "00972501234567",      # made-up local numbers
     "14155552671",                                                    # an example number from US docs
+}) | frozenset({
+    # the country table's tests: document numbers from the python-stdnum documentation and tests,
+    # textbook values or sequential digits, and the wrong forms built on them
+    "536904399", "36574261809", "11234567890", "11123456786", "11987654321", "621498320257",
+    "295109912611193", "295109912611194", "253072A07300443", "253072B07300470", "39053344705", "12345678909",
+    "123456789047", "11223344595", "4506123456", "9001011234567", "0002293234567", "9912312234567",
+    "1990010100015", "2000022901234", "9434765870", "9434765919", "046454286", "AB123456C", "NL91ABNA0417164300",
+    # their phones: sequential digits, or a range kept for fiction (555, 07700 900)
+    "89123456789", "84951234567", "88121234567", "0441234567", "0991234567", "2123456789", "2125551234",
+    "12125551234", "015112345678", "01711234567", "01601234567", "07700900123", "01012345678", "0101234567",
+    "021234567", "03112345678", "0312345678", "0361234567", "0451234567", "07012345678", "09012345678",
+    "0612345678", "0123456789",
 })
 PUBLIC_TEST_ADDRESSES = frozenset({"alex@example.com\u0431\u044b\u043b",            # glued to a Cyrillic word
                                    "alex@\u043f\u0440\u0438\u043c\u0435\u0440.\u0440\u0444",  # a Cyrillic domain
@@ -138,7 +150,7 @@ def publication_findings(files: dict[str, bytes]) -> list[str]:
     """Where the release holds something that may not go public: a number of a kind C4
     knows that is not a listed test value, an e-mail address off the reserved test domains
     and the listed ones, what looks like a token — or a file that is not UTF-8 text, which
-    cannot be checked and so may not go either (Kimi, review of PR #29). Names the place and
+    cannot be checked and so may not go either. Names the place and
     the kind, never the value. The .github/workflows/ copies are the same bytes as
     engine/workflows/."""
     found = []
@@ -157,6 +169,7 @@ def publication_findings(files: dict[str, bytes]) -> list[str]:
             kinds += [("an IBAN", s) for m in numbers_check.IBAN_RE.finditer(line)
                       if 15 <= len(s := m.group().replace(" ", "")) <= 34 and numbers_check._iban_ok(s)]
             kinds += [("a phone number", numbers_check._digits(m.group())) for rx in numbers_check.PHONE_RES for m in rx.finditer(line)]
+            kinds += numbers_check.national_values(line)
             for kind, value in kinds:
                 if value not in PUBLIC_TEST_NUMBERS:
                     found.append(f"{path} line {no}: {kind} that is not a listed test value")
@@ -168,13 +181,13 @@ def publication_findings(files: dict[str, bytes]) -> list[str]:
     return found
 
 
-def chat_rules(files: dict[str, bytes]) -> tuple[str, str, list[str]] | None:
-    """The public folder the chat field sends the chat to for its topic rules: (repository,
+def chat_rules(files: dict[str, bytes], field: str = CHAT_FIELD) -> tuple[str, str, list[str]] | None:
+    """The public folder a chat field sends the chat to for its topic rules: (repository,
     tag, the files named on the link's line), or None when the field has no such link."""
     try:
-        text = files.get(CHAT_FIELD, b"").decode("utf-8")
+        text = files.get(field, b"").decode("utf-8")
     except UnicodeDecodeError:
-        raise ValueError(f"{CHAT_FIELD} is not valid UTF-8") from None
+        raise ValueError(f"{field} is not valid UTF-8") from None
     links, rest = [], []
     for line in text.splitlines():
         for m in _CHAT_RULES_RE.finditer(line):
@@ -182,37 +195,47 @@ def chat_rules(files: dict[str, bytes]) -> tuple[str, str, list[str]] | None:
             links.append((m.group(1), m.group(2), names))
         rest.append(_CHAT_RULES_RE.sub(" ", line))
     if len(links) > 1:
-        raise ValueError(f"{CHAT_FIELD} links the public rules {len(links)} times; one link, one tag")
+        raise ValueError(f"{field} links the public rules {len(links)} times; one link, one tag")
     # A mention the pattern did not read — beside a link it did read, or alone — is refused,
-    # never skipped: the chat could follow it to rules no check has held (Kimi, PR #39).
+    # never skipped: the chat could follow it to rules no check has held.
     if _LINK_HINT_RE.search("\n".join(rest)):
-        raise ValueError(f"{CHAT_FIELD} points to the public rules, but not as "
+        raise ValueError(f"{field} points to the public rules, but not as "
                          f"https://raw.githubusercontent.com/<repository>/<tag>/{PUBLISHED_FILES}/{RULES}")
     return links[0] if links else None
 
 
 def chat_rules_findings(files: dict[str, bytes], tag: str, into: Path, repository: str) -> list[str]:
-    """Why the chat field's link would send the chat to rules this release does not hold:
+    """Why a chat field's link — `fields/chat.md`'s, and `fields/solo.md`'s, the chat that writes
+    itself (docs/DESIGN_PHASE3.md §6a) — would send the chat to rules this release does not hold."""
+    found: list[str] = []
+    for field in CHAT_FIELDS:
+        if field in files:
+            found += _field_rules_findings(files, field, tag, into, repository)
+    return found
+
+
+def _field_rules_findings(files: dict[str, bytes], field: str, tag: str, into: Path, repository: str) -> list[str]:
+    """Why this chat field's link would send the chat to rules this release does not hold:
     another repository, not a release tag, a newer release, a named file the release lacks,
     or a file that changed since the release the link names. A link to this very release
     is right by construction. The older release is read from `into`, a checkout with its
     tags: a tag missing there is a finding too, never a pass."""
-    link = chat_rules(files)
+    link = chat_rules(files, field)
     if link is None:
         return []
     linked_repo, at, names = link
     found = []
     if linked_repo != repository:
-        found.append(f"{CHAT_FIELD} links {linked_repo}, not {repository}")
+        found.append(f"{field} links {linked_repo}, not {repository}")
     if not PUBLISHED_TAG_RE.fullmatch(at):
-        return found + [f"{CHAT_FIELD} links {at!r}, which is not a release tag"]
+        return found + [f"{field} links {at!r}, which is not a release tag"]
     if not names:
-        found.append(f"{CHAT_FIELD} names no rules file on the line of its link")
-    found += [f"{CHAT_FIELD} names {name}, which is not in {RULES}" for name in names if RULES + name not in files]
+        found.append(f"{field} names no rules file on the line of its link")
+    found += [f"{field} names {name}, which is not in {RULES}" for name in names if RULES + name not in files]
     if found or at == tag:
         return found
     if release_key(at) > release_key(tag):
-        return [f"{CHAT_FIELD} links {at}, newer than {tag}"]
+        return [f"{field} links {at}, newer than {tag}"]
     for name in names:
         try:
             old = gitio.git(into, "show", f"refs/tags/{at}:{PUBLISHED_FILES}/{RULES}{name}")
@@ -220,7 +243,7 @@ def chat_rules_findings(files: dict[str, bytes], tag: str, into: Path, repositor
             found.append(f"{PUBLISHED_FILES}/{RULES}{name} at the tag {at} is not in {into}: fetch its tags")
             continue
         if old != files[RULES + name]:
-            found.append(f"{RULES}{name} changed since {at}, the copy the chat reads: link {tag} in {CHAT_FIELD}")
+            found.append(f"{RULES}{name} changed since {at}, the copy the chat reads: link {tag} in {field}")
     return found
 
 

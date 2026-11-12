@@ -40,8 +40,8 @@ REASON_MAX = 200
 def refused(method: str, path: str, status: int, raw: bytes) -> ApiError:
     """The error for an answer the checks cannot use, with GitHub's own words where it gives
     them as `reason` — the `message` of its JSON error body, on one line, cut at REASON_MAX
-    characters. A bare «HTTP 403» did not say why the update's PR was refused on the canary
-    test repository (09.11.2026): a repository setting."""
+    characters. A bare «HTTP 403» did not say why the update's PR was refused on a test
+    repository: a repository setting."""
     reason = ""
     try:
         message = json.loads(raw.decode("utf-8")).get("message")
@@ -81,7 +81,7 @@ class GitHub:
 
     def _send(self, method: str, url: str, body: object = None, auth: bool = True):
         """One request, retried once after a server error or a network error: a single
-        hiccup must not turn into a red save and a mention (Grok Bot, PR #7)."""
+        hiccup must not turn into a red save and a mention."""
         try:
             status, headers, raw = self._once(method, url, body, auth)
         except ApiError:
@@ -175,7 +175,7 @@ class GitHub:
 
     def post_no_content(self, path: str, body: dict) -> None:
         """A POST whose answer the caller does not read: a workflow dispatch answers 204, or
-        200 with the run's details where GitHub is asked for them (changelog, 19.02.2026)."""
+        200 with the run's details where GitHub is asked for them."""
         status, _headers, raw = self._send("POST", self._url(path), body)
         if status not in (200, 204):
             raise refused("POST", path, status, raw)

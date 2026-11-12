@@ -80,8 +80,8 @@ class Drift(unittest.TestCase):
 
 
 class RecordPR(unittest.TestCase):
-    """Issue #18, item 33: a PR that writes the read-back record is checked against the masters
-    at once (C2), not by N5's alarm 36 h later. In PR #11 of the first installation the bot
+    """A PR that writes the read-back record is checked against the masters
+    at once (C2), not by N5's alarm 36 h later. Once the bot
     hashed a routine with its last newline: N5 strips the outer newlines (`routine_text`)."""
 
     ROUTINE = b"\nEvery morning: the calendar.\n"
@@ -102,7 +102,7 @@ class RecordPR(unittest.TestCase):
         self.assertEqual(self.lines(installed(morning=right)), [])
 
     def test_a_routine_hashed_with_its_newlines_is_blocked_at_once(self):
-        wrong = drift.digest(self.ROUTINE.decode())                     # what the bot did in PR #11
+        wrong = drift.digest(self.ROUTINE.decode())                     # what the bot once did
         lines = self.lines(installed(morning=wrong))
         self.assertEqual(len(lines), 1)
         self.assertIn("C2", lines[0])
@@ -135,7 +135,7 @@ class RecordPR(unittest.TestCase):
                 self.assertEqual(lines[0].count("\n"), 0)                       # one line in the log, whatever the key
 
     def test_an_entry_the_pr_leaves_as_it_was_is_held_to_its_master_too(self):
-        # Kimi, review of PR #25: item 33 compares every routines.* entry at once — N5 is
+        # The record check compares every routines.* entry at once — N5 is
         # skipped on a record PR, so a stale entry left in it would land green.
         stale = installed(morning="0" * 64)                              # already wrong on main
         base = self.repo.commit({"user/fields/installed.toml": stale})

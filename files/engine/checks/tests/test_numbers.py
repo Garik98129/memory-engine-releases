@@ -24,7 +24,7 @@ class Patterns(unittest.TestCase):
         self.assertEqual(kinds("card 4111-1111-1111-1112"), [])
 
     def test_card_shapes_as_banks_print_them(self):
-        # Issue #18, item 44: no-break and narrow no-break spaces, two spaces, a dash with
+        # No-break and narrow no-break spaces, two spaces, a dash with
         # spaces; Amex and Diners groups; a card followed by its expiry or CVV.
         for text in ("4111\u00a01111\u00a01111\u00a01111", "4111\u202f1111\u202f1111\u202f1111",
                      "4111  1111  1111  1111", "4111 - 1111 - 1111 - 1111", "5555\u00a0 5555\u00a0 5555\u00a0 4444",
@@ -34,7 +34,7 @@ class Patterns(unittest.TestCase):
             self.assertEqual(kinds(f"card {text}"), ["a card number"], repr(text))
 
     def test_every_length_with_every_separator_is_cut_whole(self):
-        # Kimi, review of PR #27: 13, 17 and 18 digits were caught only with single spaces, and
+        # 13, 17 and 18 digits were caught only with single spaces, and
         # a 17-digit card whose first 16 digits pass Luhn too lost only those 16.
         def luhn_valid(prefix: str, length: int) -> str:
             body = prefix + "1" * (length - len(prefix) - 1)
@@ -69,7 +69,7 @@ class Patterns(unittest.TestCase):
             self.assertEqual(kinds(text), [], repr(text))
 
     def test_no_date_range_reads_as_a_card(self):
-        # The pattern of the owner's copy read 8–10 % of «2026-02-22 - 2026-03-01» as cards. Every
+        # An earlier pattern read 8–10 % of «2026-02-22 - 2026-03-01» as cards. Every
         # start day of 2026, four lengths, six spellings. («2026-02-22-2026-03-01», with no
         # spaces, is the free form's, as in v0.1.4, and not changed here.)
         from datetime import date, timedelta
@@ -200,7 +200,7 @@ class Check(unittest.TestCase):
 
 
 class EmailsInRoutines(unittest.TestCase):
-    """Issue #18, item 35: a routine master held the trusted contact's e-mail and the gate did
+    """A routine master held the trusted contact's e-mail and the gate did
     not see it. DOC-1 keeps addresses out of the routines; the bot field's part may hold his
     two. A machine cannot tell whose an address is, so any address under user/routines/ counts."""
 

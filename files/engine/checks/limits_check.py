@@ -8,7 +8,11 @@ number of characters, for an emoji it is 2. The limit is the person's config val
 never above the floor in engine/defaults.toml on main.
 
 Runs over the merge result on every PR: an update that lengthens the engine part
-is caught as well as a person's longer text (flagship B5, B19).
+is caught as well as a person's longer text.
+
+Which fields exist follows `platform.writer` (docs/DESIGN_PHASE3.md §6a): while the bot
+writes — phase 1, the pilot, and every config without the key — the chat's field and the
+bot's; once the chat writes, the chat's field alone, with the hard part from `solo.md`.
 """
 from __future__ import annotations
 
@@ -23,6 +27,44 @@ FIELDS = {
     "chat": ("engine/rules/fields/chat.md", "user/fields/chat.md", "chat_field_limit", "chat_field_limit_max"),
     "bot": ("engine/rules/fields/bot.md", "user/fields/bot.md", "bot_field_limit", "bot_field_limit_max"),
 }
+# The chat's hard part when the chat writes itself: one field, no bot's field.
+SOLO = "engine/rules/fields/solo.md"
+WRITERS = ("bot", "chat")               # platform.writer: who writes her Notion, mail and calendar
+CONFIG = "user/config.toml"
+
+
+def _platform(config: dict | None) -> dict:
+    table = (config or {}).get("platform", {})
+    return table if isinstance(table, dict) else {}
+
+
+def writer(config: dict | None) -> str:
+    """Who writes: «bot» — phase 1, and any config without the key — or «chat». A value C3
+    refuses reads as «bot», the scheme every installation had before the key existed."""
+    value = _platform(config).get("writer")
+    return value if value in WRITERS else "bot"
+
+
+def has_bot(config: dict | None) -> bool:
+    """Whether a bot runs her routines and posts the daily mark: true unless the config says
+    false — so N4, N5 and N7 stay on for every installation that had a bot."""
+    value = _platform(config).get("bot")
+    return value if isinstance(value, bool) else True
+
+
+def fields(config: dict | None) -> dict[str, tuple[str, str, str, str]]:
+    """The instruction fields of this installation, as FIELDS reads them."""
+    if writer(config) == "chat":
+        _engine, person, key, floor = FIELDS["chat"]
+        return {"chat": (SOLO, person, key, floor)}
+    return dict(FIELDS)
+
+
+def config_at(repo: Path, rev: str) -> dict:
+    """The person's config at rev, {} when missing or broken — C3 reports that."""
+    return _toml(repo, rev, CONFIG)
+
+
 ROUTINES = "user/routines/"
 ROUTINE_KEYS = ("routine_limit", "routine_limit_max")
 
@@ -70,12 +112,11 @@ def _text(repo: Path, rev: str, path: str, findings: list[Finding]) -> str | Non
 
 def check(repo: Path, base: str, head: str) -> list[Finding]:
     floors = _toml(repo, base, "engine/defaults.toml").get("floors", {})
-    platform = _toml(repo, head, "user/config.toml").get("platform", {})
-    if not isinstance(platform, dict):
-        platform = {}
+    config = config_at(repo, head)
+    platform = _platform(config)
     findings: list[Finding] = []
 
-    for name, (engine_path, person_path, key, floor_key) in FIELDS.items():
+    for name, (engine_path, person_path, key, floor_key) in fields(config).items():
         limit = _limit(platform, floors, key, floor_key)
         engine_part = _text(repo, head, engine_path, findings)
         person_part = _text(repo, head, person_path, findings)

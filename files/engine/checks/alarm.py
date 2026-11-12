@@ -10,7 +10,7 @@ Issue per check:
 
 - findings and no open Issue → a new Issue, unless every finding was already listed in
   an Issue that someone closed: closing is «known, not fixing», and the same findings
-  do not come back (owner, 23.10.2026, twice: the closer does not matter — the bot too,
+  do not come back (the closer does not matter — the bot too,
   that price is taken); a new finding does come back;
 - findings that differ from the last ones posted → a comment with the new list;
 - the same findings → nothing: one alarm, not one a run;
@@ -30,12 +30,12 @@ which a part of a check failed posts no changed list for that check: its list is
 and a line the failed part could not judge has not left it. A line that left the list before
 the close was not «known» then: an installation's first alarm listed «main does not
 require gate» until the protection was set, and closing it later must not silence that
-line for good (fresh-eye pre-check of the install guide, 09.11.2026). A collaborator — the bot's token is one —
-can edit those texts and so «acknowledge» a finding before it exists; the owner takes
-that as a price rather than more machinery (owner, 23.10.2026; DESIGN §7). An Issue the
+line for good. A collaborator — the bot's token is one —
+can edit those texts and so «acknowledge» a finding before it exists; this is taken
+as a price rather than more machinery. An Issue the
 workflow closed itself («Clean») counts for nothing: that close meant «clean», not
 «known». A closed error Issue counts only until the next run: an error that is still
-there opens a new Issue (owner, 23.10.2026). An Issue anybody else opens under the same
+there opens a new Issue. An Issue anybody else opens under the same
 title is ignored.
 
 The bot's to-do after a release (N7, `behind.py`) is kept here too, but it is not an alarm:
@@ -88,8 +88,7 @@ def titles_for(what: str) -> dict[str, str]:
 DIGEST_RE = re.compile(r"<!-- alarm-digest: ([0-9a-f]{64}) -->")
 LINE_RE = re.compile(r"<!-- alarm-line: ([0-9a-f]{64}) -->")
 # The machine's closing comment before it carried a digest — the only form it ever had: an
-# empty list too, so that an old Issue someone reopens and closes acknowledges nothing (Kimi,
-# review of PR #36).
+# empty list too, so that an old Issue someone reopens and closes acknowledges nothing.
 LEGACY_CLEAN_CLOSE_RE = re.compile(r"Clean in \S+\. Closing\.")
 
 
@@ -122,8 +121,7 @@ def _markers(lines: list[str]) -> str:
 
 
 def _text(lines: list[str], owner: str, contact: str, run_url: str, about: str = ABOUT["checks"]) -> str:
-    return (f"{_names(owner, contact)} — {about} found this. "
-            f"The bot tells the person in plain words.\n\n"
+    return (f"{_names(owner, contact)} — {about} found this.\n\n"
             f"```text\n{_block(lines)}\n```\n\nRun: {run_url}\n\n{_markers(lines)}")
 
 
@@ -204,7 +202,7 @@ def sync(api, findings: dict[str, list[str]], owner: str, contact: str, run_url:
         lines = findings.get(check, [])
         issue = open_issues.get(title)
         if lines and issue is None:
-            # A closed error Issue silences nothing beyond its run (owner, 23.10.2026).
+            # A closed error Issue silences nothing beyond its run.
             acked = acknowledged(api, title) if check != "ERROR" else set()
             if all(line_hash(line) in acked for line in lines):
                 done.append(f"acknowledged {check}")
@@ -296,8 +294,8 @@ def _lines(value: object) -> list[str] | None:
 def from_report(path: Path) -> tuple[dict[str, list[str]], set[str]]:
     """({check: [lines]}, skipped checks) from a run's report. A missing, unreadable or
     malformed report is itself an alarm, and judges nothing: the shape of a run is an
-    object with list-valued `error` and `skipped` and at least one check's list (Kimi,
-    PR #8: a bare `{}` must not read as «everything skipped, all clean»). A check the
+    object with list-valued `error` and `skipped` and at least one check's list (a
+    bare `{}` must not read as «everything skipped, all clean»). A check the
     report does not mention is skipped: that run did not judge it."""
     broken = {"ERROR": ["no readable report from the checks: %s"]}, set(CHECK_TITLES)
     try:

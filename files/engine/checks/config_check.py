@@ -14,13 +14,20 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from ..backup.copy import REMOVED_RE, norm
 from . import gitio, numbers_check
+from .limits_check import WRITERS
 from .paths_check import PERSON
 from .report import Finding
 
 CONFIG = "user/config.toml"
 DEFAULTS = "engine/defaults.toml"
+PLATFORMS = "engine/platforms.toml"
 
-KNOWN_PATTERNS = frozenset({"card", "iban", "phone_intl", "il_id", "il_phone"})
+KNOWN_PATTERNS = frozenset({
+    "card", "iban", "phone_intl", "il_id", "il_phone",
+    "ru_inn", "ru_snils", "ru_passport", "ru_phone", "ua_unzr", "ua_phone", "us_ssn", "nanp_phone", "ca_sin",
+    "de_idnr", "de_phone", "gb_nino", "gb_nhs", "gb_phone", "kr_rrn", "kr_phone", "jp_mynumber", "jp_phone",
+    "fr_nir", "fr_phone", "br_cpf", "br_phone",
+})
 CHANNELS = frozenset({"canary", "stable"})
 PROTECTION_MODES = frozenset({"required", "none"})   # none: a plan without branch protection (Free)
 # A GitHub login: letters, digits and single hyphens inside, at most 39 characters.
@@ -31,8 +38,8 @@ DECLINED_RE = re.compile(r"([a-z][a-z0-9-]*)@([1-9][0-9]*)")   # engine.declined
 
 class Strings(list):
     """A list whose reader keeps only strings: anything else in it is a type error, or it
-    would vanish unseen — a number in `notion.backup_exclude` excluded nothing (Kimi, review
-    of PR #23). The other lists name each wrong item in their own checks below."""
+    would vanish unseen — a number in `notion.backup_exclude` excluded
+    nothing. The other lists name each wrong item in their own checks below."""
 
 
 # section → key → (type, required)
@@ -47,14 +54,17 @@ SCHEMA: dict[str, dict[str, tuple[type, bool]]] = {
     "platform": {
         "name": (str, True),
         "chat_field_limit": (int, True),
-        "bot_field_limit": (int, True),
+        "bot_field_limit": (int, False),   # required while the bot writes (below)
+        "writer": (str, False),            # «bot» (absent: phase 1) or «chat» — docs/DESIGN_PHASE3.md §6a
+        "bot": (bool, False),              # absent: true — a bot runs her routines (N4, N5, N7)
         "routine_limit": (int, False),
         "read_budget_bytes": (int, True),
     },
     "engine": {"channel": (str, True),
                "declined": (Strings, False)},    # task versions she said no to: N7 stops listing them (her yes, C7)
     "notion": {"backup_exclude": (Strings, False), "shrink_alarm": (float, False),
-               "removed_bases": (Strings, False)},     # bases she removed: N3 stops holding them (her yes, C7)
+               "removed_bases": (Strings, False),      # bases she removed: N3 stops holding them (her yes, C7)
+               "backup": (bool, False)},               # absent: true — the nightly copy runs (DESIGN_PHASE3 §7)
     "alarm": {"trusted_contact": (str, False), "marks_issue": (int, False)},
     "github": {"protection": (str, False)},
     "review": {"second_reader": (str, False)},
@@ -62,8 +72,9 @@ SCHEMA: dict[str, dict[str, tuple[type, bool]]] = {
 }
 
 # Keys whose change can silence the person's protection: alarms, where the bot's daily
-# marks go and whose marks count (N4), the update channel, the optional second reader, and
-# whether N1 expects branch protection. They change only in
+# marks go and whose marks count (N4), the update channel, the optional second reader,
+# whether N1 expects branch protection, and who writes and whether there is a bot — the
+# last two choose her instruction fields and switch N4, N5 and N7 off (DESIGN_PHASE3 §2). They change only in
 # a push of the trusted contact's own that itself brings the change: the gate passes the
 # push's sender as `actor` and the head before the push as `before` (both empty when the
 # run cannot know them), and the keys at `before` must still equal main's — a change the
@@ -73,8 +84,10 @@ SCHEMA: dict[str, dict[str, tuple[type, bool]]] = {
 # the trusted contact closes it and opens a new one. With no trusted contact on main,
 # only installation sets them.
 PROTECTED = (("alarm", "trusted_contact"), ("alarm", "marks_issue"), ("person", "github_login"),
-             ("engine", "channel"), ("review", "second_reader"), ("github", "protection"))
-PROTECTED_DEFAULTS = {("github", "protection"): "required"}   # an absent key means this
+             ("engine", "channel"), ("review", "second_reader"), ("github", "protection"),
+             ("platform", "writer"), ("platform", "bot"))
+PROTECTED_DEFAULTS = {("github", "protection"): "required",   # an absent key means this
+                      ("platform", "writer"): "bot", ("platform", "bot"): True}
 
 # Two lists any change of which either tightens or loosens: C4's document patterns (the
 # country's set and `personal.patterns` — the person may add, not remove) and the pages the
@@ -125,7 +138,7 @@ def read(repo: Path, rev: str) -> dict:
 
 def read_for_copy(repo: Path, rev: str) -> dict:
     """The config at rev for the nightly copy, which must not run on a config it cannot read
-    whole (Issue #18, item 46). `read` takes a missing or broken file for {} — for the copy
+    whole. `read` takes a missing or broken file for {} — for the copy
     that means «exclude nothing», and a mistyped key, a string instead of a list or a number in
     the list means the same — so it would copy what the person left out. Here they raise ValueError, «the
     settings are not usable: …»: a missing or broken file, an unknown section (a misspelled
@@ -164,7 +177,7 @@ def _protected_values(config: dict | None) -> list[object]:
 def document_patterns(config: dict | None, payment: frozenset[str] = frozenset()) -> set[str]:
     """C4's document patterns this config turns on: the ones everywhere, the country's, the
     person's own, less the payment floor's (`payment`), which C4 applies whatever the config
-    says — as numbers_check.active_patterns reads them (Kimi, PR #16)."""
+    says — as numbers_check.active_patterns reads them."""
     person, personal = (config or {}).get("person", {}), (config or {}).get("personal", {})
     country = person.get("country") if isinstance(person, dict) else None
     own = personal.get("patterns", []) if isinstance(personal, dict) else []
@@ -180,8 +193,15 @@ def excluded_pages(config: dict | None) -> set[str]:
     return {norm(x) for x in ids if isinstance(x, str)} - {""} if isinstance(ids, list) else set()
 
 
+def copy_on(config: dict | None) -> bool:
+    """Whether the nightly copy runs: true unless `notion.backup` is false — so every installation
+    made before the key keeps its copy; a new one is written with it off (DESIGN_PHASE3 §7)."""
+    return _value(config, "notion", "backup") is not False
+
+
 def _guarded(config: dict | None, payment: frozenset[str]) -> tuple:
-    return (_protected_values(config), sorted(document_patterns(config, payment)), sorted(excluded_pages(config)))
+    return (_protected_values(config), sorted(document_patterns(config, payment)), sorted(excluded_pages(config)),
+            copy_on(config))
 
 
 def _introduced_by_this_push(repo: Path, before: str, on_main: dict | None, payment: frozenset[str]) -> bool:
@@ -301,10 +321,29 @@ def check(repo: Path, base: str, head: str, kind: str, actor: str = "", before: 
         if dropped and not by_trusted:
             findings.append(Finding("C3", f"C4 would stop looking for {', '.join(dropped)} (person.country or "
                                           f"personal.patterns): only in a push of the trusted contact's own"))
+        if copy_on(on_main) and not copy_on(config) and not by_trusted:
+            findings.append(Finding("C3", "notion.backup turns the nightly copy off, and N2, N3 and N6 with it: only in "
+                                          "a push of the trusted contact's own"))
         if excluded_pages(config) - excluded_pages(on_main) and not by_trusted:
             findings.append(Finding("C3", "notion.backup_exclude leaves a new page out of the copy: only in a "
                                           "push of the trusted contact's own"))
         findings += _declined_findings(repo, head, config, on_main)
+
+    platform = config["platform"]
+    writer = protected_value(config, "platform", "writer")
+    if writer not in WRITERS:
+        findings.append(Finding("C3", f"platform.writer must be one of {', '.join(WRITERS)}"))
+    elif writer == "bot" and protected_value(config, "platform", "bot") is not True:
+        findings.append(Finding("C3", "platform.writer = \"bot\" needs a bot: platform.bot = false leaves nobody to write"))
+    elif writer == "bot" and "bot_field_limit" not in platform:
+        findings.append(Finding("C3", "required key platform.bot_field_limit is missing: the bot writes"))
+    elif writer == "chat":
+        # One field on a platform of the engine's table (DESIGN_PHASE3 §4): a name setup never
+        # writes is a typo or a platform nobody checked. The bot's scheme keeps any name (phase 1).
+        table, more = _parse(gitio.file_at(repo, floors_rev, PLATFORMS), PLATFORMS, "C3")
+        findings += more
+        if table is not None and platform.get("name") not in table:
+            findings.append(Finding("C3", f"platform.name {platform.get('name')!r} is not a platform of {PLATFORMS}"))
 
     if config["engine"]["channel"] not in CHANNELS:
         findings.append(Finding("C3", f"engine.channel must be one of {', '.join(sorted(CHANNELS))}"))

@@ -1,4 +1,4 @@
-"""The engine update (docs/DESIGN.md §5; step 3 of the update plan), on fixtures (F1).
+"""The engine update (docs/DESIGN.md §5), on fixtures (F1).
 
 The factory cuts each release with `release cut` into a checkout of the public repository
 of releases and tags the commit, as the workflow `tag` does there. The person's repository

@@ -1,6 +1,5 @@
 """N7 under stress: stories of many days through the real nightly job — watch, then alarms —
-each run against what the runs before it wrote (docs/DESIGN.md §5, §6; Issue #38, the owner's
-request of 09.11.2026 for a stress test).
+each run against what the runs before it wrote (docs/DESIGN.md §5, §6).
 
 Releases come faster than the bot keeps up; the bot gets the first line, the task or the
 record wrong; people close, edit or copy the Issue; GitHub refuses a write; a run errs; she
@@ -163,10 +162,10 @@ class Stress(unittest.TestCase):
         api = s.w.api
         # Somebody else opens an Issue under the title: not the list.
         api.lists[ISSUES].append({"number": 900, "title": behind.TITLE, "body": "All done!", "state": "open",
-                                  "user": {"login": "marina-bot"}, "closed_by": None})
+                                  "user": {"login": "person-bot"}, "closed_by": None})
         api.lists[f"{ISSUES}/900/comments"] = []
         # The bot closes the list by hand: the next night opens a new one while work is left.
-        api.close(ISSUES, first, "marina-bot")
+        api.close(ISSUES, first, "person-bot")
         s.night()
         mine = [i for i in s.w.todos("open") if i["user"]["login"] == BOT]
         self.assertEqual(len(mine), 1)
@@ -279,7 +278,7 @@ class Stress(unittest.TestCase):
         self.assertEqual((red, s.w.todos("open")), (False, []), out)
 
     def test_an_unreadable_record_never_closes_a_list_that_is_not_done(self):
-        """Kimi, review of PR #41: a record that does not parse made the list judge nothing
+        """A record that does not parse made the list judge nothing
         against it and come back empty — and the machine closed a list that was not done."""
         s = self.story(template((3, "mark", 1)), {"mark": master("mark", 3, 1)})
         s.merge({"engine/rules/fields/bot.md": b"Bot safety rules, v2.\n"})        # a release changes the bot's field
@@ -312,7 +311,7 @@ class Stress(unittest.TestCase):
         s.merge({"engine/rules/routines.md": template(*tasks)})
         # A master pushed past the gate under a hostile name (N1 raises that alarm).
         with s.dated():
-            s.w.push({"user/routines/x```<!--y.md": b"Hostile.\n"}, "marina-bot")
+            s.w.push({"user/routines/x```<!--y.md": b"Hostile.\n"}, "person-bot")
         s.night(13)
         body = s.todo()["body"]
         self.assertEqual(body.count("```"), 2, body)                         # the code block is whole

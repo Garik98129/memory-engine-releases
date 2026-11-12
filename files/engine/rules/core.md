@@ -1,6 +1,6 @@
 # Core rules — both AIs, every turn
 
-The person is «she» here because the pilot is; the rules do not depend on it.
+The rules call the person «she»; they do not depend on it.
 
 - **CORE-1 Language.** Answer in her language (`person.language`). A question she writes
   in one of her work languages (`person.work_languages`) — the whole answer in that

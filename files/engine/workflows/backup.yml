@@ -19,7 +19,7 @@ on:
 permissions: {}
 
 concurrency:
-  # One group with watch.yml, up to 100 waiting runs kept (Issue #18, item 48; see there).
+  # One group with watch.yml, up to 100 waiting runs kept (see there).
   group: notion-copy
   cancel-in-progress: false
   queue: max
@@ -64,7 +64,7 @@ jobs:
         # Exit 1 is «N3 or N6 found something»: the copy is made and goes on to its commit.
         # A crash exits 1 too. The report is the night's last write, made in one step, and a
         # failed night exits 2 — so 1 counts only with a non-empty report; any other end stops
-        # here, before the commit (Issue #18, item 42).
+        # here, before the commit.
         run: >-
           python3 -m engine.backup.run --main "$MAIN" --worktree "$RUNNER_TEMP/copy"
           --report "$RUNNER_TEMP/report.json"
@@ -76,6 +76,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          # The copy is off (notion.backup = false): the run wrote nothing and says so in its
+          # report; no commit, so no notion-backup branch appears.
+          if python3 -c 'import json, sys; sys.exit(0 if json.load(open(sys.argv[1])).get("off") is True else 1)' \
+              "$RUNNER_TEMP/report.json"; then
+            echo "The nightly copy is off: nothing to commit"
+            exit 0
+          fi
           cd "$RUNNER_TEMP/copy"
           git add -A
           git -c user.name='github-actions[bot]' \
@@ -92,7 +99,7 @@ jobs:
         # Also after a failed step: a copy that could not run is an alarm (P5), and
         # nothing was committed for it. A copy that was made but not committed or pushed
         # leaves a clean report behind — the step's failure is handed to the alarm
-        # itself, or the night would pass for a quiet one (Kimi, PR #8).
+        # itself, or the night would pass for a quiet one.
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}

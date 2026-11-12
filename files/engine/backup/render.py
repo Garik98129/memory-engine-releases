@@ -318,7 +318,7 @@ def source_markdown(source: dict) -> str:
 def _schema_line(definition: object) -> str:
     """A property's type and what else its definition carries: the options of a select,
     the target of a relation, the formula, the rollup — so a change of them is a change
-    of the file (Kimi, PR #8)."""
+    of the file."""
     if not isinstance(definition, dict):
         return ""
     t = _s(definition.get("type"))

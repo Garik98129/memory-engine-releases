@@ -1,9 +1,9 @@
 """The nightly watch's workflow (engine/workflows/watch.yml), run the way GitHub runs it.
 
-Issue #18, item 1: the job was red while every finding was acknowledged — the step «N1, N5»
+The job was red while every finding was acknowledged — the step «N1, N5»
 failed on the watch's exit 1 («found something») whatever the alarm step decided. Now 1 counts
 only with a non-empty report, so the alarm step decides the colour; an error (2) or a crash
-(1 with no report) stays red in the step itself. Item 48: the watch and the copy share one
+(1 with no report) stays red in the step itself. The watch and the copy share one
 concurrency group, and no waiting run is cancelled by a newer one."""
 from __future__ import annotations
 

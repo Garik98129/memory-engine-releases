@@ -179,7 +179,7 @@ class World:
     def nightly(self) -> tuple[bool, str]:
         """One run of watch.yml: (the job is red, output). The step «N1, N5» is decided by its
         own line from the workflow (`watch_step`), the alarm step by its exit code, and the
-        job is red when either step fails — as on GitHub (Issue #18, item 1). A crash of the
+        job is red when either step fails — as on GitHub. A crash of the
         watch ends `python3 -m` with exit 1, as here."""
         runner_temp = Path(tempfile.mkdtemp(dir=self._copy_parent))   # new every job
         report = runner_temp / "report.json"
@@ -203,7 +203,7 @@ class World:
         """One run of the backup workflow: the copy, its commit and push, its alarms —
         (backup exit, alarm exit, output). Whether the commit runs is decided by the step's own
         line from backup.yml, run in bash (`copy_step`): after exit 0, or after exit 1 with a
-        non-empty report — a crash exits 1 too (Issue #18, item 42). A commit or push that
+        non-empty report — a crash exits 1 too. A commit or push that
         fails is handed to the alarms."""
         if self.backup_head is None and not self.copy_dir.exists():
             # The first night, as backup.yml does it: a worktree, then an orphan branch.
@@ -329,12 +329,12 @@ class Scenarios(unittest.TestCase):
         self.assertEqual(red, 1)
         self.assertEqual(len(w.issues("open")), 1)
 
-    # -- Issue #18, item 1: the nightly job's colour follows the alarm step --------------
+    # -- the nightly job's colour follows the alarm step --------------
 
     def test_an_installation_acknowledged_before_the_protection_was_set_still_alarms_when_it_goes(self):
         # The install push lands while main has no protection; the installer sets it, runs the
         # watch again, and closes the Issue once its last list holds only the push. Taking the
-        # protection off later alarms again (fresh-eye pre-check of the install guide, 09.11.2026).
+        # protection off later alarms again.
         w = self.w
         protected = w.api.objects[f"repos/{REPO}/branches/main"]
         w.api.objects[f"repos/{REPO}/branches/main"] = {"protection": {"enabled": False}}
@@ -413,7 +413,7 @@ class Scenarios(unittest.TestCase):
         self.assertIn("CRASH OSError", out)
 
     def test_the_bots_account_closing_counts_the_same_as_anyone(self):
-        # Owner, 23.10.2026 (DESIGN §7): whoever closed it, the bot or the person, judged it known.
+        # Whoever closed it, the bot or the person, judged it known.
         w = self.w
         w.bypass("alex", b"x\n")
         w.run()
@@ -462,10 +462,9 @@ class Scenarios(unittest.TestCase):
         self.assertEqual([i["title"] for i in w.issues("open")], [alarm.TITLES["N5"]])
 
     def test_a_routine_hashed_wrong_or_left_stale_is_red_in_the_record_pr(self):
-        # Issue #18, item 33: the first installation's record hashed a routine with its last
+        # A record once hashed a routine with its last
         # newline, and only N5 would have said so, 36 h later. Every routine entry of a record
-        # PR is compared with its master at once, also one the PR leaves as it was (Kimi,
-        # review of PR #25): N5 is skipped on that PR.
+        # PR is compared with its master at once, also one the PR leaves as it was: N5 is skipped on that PR.
         w = self.w
         morning = b"Every morning: the calendar.\n"
         code, out = w.gate({"user/routines/morning.md": morning})
@@ -508,7 +507,7 @@ class Scenarios(unittest.TestCase):
         self.assertEqual((red, w.issues("open")), (0, []), out)
 
     def test_an_address_in_a_routine_is_blocked_at_the_gate_and_one_pushed_past_it_is_an_alarm(self):
-        # Issue #18, item 35: a routine master once held the trusted contact's address; the
+        # A routine master once held the trusted contact's address; the
         # routines hold none — his two live in the bot field's part (DOC-1).
         w = self.w
         routine = {"user/routines/invitations.md": b"Accept the invitations from alex.trusted@example.com.\n"}
@@ -581,7 +580,7 @@ class Scenarios(unittest.TestCase):
         self.assertEqual(red, 0)
 
     def test_a_forged_marker_in_a_closed_issue_is_the_price_the_owner_took(self):
-        # Grok Bot found it; the owner (23.10.2026; DESIGN §7) took it as a price, not a rework.
+        # Taken as a price, not a rework (DESIGN §7).
         w = self.w
         w.bypass("alex", b"x\n")
         w.run()
@@ -631,7 +630,7 @@ class CopyScenarios(unittest.TestCase):
         self.assertEqual(len(_git(w.copy_dir, "rev-list", "HEAD").splitlines()), 3)   # a stamp commit a night
 
     def test_a_small_base_that_vanishes_is_an_alarm_while_the_total_barely_moves(self):
-        w = self.w                                      # Kimi's example (23.10.2026): the Documents base is a few rows among many
+        w = self.w                                      # the Documents base is a few rows among many
         w.notion.sources.append(source("ids", "Documents", "idsdb", "home"))
         w.notion.row_lists["ids"] = [page("id1", "Passport", {"type": "data_source_id", "data_source_id": "ids"})]
         w.notion.row_lists["docs"] = [page(f"row{i}", f"Document {i}", {"type": "data_source_id", "data_source_id": "docs"}) for i in range(12)]
@@ -646,7 +645,7 @@ class CopyScenarios(unittest.TestCase):
         self.assertEqual(issue["title"], alarm.CHECK_TITLES["N3"])
         self.assertIn("the base data/ids (1 row) is gone from the copy since", issue["body"])
         self.assertNotIn("fell from", issue["body"])    # the total said nothing
-        for _ in range(3):                              # held night after night (Issue #18, item 43): no longer closed the next night
+        for _ in range(3):                              # held night after night: no longer closed the next night
             w.advance(24)
             code, red, out = w.night()
             self.assertEqual((code, red), (1, 1), out)
@@ -699,7 +698,7 @@ class CopyScenarios(unittest.TestCase):
         code, red, out = w.night()
         self.assertEqual((code, red), (1, 1), out)
         w.advance(24)
-        code, red, out = w.night()                      # before item 43 this night was «Clean … Closing»
+        code, red, out = w.night()                      # before the hold this night was «Clean … Closing»
         self.assertEqual((code, red), (1, 1), out)
         self.assertIn("data/docs (3 rows) is gone from the copy", out)               # tonight's findings, not the body's
         self.assertNotIn("fell from", out)              # the total's share is that one night's
@@ -784,8 +783,8 @@ class CopyScenarios(unittest.TestCase):
         self.assertEqual(w.issues("open"), [])
 
     def test_a_card_pasted_from_a_bank_is_cut_and_a_date_range_is_not(self):
-        # Issue #18, item 44: bank text splits the groups with no-break spaces; the pattern of
-        # the owner's copy also read some date ranges as cards.
+        # Bank text splits the groups with no-break spaces; the pattern of
+        # an earlier version also read some date ranges as cards.
         w = self.w
         w.night()
         w.advance(24)
@@ -824,7 +823,7 @@ class CopyScenarios(unittest.TestCase):
         _, gate_red, out = w.run()
         self.assertEqual((gate_red, w.issues("open")), (0, []))
 
-    # -- Issue #18, item 42: a copy that fails after Notion was read --------------------
+    # -- a copy that fails after Notion was read --------------------
     # Before: the write and the lock read stood outside the copy's `try`, a crash exited 1
     # («N3 or N6 found something»), backup.yml committed the half tree, and the only alarm
     # was «no readable report».
@@ -949,7 +948,7 @@ class CopyScenarios(unittest.TestCase):
             w.close()
 
 
-    # -- Issue #18, items 45–46: found on the owner's own copy (notion-backup PR #1) ----------
+    # -- exclusions: an unreadable chain and an unreadable config ----------
 
     def test_with_exclusions_a_page_shared_without_its_parent_stops_the_night(self):
         w = World(VALID_CONFIG + b'\n[notion]\nbackup_exclude = ["notes"]\n')
@@ -989,7 +988,7 @@ class CopyScenarios(unittest.TestCase):
             code, red, out = w.night()
             self.assertEqual((code, red), (0, 0), out)
             self.assertNotIn("notes", _git(w.copy_dir, "log", "--all", "--name-only", "--format="))   # no night ever had it
-            # A number instead of an id (Kimi, review of PR #23): the same stop, not «exclude nothing».
+            # A number instead of an id: the same stop, not «exclude nothing».
             w.push({"user/config.toml": VALID_CONFIG + b'\n[notion]\nbackup_exclude = [123]\n'}, "alex")
             w.advance(24)
             code, red, out = w.night()
@@ -1002,7 +1001,7 @@ class CopyScenarios(unittest.TestCase):
 
 class AdversarialCopyScenarios(unittest.TestCase):
     """What a collaborator's token, a flaky Notion or a hostile page can do to the copy and
-    its watch — the owner's safety check before the second reader (ADR-0033)."""
+    its watch — a safety check before the second reader."""
 
     def setUp(self):
         self.w = World()
@@ -1097,7 +1096,7 @@ class AdversarialCopyScenarios(unittest.TestCase):
         self.assertEqual(sorted(w.copied()), ["README.md", "copy.json"])
 
     def test_a_hostile_page_title_never_reaches_the_alarm_or_the_run_log(self):
-        w = self.w                                           # machine output carries no titles (DESIGN §11, plan decision 58)
+        w = self.w                                           # machine output carries no titles (DESIGN §11)
         title = "@stranger <!-- alarm-line: " + "0" * 64 + " --> ``` end"
         w.notion.pages[1]["properties"]["Name"]["title"] = rich(title)
         w.notion.blocks["notes"] = [paragraph("n1", f"card {CARD}")]

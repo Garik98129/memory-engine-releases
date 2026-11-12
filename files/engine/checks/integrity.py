@@ -11,14 +11,14 @@ that cannot run is reported as an error while the others still report (P5):
   out, within WINDOW. Every change must be a PR merge made by job `merge`
   (`merged_by` = github-actions[bot]) of a head that holds a successful `gate` from a
   verified run of the checking workflow. A release the trusted contact pushes by hand
-  (§5) is an alarm like any push — an expected one, which the trusted contact closes
-  (owner, 23.10.2026, in the review of PR #7). Commit dates are not used: a pusher sets
+  (§5) is an alarm like any push — an expected one, which the trusted contact closes.
+  Commit dates are not used: a pusher sets
   them. Changes newer than this run's checkout are left to the run they started (every
   push to main starts one).
 - **Branches.** No branch but main and notion-backup changes `.github/` against its
-  merge-base with main: a workflow file the bot managed to push (§13, question 3). The
+  merge-base with main: a workflow file the bot managed to push. The
   merge-base, not main itself, so an old branch is not blamed for an update main took
-  after it was made (Grok Bot, Issue #5).
+  after it was made.
 - **Settings.** main requires `gate` from GitHub Actions — read from the branch and
   from the rulesets, the two places GITHUB_TOKEN can see; the protection settings
   themselves need admin rights it never has, and whether admins may bypass is an
@@ -27,7 +27,7 @@ that cannot run is reported as an error while the others still report (P5):
   or no alarm reaches them.
 
 Runs inside the gate on every PR check (job `check`, against the main it checked out)
-and nightly (owner, 23.10.2026: the nightly run is the supplement for days without
+and nightly (the nightly run is the supplement for days without
 saves). The API is passed in, so the tests run on fixtures (F1).
 """
 from __future__ import annotations
@@ -67,10 +67,11 @@ def tree(repo: Path, main: str, manifest: dict) -> Parts:
     found += lock_check.check(repo, main, main, paths_check.PERSON, manifest)
     found += paths_check.tree_findings(repo, main)
     found += config_check.check(repo, main, main, paths_check.PERSON)
-    found += numbers_check.check_tree(repo, main)
+    c4_notes: list[str] = []        # a country with no row: said, never a silent N1 OK (P5)
+    found += numbers_check.check_tree(repo, main, c4_notes)
     found += text_check.check_tree(repo, main)
     found += limits_check.check(repo, main, main)
-    return [_alarm(f"{f.check} {f.message}") for f in found], []
+    return [_alarm(f"{f.check} {f.message}") for f in found], [f"N1 NOTE C4 {n}" for n in c4_notes]
 
 
 # ---- history -------------------------------------------------------------------------
@@ -83,10 +84,9 @@ def verify_run(api, repo: Path, main: str, run_id: str, pr: int, head: str, befo
     """None if run_id is a run of the checking workflow whose job `check` succeeded and
     logged that it checked this PR at this head against `before` — the main the PR then
     merged onto, which is job `merge`'s own condition; else why not. GitHub reports a
-    `pull_request_target` run on the PR head (`head_sha` = the head, seen live in the
-    review of PR #7), so the run is tied to main through the base it logged, not through
-    `head_sha`; a `workflow_dispatch` run is on main itself. The workflow that ran is
-    main's check.yml at `before`: an update that changes check.yml is checked by the
+    `pull_request_target` run on the PR head (`head_sha` = the head, seen live), so the run
+    is tied to main through the base it logged, not through `head_sha`; a `workflow_dispatch`
+    run is on main itself. The workflow that ran is main's check.yml at `before`: an update that changes check.yml is checked by the
     one before it, as designed."""
     run = api.get(f"repos/{api.repository}/actions/runs/{run_id}", allow_404=True)
     if run is None:
