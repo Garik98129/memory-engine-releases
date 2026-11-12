@@ -9,12 +9,15 @@
 # schedule     whether it runs a task on its own at a time: "yes", "paid", "unconfirmed", "no"
 # plan         the plan the engine needs there
 # status       "supported", "beta" (installs, with what is unknown said), "not-supported"
+# unknown      for "beta" when notion is not "unknown": what is not known yet, said in the Issue
 
 [grok]
 title = "Grok"
 field_limit = 4000                  # the limit the app shows
 field = "Grok app: the instructions field"
 notion = "yes"                      # seen: the chat created a base and a row (11.11.2026)
+# its chat opened the rules' raw link through its GitHub connector and, told not to use it, as a
+# web page (owner's test, 12.11.2026): it reads the rules by the raw link
 schedule = "unconfirmed"            # Automations «available to everyone» (x.ai), not yet seen on a free account
 plan = "any"
 status = "supported"
@@ -30,12 +33,16 @@ status = "supported"
 
 [chatgpt]
 title = "ChatGPT"
-field_limit = 5000                  # Plus and above; Free and Go: 1 500
-field = "ChatGPT app: Settings, Customize ChatGPT"
-notion = "unknown"                  # the help says «may be able to create or update»; not tried
+field_limit = 5000                  # Plus and above; Free and Go: 1 500 (OpenAI help; the owner saw 1 500 on Free,
+                                    # and about 3 800 went in on Plus, 12.11.2026)
+field = "ChatGPT app: Personalization"            # where the owner put it, 12.11.2026
+notion = "yes"                      # seen 12.11.2026 in a test workspace: pages and the two bases (owner's check)
+# its chat did not open the rules' raw link, with its GitHub app on or off; with the app off it opened
+# GitHub's page of the same file (owner's tests, 12.11.2026): engine/checks/limits_check.py, BLOB_RULES
 schedule = "yes"
 plan = "Plus"
 status = "beta"
+unknown = "how it keeps to its rules day to day: so far it has been tried in one test installation"
 
 [gemini]
 title = "Gemini"
