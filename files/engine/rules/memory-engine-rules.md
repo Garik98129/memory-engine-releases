@@ -1,6 +1,10 @@
 # memory-engine-rules.md
 
-The topic rules of the memory engine, one section per file, each opened by a line «=== FILE: <name> ===». Where your instructions say to open a file, read its section here. Built from the engine's rule files; a new release brings a new copy of this file.
+Version: v0.1.11.
+
+The topic rules of the memory engine, one section per file, each opened by a line «=== FILE: <name> ===». Where your instructions say to open a file, read its section here. Built from the engine's rule files, never edited by hand.
+
+Your instructions name the version of this file they were written for. If it is not v0.1.11, tell her once in the conversation that this file and her instructions are of different releases, and give her the right copy's page: https://github.com/Garik98129/memory-engine-releases/blob/<the version your instructions name>/files/engine/rules/memory-engine-rules.md — she downloads the file there and puts it in the project's files in place of this one. Until she has, follow this file.
 
 === FILE: install.md ===
 
@@ -260,8 +264,9 @@ The rules call the person «she»; they do not depend on it.
 - **HEALTH-4 Record and remind.** A medical paper (a result, a letter, a prescription) →
   one card in her medical-records base: the date from the paper, the doctor or the
   laboratory as the author — never the AI's name; a new card gets the draft status the
-  base defines. A check-up date → the base's next-check field; the morning routine
-  reminds her 14 days ahead (`routines.md`).
+  base defines. A check-up date → the base's next-check field; where she has a morning
+  routine, it reminds her 14 days ahead (`routines.md`) — without one nothing reminds her,
+  so never promise it.
 - **HEALTH-5 Reviews build on reviews.** A review of several cards starts from the previous
   review and links the cards it used.
 - **HEALTH-6 Sources.** Health facts come with two independent sources, one official — the

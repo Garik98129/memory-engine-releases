@@ -9,6 +9,7 @@
 # schedule     whether it runs a task on its own at a time: "yes", "paid", "unconfirmed", "no"
 # plan         the plan the engine needs there
 # status       "supported", "beta" (installs, with what is unknown said), "not-supported"
+# unknown      for "beta" when notion is not "unknown": what is not known yet, said in the Issue
 
 [grok]
 title = "Grok"
@@ -30,7 +31,8 @@ status = "supported"
 
 [chatgpt]
 title = "ChatGPT"
-field_limit = 5000                  # Customize ChatGPT: Plus and above, Free and Go 1 500; a project's own limit not measured
+field_limit = 5000                  # Customize ChatGPT's on Plus; a project's instructions: about 3 800 went in on Plus
+                                    # (owner's test), 1 500 on Free (owner, in the app, 12.11.2026); Plus's own ceiling not seen
 field = "ChatGPT app: a new project, its instructions; talk to the AI inside that project"
 notion = "yes"                      # seen 12.11.2026 in a test workspace: pages and the two bases (owner's check)
 # its chat did not open the rules' raw link, with its GitHub app on or off (12.11.2026): it reads the
@@ -38,6 +40,7 @@ notion = "yes"                      # seen 12.11.2026 in a test workspace: pages
 schedule = "yes"
 plan = "Plus"
 status = "beta"
+unknown = "how it keeps to its rules day to day: so far it has been tried in one test installation"
 
 [gemini]
 title = "Gemini"

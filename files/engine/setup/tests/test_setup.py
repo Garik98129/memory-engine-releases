@@ -11,7 +11,7 @@ from unittest import mock
 from engine.checks import config_check, limits_check
 from engine.checks.paths_check import PERSON
 from engine.checks.tests.helpers import BASE_FILES, VALID_CONFIG, Repo
-from engine.setup import bundle, setup
+from engine.setup import bundle, release, setup
 
 HERE = Path(__file__).resolve().parents[2]
 CHOICES = dict(platform="grok", language="ru", country="IL", timezone="Asia/Jerusalem", name="Anna",
@@ -416,7 +416,8 @@ class TheIssue(unittest.TestCase):
         self.assertIn("You need the Pro plan.", claude)
         self.assertIn("a new project, its instructions", claude)
         chatgpt = self.text("chatgpt")
-        self.assertIn("You need the Plus plan.", chatgpt, "on Free and Go the field cuts her part off")
+        self.assertIn("You need the Plus plan.", chatgpt, "on Free a project's instructions hold 1 500 (owner, 12.11.2026)")
+        self.assertIn("In beta — not known yet: how it keeps to its rules day to day", chatgpt)
         self.assertIn("Your AI writes your records into Notion itself.", chatgpt, "seen 12.11.2026 (owner's check)")
         grok = self.text("grok")
         self.assertNotIn("You need the", grok)
@@ -435,7 +436,8 @@ class TheIssue(unittest.TestCase):
                       "follow it: start the installation.", chatgpt)
         self.assertNotIn(LINK, chatgpt)
         self.assertNotIn("raw.githubusercontent.com", chatgpt, "no link it cannot open")
-        self.assertIn("the project file memory-engine-rules.md, its section «=== FILE: name ===»", chatgpt)
+        _repo, tag = bundle.link((HERE / "rules/fields/solo.md").read_text(encoding="utf-8"))
+        self.assertIn(f"the project file memory-engine-rules.md ({tag}), its section «=== FILE: name ===»", chatgpt)
         grok = self.text("grok")
         self.assertIn("Three steps, all on your phone.", grok)
         self.assertNotIn("The rules file", grok)
@@ -456,11 +458,26 @@ class Bundle(unittest.TestCase):
         text = bundle.BUNDLE.read_text(encoding="utf-8")
         solo = (HERE / "rules/fields/solo.md").read_text(encoding="utf-8")
         topic_line = next(line for line in solo.splitlines() if line.startswith("Topic rules:"))
-        for name in ("install.md", *[n for n in bundle.ORDER if n in topic_line]):
-            self.assertIn(f"=== FILE: {name} ===", text)
-        for name in ("health.md", "shopping.md", "mail.md", "calendar.md", "notion.md", "documents.md", "core.md"):
-            self.assertIn(name, topic_line)
+        named = set(release._RULE_FILE_RE.findall(topic_line))
+        self.assertGreaterEqual(len(named), 7, "the line names the topic files")
+        for name in sorted(named | {"install.md"}):
             self.assertIn(name, bundle.ORDER, f"{name} is named on the field's line, so the file must hold it")
+            self.assertIn(f"=== FILE: {name} ===", text)
+
+    def test_the_field_and_the_file_carry_the_release_of_the_link(self):
+        solo = (HERE / "rules/fields/solo.md").read_text(encoding="utf-8")
+        repo, tag = bundle.link(solo)
+        self.assertRegex(tag, release.PUBLISHED_TAG_RE.pattern)
+        other = (HERE / "rules/fields/solo-file.md").read_text(encoding="utf-8")
+        self.assertIn(f"the project file memory-engine-rules.md ({tag}), its section", other)
+        head = bundle.BUNDLE.read_text(encoding="utf-8").split("\n=== FILE: install.md ===", 1)[0]
+        self.assertIn(f"Version: {tag}.", head)
+        self.assertIn(f"If it is not {tag}, tell her", head, "the chat holds the two versions together")
+        self.assertIn(f"https://github.com/{repo}/blob/<the version your instructions name>/files/engine/rules/"
+                      "memory-engine-rules.md", head)
+        # a release that moves solo.md's link changes the field she pastes, not the file alone
+        moved = solo.replace(f"/{tag}/", "/v9.9.9/")
+        self.assertIn("(v9.9.9)", bundle.solo_file(moved))
 
     def test_solo_file_is_solo_with_the_link_alone_replaced(self):
         solo = (HERE / "rules/fields/solo.md").read_text(encoding="utf-8").splitlines()
@@ -471,6 +488,12 @@ class Bundle(unittest.TestCase):
         self.assertTrue(solo[differ[0]].startswith("Topic rules:"))
         self.assertIn("raw.githubusercontent.com", solo[differ[0]])
         self.assertNotIn("raw.githubusercontent.com", other[differ[0]])
+
+    def test_a_beta_platform_says_what_is_not_known(self):
+        for name, row in setup.platforms().items():
+            if row.get("status") == "beta":
+                self.assertTrue(row.get("notion") == "unknown" or row.get("unknown"),
+                                f"{name}: «beta» installs with what is unknown said (platforms.toml)")
 
     def test_the_checks_give_chatgpt_the_file_field(self):
         self.assertEqual(limits_check.fields({"platform": {"writer": "chat", "name": "chatgpt"}})["chat"][0],

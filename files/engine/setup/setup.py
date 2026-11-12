@@ -8,7 +8,8 @@ Writes the text of the Issue «Your assistant's instructions» into `--issue` fi
 `user/config.toml` and her part of the field, `user/fields/chat.md`, into the checkout. The
 Issue holds the field to paste, where her platform keeps it, the plan it needs, the first
 message to her AI — with the link to `install.md` in the release her repository holds
-(`user/engine.lock`) — and what works on her platform and what does not. Refuses — exit 2,
+(`user/engine.lock`), or, where her chat reads the rules from a project file, that file's page
+and a first message to it — and what works on her platform and what does not. Refuses — exit 2,
 nothing written — a platform the table does not support, a choice C3 would refuse, a name C5 would
 hold red every night (C4 scans her part too), a repository that already has her part, or a field
 over the limit. No emergency number is asked: her part names her country, and the AI names its
@@ -202,8 +203,8 @@ def build(platform: str, language: str, country: str, timezone: str, name: str, 
 
 
 def reads_file(platform: str) -> bool:
-    """Whether her chat reads the rules from the project file, not by the link (ChatGPT did not
-    open the raw link, with its GitHub app on or off, 12.11.2026)."""
+    """Whether her chat reads the rules from the project file, not by the link (on the owner's test,
+    12.11.2026, ChatGPT did not open the raw link, with its GitHub app on or off)."""
     return platform in limits_check.FILE_RULES
 
 
@@ -221,8 +222,8 @@ def install_link(repo: Path) -> str:
 
 
 def bundle_link(repo: Path) -> str:
-    """The rules file on GitHub's own page, at the release her repository holds: she downloads it
-    there and adds it to her project's files."""
+    """The rules file on GitHub's own page, at the release her repository holds: the Issue sends her
+    there to download it and add it to her project's files (not yet tried from a phone)."""
     manifests, tag = _release(repo)
     return f"https://github.com/{manifests}/blob/{tag}/{PUBLISHED_FILES}/{RULES}{BUNDLE}"
 
@@ -251,6 +252,7 @@ def issue(row: dict, field: str, link: str, rules_file: str = "") -> str:
                 "paid": f"Daily things on its own need the {row['plan']} plan.",
                 "unconfirmed": "Whether it does daily things on its own on your plan is not confirmed yet.",
                 "no": "It cannot do anything on its own on a schedule."}[row["schedule"]]
+    unknown = f" In beta — not known yet: {row['unknown']}." if row.get("unknown") else ""
     plan = "" if row["plan"] == "any" else (
         f"**You need the {row['plan']} plan.** On a smaller plan the instructions field is too short or the "
         "AI cannot do what this needs: the end of the text — your own part — would be cut off.\n\n")
@@ -259,8 +261,8 @@ def issue(row: dict, field: str, link: str, rules_file: str = "") -> str:
              f"```\n{field}\n```\n\n"]
     if rules_file:
         steps.append("**{n}. The rules file.** " + f"Download {BUNDLE} from {rules_file} and add it to the "
-                     "files of the same project. This AI cannot open the rules by a link, so it reads them "
-                     "there.\n\n")
+                     "files of the same project. In our test this AI did not open the rules by a link, so it reads "
+                     "them there.\n\n")
     steps.append("**{n}. Connections.** In the same app, connect Notion — and Google, if you want your mail "
                  "and calendar.\n\n")
     first = (f"Open the project file {BUNDLE}, its section «=== FILE: install.md ===», and follow it: "
@@ -282,7 +284,7 @@ def issue(row: dict, field: str, link: str, rules_file: str = "") -> str:
         "send it again.\n\n"
         "Then it asks a few questions — how to address you, what to help with first, how you like answers, "
         "what you must avoid; skip any. It can learn more about you later: on any day, say «continue setup» in your language.\n\n"
-        f"**What works on {row['title']}.** {notion} {schedule} No daily task is set up at installation "
+        f"**What works on {row['title']}.** {notion} {schedule}{unknown} No daily task is set up at installation "
         "yet: a later release brings them. The nightly copy of your Notion is off; it can be turned on "
         "later.\n"
     )

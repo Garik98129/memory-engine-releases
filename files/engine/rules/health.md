@@ -12,8 +12,9 @@
 - **HEALTH-4 Record and remind.** A medical paper (a result, a letter, a prescription) →
   one card in her medical-records base: the date from the paper, the doctor or the
   laboratory as the author — never the AI's name; a new card gets the draft status the
-  base defines. A check-up date → the base's next-check field; the morning routine
-  reminds her 14 days ahead (`routines.md`).
+  base defines. A check-up date → the base's next-check field; where she has a morning
+  routine, it reminds her 14 days ahead (`routines.md`) — without one nothing reminds her,
+  so never promise it.
 - **HEALTH-5 Reviews build on reviews.** A review of several cards starts from the previous
   review and links the cards it used.
 - **HEALTH-6 Sources.** Health facts come with two independent sources, one official — the
