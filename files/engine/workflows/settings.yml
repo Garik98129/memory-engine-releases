@@ -1,0 +1,98 @@
+# A change of her settings on an installed repository, by a form where every answer already
+# stands on «keep as it is» (docs/DESIGN_PHASE3.md §6). Installed as .github/workflows/settings.yml
+# and locked by C1.
+#
+# The repository's owner presses «Run workflow» on main and gives only the answer that changes:
+# a list left on its first item, a text field left empty, keeps what her config on main holds.
+# Main's code (`engine.setup.setup_run --keep`) builds her config and her part of the field anew
+# and lands them like every change: a commit on setup/settings, a PR, the gate started through
+# workflow_dispatch, and job `merge`. The gate knows the PR by its branch and trusts neither that
+# nor its author: C2 lets a setup PR only change her two files where they stand, held byte for
+# byte to what `setup` builds; C3 lets it take nothing from the config main holds. A new Issue
+# «Your assistant's instructions» then carries the field to paste. The form `setup` installs once
+# and sends her here: its lists stand on a real answer, not on «keep as it is».
+# The answers reach the code as environment variables, never inside the script's text.
+name: settings
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Your AI
+        required: false
+        type: choice
+        default: keep as it is
+        options: [keep as it is, chatgpt, claude, grok]
+      language:
+        description: Your language, as a code — ru, en, he, uk, de, pt-BR (empty — keep as it is)
+        required: false
+        type: string
+        default: ""
+      country:
+        description: Your country, two letters — IL, DE, US (empty — keep as it is)
+        required: false
+        type: string
+        default: ""
+      timezone:
+        description: Your time zone — Asia/Jerusalem, Europe/Berlin, America/New_York (empty — keep as it is)
+        required: false
+        type: string
+        default: ""
+      name:
+        description: Your name, as your AI will call you (empty — keep as it is)
+        required: false
+        type: string
+        default: ""
+      gender:
+        description: For the grammar of your language
+        required: false
+        type: choice
+        default: keep as it is
+        options: [keep as it is, female, male]
+      work_languages:
+        description: Other languages you work in, as codes, comma-separated — en,he (empty — keep as it is; none — no other language)
+        required: false
+        type: string
+        default: ""
+
+permissions: {}
+
+concurrency:
+  group: setup
+  cancel-in-progress: false
+
+jobs:
+  settings:
+    # A dispatch on any other branch would run that branch's copy of this file.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write         # the branch setup/settings
+      pull-requests: write    # the PR of the change
+      issues: write           # «Your assistant's instructions»
+      actions: write          # start the gate on that PR
+      statuses: read          # what the gate said to its head
+    steps:
+      - name: Code from main
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Settings
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PLATFORM: ${{ inputs.platform }}
+          LANGUAGE: ${{ inputs.language }}
+          COUNTRY: ${{ inputs.country }}
+          TIMEZONE: ${{ inputs.timezone }}
+          NAME: ${{ inputs.name }}
+          GENDER: ${{ inputs.gender }}
+          WORK_LANGUAGES: ${{ inputs.work_languages }}
+        run: >-
+          python3 -m engine.setup.setup_run --keep --main "$GITHUB_SHA"
+          --run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          --platform="$PLATFORM" --language="$LANGUAGE" --country="$COUNTRY" --timezone="$TIMEZONE"
+          --name="$NAME" --gender="$GENDER" --work-languages="$WORK_LANGUAGES"

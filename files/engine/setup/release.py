@@ -4,6 +4,8 @@
     python -m engine.setup.release manifest --rev COMMIT --tag v0.1.0 > release-manifest.json
     python -m engine.setup.release cut --rev COMMIT --tag v0.1.6 --into RELEASES_CHECKOUT
     python -m engine.setup.release install --rev COMMIT --tag v0.1.0 --into PERSON_REPO
+    python -m engine.setup.release template --rev COMMIT --tag v0.1.12 --releases RELEASES_CHECKOUT \
+        --into TEMPLATE_CHECKOUT
 
 A release is the template's `engine/` at one commit, read as git objects: an untracked
 or uncommitted file never ships. Each `engine/workflows/<name>` ships a second time as
@@ -25,6 +27,18 @@ one of them names itself in the link, so the chat field changes with it (§10).
 
 `install` is the first installation only: it refuses a repository that already has
 `engine/`, `.github/` or `user/engine.lock`. Updates come through the update PR (§5).
+
+`template` writes the public template a person makes her repository from with «Use this
+template» (DESIGN_PHASE3 §5, step 1): the release's files, its lock, and under `user/` nothing
+else — anything more there would make every repository made from it «installed» from its first
+commit, and `setup` would refuse it — plus the template's README (`docs/template/README.md`,
+the steps on a phone) and the licence. Only a release already published, and only from the
+commit it was cut from: the manifest at its tag, read from a checkout of the repository of
+releases that has fetched its tags from GitHub, names that commit and its files, so C1 in her
+repository holds the engine she got to the release she got, and the README is that release's.
+The template's `engine/`, `.github/` and `user/` are replaced whole at every release — nothing
+added there by hand survives; any other entry at its top refuses the run before anything is
+removed.
 """
 from __future__ import annotations
 
@@ -319,10 +333,95 @@ def install(files: dict[str, bytes], tag: str, into: Path) -> list[str]:
     return written
 
 
+TEMPLATE_README = "docs/template/README.md"
+TEMPLATE_ROOT = ("README.md", "LICENSE")
+TEMPLATE_TOP = frozenset({SOURCE, ".github", "user", *TEMPLATE_ROOT})
+
+
+def published_manifest(releases: Path, tag: str) -> dict:
+    """The manifest at the tag of a published release, from a checkout of the repository of
+    releases that has fetched its tags."""
+    release_key(tag)
+    try:
+        raw = gitio.file_at(releases, f"refs/tags/{tag}", MANIFEST_FILE)
+    except gitio.GitError:
+        raw = None
+    if raw is None:
+        raise ValueError(f"{releases} has no tag {tag} with a {MANIFEST_FILE}: fetch its tags, or cut and publish it first")
+    data = json.loads(raw.decode("utf-8"))
+    if not isinstance(data, dict) or data.get("release") != tag or not isinstance(data.get("files"), dict):
+        raise ValueError(f"the manifest at {tag} does not name {tag} and its files")
+    return data
+
+
+def template_tree(repo: Path, rev: str, files: dict[str, bytes], tag: str, published: dict) -> dict[str, bytes]:
+    """Path → content of the template at this release; refused unless rev is the commit the
+    release was cut from and the files are the published ones."""
+    release_key(tag)
+    if published.get("release") != tag:
+        raise ValueError(f"the published manifest is of {published.get('release')!r}, not {tag}")
+    if published.get("source") != commit_of(repo, rev):
+        raise ValueError(f"{tag} was cut from {str(published.get('source'))[:12]}, not from {rev[:12]}: the template "
+                         f"is written from the release's own commit")
+    shipped = {path: hashlib.sha256(content).hexdigest() for path, content in files.items()}
+    if shipped != published["files"]:
+        differ = sorted(set(shipped) ^ set(published["files"]) |
+                        {p for p in set(shipped) & set(published["files"]) if shipped[p] != published["files"][p]})
+        raise ValueError(f"these files are not the ones published as {tag}: {', '.join(differ[:10])}")
+    tree = dict(files)
+    tree[LOCK_FILE] = f'release = "{tag}"\n'.encode()
+    for target, source in (("README.md", TEMPLATE_README), ("LICENSE", "LICENSE")):
+        content = gitio.file_at(repo, rev, source)
+        if content is None:
+            raise ValueError(f"{source} is missing at {rev[:12]}")
+        tree[target] = content
+    return tree
+
+
+def template(tree: dict[str, bytes], into: Path) -> list[str]:
+    """Write the template into a checkout of its repository: `engine/`, `.github/` and `user/`
+    replaced whole, README and LICENSE rewritten. Everything is looked at before anything is
+    removed: an entry at the top that is not the template's, a link, a folder where a file
+    belongs or the other way round, or a `user/` holding more than the lock (a person's part
+    above all) refuses the run."""
+    git_dir = into / ".git"
+    if git_dir.is_symlink() or not git_dir.is_dir():
+        raise ValueError(f"{into} is not a checkout of the template's repository")
+    for entry in sorted(into.iterdir()):
+        if entry.name == ".git":
+            continue
+        if entry.is_symlink():
+            raise ValueError(f"{entry} is a link")
+        if entry.name not in TEMPLATE_TOP:
+            raise ValueError(f"{entry} is not the template's: the checkout holds only what `template` writes")
+        if entry.name in TEMPLATE_ROOT and not entry.is_file():
+            raise ValueError(f"{entry} is not a file")
+        if entry.name not in TEMPLATE_ROOT and not entry.is_dir():
+            raise ValueError(f"{entry} is not a folder")
+    user = into / "user"
+    if user.exists():
+        if not user.is_dir() or any(p.name != "engine.lock" for p in user.iterdir()):
+            raise ValueError(f"{user} holds more than the lock: a template with a person's part would make every "
+                             f"repository made from it «installed» (DESIGN_PHASE3 §5)")
+    for top in (SOURCE, ".github", "user"):
+        if (into / top).exists():
+            shutil.rmtree(into / top)
+    for name in TEMPLATE_ROOT:
+        (into / name).unlink(missing_ok=True)
+    written = []
+    for path in sorted(tree):
+        out = into / path
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_bytes(tree[path])
+        out.chmod(0o644)
+        written.append(path)
+    return written
+
+
 def main(argv: list[str] | None = None, now: datetime | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = ap.add_subparsers(dest="command", required=True)
-    for name in ("manifest", "cut", "install"):
+    for name in ("manifest", "cut", "install", "template"):
         p = sub.add_parser(name)
         p.add_argument("--repo", type=Path, default=Path("."), help="the template")
         p.add_argument("--rev", required=True, help="the template commit the release is cut from")
@@ -330,6 +429,10 @@ def main(argv: list[str] | None = None, now: datetime | None = None) -> int:
     sub.choices["install"].add_argument("--into", type=Path, required=True, help="the person's repository")
     sub.choices["cut"].add_argument("--into", type=Path, required=True,
                                     help="a checkout of the public repository of releases")
+    sub.choices["template"].add_argument("--into", type=Path, required=True,
+                                         help="a checkout of the template's public repository")
+    sub.choices["template"].add_argument("--releases", type=Path, required=True,
+                                         help="a checkout of the repository of releases, with its tags")
     args = ap.parse_args(argv)
     try:
         source = commit_of(args.repo, args.rev)
@@ -340,10 +443,14 @@ def main(argv: list[str] | None = None, now: datetime | None = None) -> int:
             repository = tomllib.loads(files["engine/defaults.toml"].decode("utf-8"))["release"]["manifests"]
             for path in cut(files, args.tag, source, now or datetime.now(timezone.utc), args.into, repository):
                 print(path)
+        elif args.command == "template":
+            tree = template_tree(args.repo, source, files, args.tag, published_manifest(args.releases, args.tag))
+            for path in template(tree, args.into):
+                print(path)
         else:
             for path in install(files, args.tag, args.into):
                 print(path)
-    except (ValueError, KeyError, tomllib.TOMLDecodeError, gitio.GitError, OSError) as exc:
+    except (ValueError, KeyError, tomllib.TOMLDecodeError, json.JSONDecodeError, gitio.GitError, OSError) as exc:
         print(f"ERROR {exc}", file=sys.stderr)
         return 2
     return 0

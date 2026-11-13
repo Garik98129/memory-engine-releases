@@ -24,7 +24,7 @@ import tomllib
 from datetime import datetime, timezone
 from pathlib import Path
 
-from ..checks import config_check, gitio, lock_check
+from ..checks import config_check, gitio, lock_check, paths_check
 from ..checks.report import ALARM, Finding, render
 from . import copy as copying
 from .notion import Notion, NotionError
@@ -101,14 +101,19 @@ def main(argv: list[str] | None = None, api=None, now: datetime | None = None) -
 
     report: dict = {"N3": [], "N6": [], "error": [], "skipped": []}
     findings: list[Finding] = []
+    reason = "the nightly copy is off (notion.backup = false)"
     try:
-        off = not config_check.copy_on(config_check.read_for_copy(args.repo, args.main))
+        if not paths_check.installed(args.repo, args.main):
+            # A repository made from the template, before `setup` (DESIGN_PHASE3 §5): no config
+            # and no Notion token yet. Off, and said so — not a failed night for a new owner.
+            off, reason = True, "not installed yet: the workflow «setup» writes her part"
+        else:
+            off = not config_check.copy_on(config_check.read_for_copy(args.repo, args.main))
     except FAILS:
         off = False                 # a config or a revision it cannot read stops the night just below, as before
     if off:
         # The copy is off (DESIGN_PHASE3 §7): Notion is not read, nothing is written, and the
         # workflow commits nothing — it reads «off» in this report. Said, not silent (P5).
-        reason = "the nightly copy is off (notion.backup = false)"
         report.update({"skipped": ["N3", "N6"], "off": True})
         print(render([], [], {"N3": reason, "N6": reason}, notes=[f"NOTE {reason}"], word="alarm"))
         try:

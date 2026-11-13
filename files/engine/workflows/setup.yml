@@ -1,0 +1,88 @@
+# The first installation of a person's repository made from the template
+# (docs/DESIGN_PHASE3.md §5, step 2). Installed as .github/workflows/setup.yml and locked by C1.
+#
+# The repository's owner presses «Run workflow» on main, with her choices. Main's code builds her
+# config and her part of the field (`engine.setup.setup_run`) and lands them like every change:
+# a commit on setup/installation, a PR, the gate started through workflow_dispatch (a PR opened
+# with GITHUB_TOKEN starts no pull_request_target run) and job `merge`. The gate knows the PR by
+# its branch and trusts neither that nor its author: C2 lets a setup PR only add her two files
+# to a repository never installed, held byte for byte to what `setup` builds from her choices.
+# The Issue «Your assistant's instructions» carries the field to paste and the first message.
+# The choices reach the code as environment variables, never inside the script's text.
+name: setup
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Your AI
+        required: true
+        type: choice
+        options: [chatgpt, claude, grok]
+      language:
+        description: Your language, as a code — ru, en, he, uk, de, pt-BR
+        required: true
+        type: string
+      country:
+        description: Your country, two letters — IL, DE, US
+        required: true
+        type: string
+      timezone:
+        description: Your time zone — Asia/Jerusalem, Europe/Berlin, America/New_York
+        required: true
+        type: string
+      name:
+        description: Your name, as your AI will call you
+        required: true
+        type: string
+      gender:
+        description: For the grammar of your language
+        required: true
+        type: choice
+        options: [female, male]
+      work_languages:
+        description: Other languages you work in, as codes, comma-separated — en,he (or leave empty)
+        required: false
+        type: string
+        default: ""
+
+permissions: {}
+
+concurrency:
+  group: setup
+  cancel-in-progress: false
+
+jobs:
+  setup:
+    # A dispatch on any other branch would run that branch's copy of this file.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write         # the branch setup/installation
+      pull-requests: write    # the setup PR
+      issues: write           # «Your assistant's instructions»
+      actions: write          # start the gate on the setup PR
+    steps:
+      - name: Code from main
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PLATFORM: ${{ inputs.platform }}
+          LANGUAGE: ${{ inputs.language }}
+          COUNTRY: ${{ inputs.country }}
+          TIMEZONE: ${{ inputs.timezone }}
+          NAME: ${{ inputs.name }}
+          GENDER: ${{ inputs.gender }}
+          WORK_LANGUAGES: ${{ inputs.work_languages }}
+        run: >-
+          python3 -m engine.setup.setup_run --main "$GITHUB_SHA"
+          --run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          --platform="$PLATFORM" --language="$LANGUAGE" --country="$COUNTRY" --timezone="$TIMEZONE"
+          --name="$NAME" --gender="$GENDER" --work-languages="$WORK_LANGUAGES"

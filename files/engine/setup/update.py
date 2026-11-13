@@ -273,10 +273,13 @@ def ask_for_hands(api, tag: str, channel: str, owner: str, contact: str, run_url
     for issue in _hands_issues(api, "all"):
         if issue["title"] == title:
             return issue["number"], "already open" if issue.get("state") == "open" else "closed by hand: not asked again"
+    who = ("The trusted contact applies it by hand, as docs/DESIGN.md §5 says" if contact else
+           "There is no trusted contact: it waits for somebody who can push workflow files to this repository "
+           "and apply it by hand — not yet a step anyone can take from a phone (DESIGN_PHASE3 §6)")
     body = (f"{alarm._names(owner, contact)} — release {tag} is due on the {channel} channel and changes "
             f".github/. GITHUB_TOKEN cannot write workflow files, so the update workflow opened no PR. "
-            f"The trusted contact applies it by hand, as docs/DESIGN.md §5 says; N1 then raises its expected "
-            f"alarm. This Issue closes itself once main holds {tag}.\n\nRun: {run_url}\n")
+            f"{who}; N1 then raises its expected alarm. This Issue closes itself once main holds {tag}."
+            f"\n\nRun: {run_url}\n")
     return api.post(f"repos/{api.repository}/issues", {"title": title, "body": body})["number"], "opened"
 
 

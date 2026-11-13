@@ -45,6 +45,14 @@ it — is written again, an empty list closes the Issue, and a run that left the
 its report — the copy's run, a record PR, a stale run, a record that does not parse — or
 that had an error in the checks leaves it alone. It never turns the run red, not even when GitHub refuses to keep it.
 
+The field's Issue of an installation without a bot (`field_issue.py`) is kept here as well, and
+is no alarm either: a run whose report carries the field hands it to her when it is not the one
+she was given; a run that left it out, or that had an error in the checks, leaves it alone. While
+N1 lists a line of the gate's own checks on main (C1 to C6), nothing is handed over — the text
+is one no check would let in — and an open N1 alarm gets one comment saying what is wrong; nobody
+has to close an alarm to get a field. An installation with a bot is never touched, whatever the
+report says.
+
 The exit code says whether the checks found something not acknowledged — the gate goes
 red on it.
 
@@ -61,7 +69,7 @@ import re
 import sys
 from pathlib import Path
 
-from . import behind, config_check
+from . import behind, config_check, field_issue, limits_check
 from .github import ApiError, GitHub
 from .integrity import BOT
 
@@ -85,6 +93,7 @@ PEOPLE_CLOSE = frozenset({"N1"})        # never closed by the machine (see above
 def titles_for(what: str) -> dict[str, str]:
     """The Issue titles one run may open, update or close: the checks' and its own error."""
     return {**CHECK_TITLES, "ERROR": ERROR_TITLES[what]}
+TREE_LINE_RE = re.compile(r"C[1-7] ")           # an N1 line of the gate's checks on main itself (integrity, «Tree»)
 DIGEST_RE = re.compile(r"<!-- alarm-digest: ([0-9a-f]{64}) -->")
 LINE_RE = re.compile(r"<!-- alarm-line: ([0-9a-f]{64}) -->")
 # The machine's closing comment before it carried a digest — the only form it ever had: an
@@ -287,6 +296,22 @@ def todo_from_report(path: Path) -> list[str] | None:
     return _lines(report.get("todo")) if isinstance(report, dict) else None
 
 
+def open_alarm(api, title: str) -> int | None:
+    """The number of the open alarm Issue under this title, if the workflow has one."""
+    for issue in api.pages(f"repos/{api.repository}/issues", {"state": "open", "creator": BOT}):
+        if _own(issue) and issue.get("title") == title:
+            return issue["number"]
+    return None
+
+
+def field_from_report(path: Path) -> dict | None:
+    """The run's field for her Issue, or None when the run did not judge it."""
+    try:
+        return field_issue.from_report(json.loads(path.read_text(encoding="utf-8")))
+    except (OSError, ValueError):
+        return None
+
+
 def _lines(value: object) -> list[str] | None:
     return [str(x) for x in value] if isinstance(value, list) else None
 
@@ -350,6 +375,28 @@ def main(argv: list[str] | None = None, api=None) -> int:
                 done += todo_sync(api, todo, args.run_url)
             except Exception as exc:    # noqa: BLE001 — the to-do is not an alarm: the next run keeps it
                 done.append(f"TODO ERROR the to-do could not be kept: {type(exc).__name__}: {exc}")
+        handed = field_from_report(args.report)
+        solo = limits_check.writer(config) == "chat" and not limits_check.has_bot(config)   # main's own config, not the report's word
+        if handed is not None and solo and not findings.get("ERROR"):  # as the to-do: an error proves nothing about main
+            try:
+                # What decides is main's content, not an alarm's state: while N1 lists a line of the
+                # gate's own checks on main — an engine file that is not the release's, a field over
+                # its limit — the text is one no check would let in. Closing the alarm changes
+                # nothing here, and nobody has to close one to be handed a field.
+                broken = [line for line in findings.get("N1", []) if TREE_LINE_RE.match(line)]
+                live = api.get(f"repos/{api.repository}/git/ref/heads/main")["object"]["sha"]
+                if live != args.main:
+                    # main moved between the watch and this step: the run for the new main hands its
+                    # field over, and this one must not put the older text on top of it.
+                    done.append(f"FIELD left alone: main is at {live[:12]} now, this run read {args.main[:12]}")
+                elif broken:
+                    done += field_issue.hold(api, handed, open_alarm(api, CHECK_TITLES["N1"]), broken, args.run_url)
+                else:
+                    done += field_issue.sync(api, handed, owner, contact, args.run_url)
+            except Exception as exc:    # noqa: BLE001 — not an alarm: the next run does what this one could not
+                reason = getattr(exc, "reason", "")
+                done.append(f"FIELD ERROR the field's Issue could not be kept: {type(exc).__name__}: {exc}"
+                            + (f" — {reason}" if reason else ""))
         for line in done:
             print(line)
     except ApiError as exc:

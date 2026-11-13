@@ -21,6 +21,7 @@ from pathlib import Path
 from . import (approval_check, config_check, drift, gitio, limits_check, lock_check,
                numbers_check, paths_check, text_check)
 from .report import render
+from ..setup import setup as installer
 
 REPO_RE = re.compile(r"[A-Za-z0-9-]+/[A-Za-z0-9._-]+")
 MANIFEST_FILE = "release-manifest.json"
@@ -78,6 +79,8 @@ def main(argv: list[str] | None = None, now: datetime | None = None) -> int:
         findings, notes = [], []
         findings += lock_check.check(repo, base, result, kind, manifest, now)
         findings += paths_check.check(repo, base, result, kind)
+        if kind == paths_check.SETUP:                             # C2: her part, as setup builds it and nothing else
+            findings += installer.held(repo, result)
         findings += drift.record_check(repo, base, result)        # C2: a record's routine entries, against their masters
         findings += config_check.check(repo, base, result, kind, args.actor, args.before)
         findings += numbers_check.check(repo, base, result, body, notes)
