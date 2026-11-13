@@ -94,9 +94,15 @@ jobs:
           if [ "$state" != open ]; then echo "PR $PR is $state"; exit 1; fi
           if [ "$target" != main ]; then echo "PR $PR targets $target, not main"; exit 1; fi
           # Only automation opens PRs as github-actions[bot]; they may touch the
-          # engine, but C1 still holds it to the release manifest.
+          # engine, but C1 still holds it to the release manifest. The workflows `setup`
+          # and `settings` open their PRs from setup/: C2 lets such a PR only add her part
+          # to a repository not installed yet, or change it where it stands on an installed
+          # one (DESIGN_PHASE3 §5, §6).
           kind=person
-          if [ "$author" = "github-actions[bot]" ]; then kind=update; fi
+          if [ "$author" = "github-actions[bot]" ]; then
+            kind=update
+            case "$(jq -r .head.ref "$RUNNER_TEMP/pr.json")" in setup/*) kind=setup ;; esac
+          fi
           # Fetch the PR's objects; the token stays out of .git/config and argv.
           auth=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
           GIT_CONFIG_COUNT=1 \

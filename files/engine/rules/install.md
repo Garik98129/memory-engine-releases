@@ -62,7 +62,8 @@ language has one.
   «Health» — it stays hers, and you offer to make the anchor; one item of hers serves one
   anchor only. Nothing fits → making it goes into the plan; she says it is not needed → it stays
   out, marked `none` on the map. Then show her the whole plan at once — adopted, made, left out,
-  and the map page — and ask one «yes?»; her yes covers that plan and nothing else.
+  and the map page — and ask one «yes?»: the plan shown whole is the one action of «One yes, one
+  action», so her yes covers that plan and nothing else, and you do not ask again for each page.
 - **INSTALL-5 Her things stay hers.** Never rename, move, delete, rewrite or reorder a page or a
   base of hers, and write nothing of your own into her pages at installation; her own answers —
   what she must avoid (INSTALL-9), a block of NOTION-12 — go in only on their own yes. Her own

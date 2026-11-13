@@ -41,10 +41,15 @@ class FakeApi:
 
     def pages(self, path, params=None, key=None):
         if path not in self.lists:
+            if path.endswith("/statuses"):
+                return                  # a commit nobody wrote a status on: GitHub lists nothing, it does not refuse
             raise ApiError(f"GET {path}: HTTP 404")
         state = (params or {}).get("state")
         ref = (params or {}).get("ref")
-        for item in self.lists[path]:
+        items = self.lists[path]
+        if (params or {}).get("sort") == "created" and (params or {}).get("direction") == "desc":
+            items = sorted(items, key=lambda i: i.get("number", 0) if isinstance(i, dict) else 0, reverse=True)
+        for item in items:
             # An item that names its state is served only for that state (the issues list);
             # one that names its ref only for that ref (the activity log).
             if state and state != "all" and isinstance(item, dict) and item.get("state", state) != state:

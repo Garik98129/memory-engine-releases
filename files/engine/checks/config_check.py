@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from ..backup.copy import REMOVED_RE, norm
 from . import gitio, numbers_check
 from .limits_check import WRITERS
-from .paths_check import PERSON
+from .paths_check import PERSON, SETUP
 from .report import Finding
 
 CONFIG = "user/config.toml"
@@ -50,6 +50,8 @@ SCHEMA: dict[str, dict[str, tuple[type, bool]]] = {
         "country": (str, True),
         "timezone": (str, True),
         "github_login": (str, False),    # the account the bot acts under — N4 reads its marks
+        "name": (str, False),            # as her AI calls her, and the grammar for her: written by `setup`,
+        "gender": (str, False),          # so that the form «settings» can keep them (DESIGN_PHASE3 §6)
     },
     "platform": {
         "name": (str, True),
@@ -250,8 +252,58 @@ def _declined_findings(repo: Path, head: str, config: dict, on_main: dict | None
     return findings
 
 
+# Her answers to the form that `setup` writes only when she gives one: leaving it out again is
+# her answer too, not a key dropped.
+FORM_OPTIONAL = frozenset({("person", "work_languages")})
+
+
+def settings_findings(on_main: dict, config: dict) -> list[Finding]:
+    """What a change of her settings by the form may not do to main's config (DESIGN_PHASE3 §6).
+    The new config is what `setup` builds — the gate holds that byte for byte beside this — so
+    here only main is asked, and by meaning, not by its bytes: the config on main was written
+    by the release she installed with, and a later release may word its own differently.
+    - An installation with a bot is no place for it: there the bot keeps the record of her yes.
+    - No protected key changes: `setup` writes each with one fixed value, and main must hold
+      that value already — so a trusted contact, another channel, a login set since are never
+      overwritten.
+    - Nothing main holds is dropped: a key `setup` does not write — a trusted contact, declined
+      tasks, patterns, pages left out of the copy — would vanish with the rebuilt file.
+    - The copy she turned on is not turned off.
+    What it lets change besides her seven answers: values `setup` itself writes and no rule
+    guards, and her country — with it the document numbers C4 looks for, which a person's PR
+    may not loosen: the form is her own answer about where she lives."""
+    if protected_value(on_main, "platform", "writer") != "chat" or protected_value(on_main, "platform", "bot") is not False:
+        return [Finding("C3", "a setup PR changes her settings only in an installation without a bot: with a bot, "
+                              "the bot's record of her yes is the way (C7)")]
+    found = []
+    for section, key in PROTECTED:
+        if protected_value(on_main, section, key) != protected_value(config, section, key):
+            found.append(Finding("C3", f"{section}.{key} is not setup's to change: main holds another value than "
+                                       f"setup writes"))
+    for section, table in on_main.items():
+        mine = config.get(section)
+        for key in (table if isinstance(table, dict) else {section: None}):
+            if (section, key) in FORM_OPTIONAL and isinstance(table, dict):
+                continue
+            if not isinstance(table, dict) or not isinstance(mine, dict) or key not in mine:
+                name = f"{section}.{key}" if isinstance(table, dict) else section
+                if not any(f.message.startswith(f"{name} is not setup's") for f in found):
+                    found.append(Finding("C3", f"main holds {name}, which setup does not write: building her "
+                                               f"config again would drop it"))
+    if copy_on(on_main) and not copy_on(config):
+        found.append(Finding("C3", "notion.backup: setup would turn the nightly copy off, and N2, N3 and N6 with it"))
+    return found
+
+
 def check(repo: Path, base: str, head: str, kind: str, actor: str = "", before: str = "") -> list[Finding]:
-    floors_rev = base if kind == PERSON else head
+    # A setup PR reads the floors from main, as a person's PR does: it brings no engine. It
+    # sets the protected keys for the first time, into a repository never installed (C2),
+    # where main has none to compare with — so they are held by content instead: the gate
+    # holds the whole config to what `setup` builds (`engine.setup.setup.held`), which writes
+    # no trusted contact, no login, no second reader, the stable channel and the copy off.
+    # On an installed repository a setup PR is a change of her settings by the form, and main
+    # has a config to compare with: `settings_findings`, below.
+    floors_rev = base if kind in (PERSON, SETUP) else head
     defaults, findings = _parse(gitio.file_at(repo, floors_rev, DEFAULTS), DEFAULTS, "C3")
     config, more = _parse(gitio.file_at(repo, head, CONFIG), CONFIG, "C3")
     findings += more
@@ -328,6 +380,14 @@ def check(repo: Path, base: str, head: str, kind: str, actor: str = "", before: 
             findings.append(Finding("C3", "notion.backup_exclude leaves a new page out of the copy: only in a "
                                           "push of the trusted contact's own"))
         findings += _declined_findings(repo, head, config, on_main)
+
+    if kind == SETUP and gitio.file_at(repo, base, CONFIG) is not None:
+        on_main, broken = _parse(gitio.file_at(repo, base, CONFIG), CONFIG, "C3")
+        if on_main is None:
+            findings.append(Finding("C3", f"a setup PR changes her settings only where main's config reads: "
+                                          f"{broken[0].message}"))
+        else:
+            findings += settings_findings(on_main, config)
 
     platform = config["platform"]
     writer = protected_value(config, "platform", "writer")

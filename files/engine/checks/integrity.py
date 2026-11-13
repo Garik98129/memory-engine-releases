@@ -12,7 +12,13 @@ that cannot run is reported as an error while the others still report (P5):
   (`merged_by` = github-actions[bot]) of a head that holds a successful `gate` from a
   verified run of the checking workflow. A release the trusted contact pushes by hand
   (§5) is an alarm like any push — an expected one, which the trusted contact closes.
-  Commit dates are not used: a pusher sets
+  One change cannot pass the gate and is not an alarm: the repository's birth — main's
+  first record ever, its creation from nothing (`before` all zeros) by the repository's
+  owner, as a root commit whose tree holds no installation — what «Use this template» is
+  expected to record (DESIGN_PHASE3 §5; the test installation, §8, shows whether it does).
+  Such a commit brings no config and no field, so nothing rides in on it. That a main
+  deleted and made again keeps a record before it is GitHub's to keep: seen in the
+  fixtures, not yet on GitHub. Commit dates are not used: a pusher sets
   them. Changes newer than this run's checkout are left to the run they started (every
   push to main starts one).
 - **Branches.** No branch but main and notion-backup changes `.github/` against its
@@ -25,6 +31,15 @@ that cannot run is reported as an error while the others still report (P5):
   installation choice (§7), not readable here. A config without protection (GitHub
   Free) gets a NOTE, not a green tick. The trusted contact must still be a collaborator,
   or no alarm reaches them.
+
+Before installation — a repository made from the template, holding only the lock under
+user/ until `setup` lands (`paths_check.installed`) — the tree part has no config and no
+field to read, and the settings part no protection setting: both say so in a NOTE instead
+of finding them missing. The engine, the paths, the history and the branches are held as
+always. «Installed» is «ever installed», read from all of main's history: her part deleted
+later — a change the gate refuses (C3), so only a push can do it — leaves a broken
+installation, reported every night. A force push that replaces that history is the limit:
+alarmed as a push for WINDOW, and after it the repository reads as it is.
 
 Runs inside the gate on every PR check (job `check`, against the main it checked out)
 and nightly (the nightly run is the supplement for days without
@@ -43,6 +58,10 @@ from .github import ApiError
 from .report import ALARM, Finding
 
 WINDOW = timedelta(hours=36)
+ZERO = "0" * 40
+BIRTHS = ("branch_creation", "push")       # how GitHub may record main's creation
+NOT_INSTALLED = ("N1 NOTE not installed yet: under user/ only the lock — the workflow «setup» "
+                 "writes her config and her field (DESIGN_PHASE3 §5)")
 BOT = "github-actions[bot]"
 CHECK_WORKFLOW = ".github/workflows/check.yml"
 OWN_BRANCHES = frozenset({"main", "notion-backup"})
@@ -66,12 +85,16 @@ def tree(repo: Path, main: str, manifest: dict) -> Parts:
     found = []
     found += lock_check.check(repo, main, main, paths_check.PERSON, manifest)
     found += paths_check.tree_findings(repo, main)
-    found += config_check.check(repo, main, main, paths_check.PERSON)
+    installed = paths_check.installed(repo, main)
+    if installed:
+        found += config_check.check(repo, main, main, paths_check.PERSON)
     c4_notes: list[str] = []        # a country with no row: said, never a silent N1 OK (P5)
     found += numbers_check.check_tree(repo, main, c4_notes)
     found += text_check.check_tree(repo, main)
-    found += limits_check.check(repo, main, main)
-    return [_alarm(f"{f.check} {f.message}") for f in found], [f"N1 NOTE C4 {n}" for n in c4_notes]
+    if installed:
+        found += limits_check.check(repo, main, main)
+    notes = [f"N1 NOTE C4 {n}" for n in c4_notes] + ([] if installed else [NOT_INSTALLED])
+    return [_alarm(f"{f.check} {f.message}") for f in found], notes
 
 
 # ---- history -------------------------------------------------------------------------
@@ -159,7 +182,7 @@ def verify_merge(api, repo: Path, main: str, sha: str, before: str) -> list[Find
     return found
 
 
-def history(api, repo: Path, main: str, now: datetime) -> Parts:
+def history(api, repo: Path, main: str, now: datetime, owner: str = "") -> Parts:
     found: list[Finding] = []
     notes: list[str] = []
     cutoff = now - WINDOW
@@ -169,6 +192,7 @@ def history(api, repo: Path, main: str, now: datetime) -> Parts:
     to_verify: list[dict] = []
     seen_main = False
     latest = None
+    whole = True                    # the record read to its first entry, not cut by WINDOW
     for item in api.pages(f"repos/{api.repository}/activity",
                           {"ref": "refs/heads/main", "direction": "desc"}):
         latest = latest or item
@@ -178,6 +202,7 @@ def history(api, repo: Path, main: str, now: datetime) -> Parts:
                 continue
             seen_main = True
         if _when(item["timestamp"]) < cutoff:
+            whole = False
             break
         to_verify.append(item)
     if latest is None:
@@ -190,7 +215,7 @@ def history(api, repo: Path, main: str, now: datetime) -> Parts:
         notes.append(f"N1 NOTE {len(newer)} change(s) of main after this run's checkout are checked by their own run")
 
     previous = None
-    for change in reversed(to_verify):          # oldest first
+    for i, change in enumerate(reversed(to_verify)):     # oldest first
         kind = change.get("activity_type")
         who = (change.get("actor") or {}).get("login", "?")
         if previous is not None and change.get("before") != previous:
@@ -199,8 +224,29 @@ def history(api, repo: Path, main: str, now: datetime) -> Parts:
         if kind == "pr_merge":
             found += verify_merge(api, repo, main, change["after"], str(change.get("before", "")))
             continue
+        if i == 0 and whole and is_birth(repo, change, owner):
+            notes.append(f"N1 NOTE main was created at {change.get('timestamp')} by {who}: the repository's "
+                         f"first commit, made with the repository — not a change of main")
+            continue
         found.append(_alarm(f"main: {kind} by {who} at {change.get('timestamp')} — not through the gate"))
     return found, notes
+
+
+def is_birth(repo: Path, change: dict, owner: str) -> bool:
+    """main made from nothing, by the owner, as a root commit that holds no installation:
+    what creating the repository from the template records. Only ever the first record of
+    main — the caller holds it to that. An unknown owner makes nothing a birth."""
+    if change.get("activity_type") not in BIRTHS or change.get("before") != ZERO:
+        return False
+    who = (change.get("actor") or {}).get("login")
+    if not owner or not isinstance(who, str) or who.lower() != owner.lower():
+        return False
+    after = str(change.get("after", ""))
+    try:
+        parents = gitio.git(repo, "rev-list", "--parents", "-n", "1", after).split()
+        return len(parents) == 1 and not paths_check.installed(repo, after)
+    except gitio.GitError:
+        return False                # a commit this clone does not have proves nothing
 
 
 # ---- branches ------------------------------------------------------------------------
@@ -224,12 +270,14 @@ def branches(repo: Path, main: str, refs_prefix: str) -> Parts:
 
 # ---- settings ------------------------------------------------------------------------
 
-def settings(api, config: dict, owner: str, trusted: str) -> Parts:
+def settings(api, config: dict, owner: str, trusted: str, installed: bool = True) -> Parts:
     found: list[Finding] = []
     notes: list[str] = []
 
     mode = config_check.protected_value(config, "github", "protection")
-    if mode == "none":
+    if not installed:
+        notes.append("N1 NOTE not installed yet: whether main must require «gate» is set with the installation")
+    elif mode == "none":
         notes.append("N1 NOTE github.protection = none: main has no branch protection; "
                      "N1 catches mistakes, not a writer who bypasses it (§2a)")
     else:
@@ -274,9 +322,9 @@ def check(api, repo: Path, main: str, manifest: dict, now: datetime, owner: str,
         trusted = ""                # C3 in the tree part reports it; never trust an odd string
     parts: list[tuple[str, Callable[[], Parts]]] = [
         ("tree", lambda: tree(repo, main, manifest)),
-        ("history", lambda: history(api, repo, main, now)),
+        ("history", lambda: history(api, repo, main, now, owner)),
         ("branches", lambda: branches(repo, main, refs_prefix)),
-        ("settings", lambda: settings(api, config, owner, trusted)),
+        ("settings", lambda: settings(api, config, owner, trusted, paths_check.installed(repo, main))),
     ]
     found: list[Finding] = []
     notes: list[str] = []

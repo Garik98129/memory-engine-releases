@@ -1,6 +1,12 @@
 # Installing the memory engine for a person
 
-The steps to set up a person's repository from a published release. This is the one place
+**A new person installs it herself, from a phone** (DESIGN_PHASE3 §5): she makes her repository
+from the public template with «Use this template» and follows the template's README — one
+Actions setting, the workflow `setup`, then the Issue it opens with her assistant's
+instructions. The parts below are not her way.
+
+**This guide is the installer's path**, the way of phase 1: an installation with a bot and a
+trusted contact, as the pilot's. It sets up such a repository from a published release. This is the one place
 the installation is written down: it ships with every release, so the guide at a release's
 tag is the guide for that release. It is written for the installer —
 today the person's trusted contact (`alarm.trusted_contact`, docs/DESIGN.md §3); the

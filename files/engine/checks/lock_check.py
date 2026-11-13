@@ -21,7 +21,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from . import config_check, gitio
-from .paths_check import PERSON, UPDATE
+from .paths_check import PERSON, SETUP, UPDATE
 from .report import Finding
 
 LOCKED_PREFIXES = ("engine", ".github")
@@ -59,9 +59,9 @@ def lock_release(repo: Path, rev: str) -> str | None:
 
 def wanted_release(repo: Path, base: str, head: str, kind: str) -> str:
     """Which release's manifest the gate must fetch: the installed one for a
-    person's PR, the one the update names for an update. Validated, so the tag is
-    safe to put into a URL."""
-    tag = lock_release(repo, base if kind == PERSON else head)
+    person's PR and a setup PR, the one the update names for an update. Validated, so
+    the tag is safe to put into a URL."""
+    tag = lock_release(repo, base if kind in (PERSON, SETUP) else head)
     if tag is None:
         raise ValueError(f"{LOCK_FILE} is missing")
     release_key(tag)
@@ -110,7 +110,7 @@ def check(repo: Path, base: str, head: str, kind: str, manifest: dict,
     base_release = lock_release(repo, base)
     if base_release is None:
         findings.append(Finding("C1", f"{LOCK_FILE} is missing on the base branch"))
-    elif kind == PERSON and base_release != release:
+    elif kind in (PERSON, SETUP) and base_release != release:
         findings.append(Finding("C1", f"manifest is {release}, but the installed release is {base_release}"))
     elif kind == UPDATE:
         if release_key(release) < release_key(base_release):
