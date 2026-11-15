@@ -18,14 +18,21 @@ than the newest release tag, and whose `files/` is exactly the manifest's files;
 on one line (`.github/scripts/tag-release.sh`; its test:
 `bash .github/scripts/test-tag-release.sh`). `main`'s own line: a pull request merged by a
 merge commit is tagged on the merge, which holds what `main` took, and what its branch held
-on the way is never tagged. And only a release that is whole as the code that moves the branch
-`stable` reads it (below) — asked before the tag, because a tag cannot be taken back: a
-release with no topic index, with an index that is not its own topics' text, or whose commit
-changed anything beside `files/`, the manifest and the index gets none.
+on the way is not looked at; where commits land on that line one by one — a branch merged by
+rebase, a push — a release named by two of them is the later one's, and two commits that name
+two releases are two releases. So a release's pull request is merged by squash or by a merge
+commit, and merging by rebase is switched off in this repository's settings. A commit that
+holds exactly a release already tagged — `main` taken back to it — is nothing to tag. And only
+a release that is whole as the code that moves the branch `stable` reads it (below) — asked
+before the tag, because a tag cannot be taken back: a release with no topic index, with an
+index that is not its own topics' text, or whose commit changed anything beside `files/`, the
+manifest and the index gets none.
 A run is red when the newest manifest on `main` was refused; an older refusal a later
 release superseded is a warning. A red run that refused a release is a finding to fix in
 the manifest, not a tag to set by hand. Only when the tag could not be pushed at all (a permission or an HTTP error) does the
-owner set it by hand; the steps are in the template's `docs/DESIGN.md` §5 («Releases and
+owner set it by hand — on the release's own commit, which is not `main` once `main` has gone
+on: nothing checks a tag set by hand, and one on another commit is a release the branch
+`stable` refuses for good. The steps are in the template's `docs/DESIGN.md` §5 («Releases and
 channels»).
 
 Tags `v*` are never moved or deleted: a tag ruleset forbids it. Old manifests stay here for
@@ -94,17 +101,33 @@ What holds that, and what does not:
   It runs `main`'s own code, never the pull request's. It only says: a red pull request can
   still be merged unless a ruleset on `main` requires the check `paths` — a setting of this
   repository.
-- A mixed pull request merged all the same gets no tag: the script that tags refuses a commit
-  that changed more than a release. So does a direct push to `main` that mixes them.
+- A commit that mixes the two gets no tag: the script that tags refuses a release whose commit
+  changed more than a release — a mixed pull request merged all the same by squash or by a
+  merge commit, a direct push. This holds a mistake. It does not hold a pull request made to
+  change that script itself: GitHub runs the workflow of the commit that was pushed, so the
+  code that judges such a release is the code it brought. That one is the reader's of the
+  pull request, and the ruleset's that requires `paths`.
 - `release cut` refuses a release while `.github/scripts/stable.py` in the checkout it writes
   into is not the release's own `engine/setup/stable.py` — so a release is cut into a checkout
   of `main`, and when the template changes that file, a pull request brings the copy here
   first.
 - That pull request is the one place where the copy changes, and the workflow `tests` reads
-  it for what it would do to the releases already out (`.github/scripts/copy-holds.py`): a
-  copy by which a release whole today would be refused — the index built in other words is
-  enough — is red, because the branch could then neither stay on that release nor move back
-  to it.
+  it for what it would do to what is already out (`.github/scripts/copy-holds.py`): a copy by
+  which a release whole today would be refused — the index built in other words is enough —
+  or the branch `stable` as it stands would not be read is red, because the branch could then
+  neither stay where it is nor move back. A copy that holds more than the one before is not
+  judged there: that is read as code.
+
+Settings of this repository that the words above lean on, the owner's to make — the code
+cannot make them, and only the first is read by a run:
+
+- a branch ruleset for `stable`: active, «Restrict deletions», «Block force pushes», nobody
+  on the bypass list, and no other rule (a rule that restricts creations or updates, or wants
+  a pull request, would stop the workflow's own push);
+- a branch ruleset for `main`: «Require a pull request before merging», the status check
+  `paths` required, «Block force pushes», «Restrict deletions»;
+- pull requests merged by squash or by a merge commit: «Allow rebase merging» off;
+- the tag ruleset for `v*`, as it is: no move, no deletion, nobody past it.
 
 The workflow `tests` runs on a pull request that changes `.github/`: the scripts' tests
 (`bash .github/scripts/test-tag-release.sh`, `test-pr-paths.sh`, `test-move-stable.sh`), one

@@ -5,11 +5,19 @@
 # finds those releases tagged already and does nothing, so no release is skipped whatever order
 # the runs take. A commit whose tag is already on it is passed over.
 #
-# Main's own line — its first parents — and no other commit: what a merged branch held on its
-# way is never tagged. A pull request merged by a merge commit is tagged on that merge, which
-# holds what main took; its branch's commits, which nobody read as the release, are not looked
-# at. (Before, every commit that touched the manifest was: a branch whose earlier commit named
-# the same release got the tag on that commit — the adversarial reading of this change.)
+# Main's own line — its first parents — and no other commit. A pull request merged by a merge
+# commit is tagged on that merge, which holds what main took; its branch's commits, which nobody
+# read as the release, are not looked at. (Before, every commit that touched the manifest was: a
+# branch whose earlier commit named the same release got the tag on that commit — the
+# adversarial reading of this change.) A branch merged by rebase, or pushed, puts its commits on
+# that line one by one: there a release named by two commits of the range is the later one's —
+# the cut main ended with — and the earlier is passed over. Two commits that name two releases
+# are two releases, both tagged, as two pull requests merged in a row are; a pull request is one
+# release when it is merged by squash or by a merge commit, and merging by rebase is switched
+# off in this repository's settings (README.md).
+#
+# A commit that holds, exactly, a release already tagged — main went back to it, a revert — is
+# nothing to tag and no refusal.
 #
 # Refused: a manifest that is not a release; a files/ that is not exactly the manifest's files,
 # a path there that is not valid UTF-8 among it; a tag that exists on another commit or one not
@@ -67,12 +75,21 @@ commits=$(git rev-list --reverse --first-parent "$range" -- release-manifest.jso
 [ -n "$commits" ] || { echo "no release on main after ${newest:-the start} — nothing to tag"; exit 0; }
 last=$(printf '%s\n' "$commits" | tail -n 1)
 
-refused_last=""
-for sha in $commits; do
-  verdict=$(python3 -I - "$sha" "$after" "$here/stable.py" "$repository" <<'PY'
-import hashlib, json, re, subprocess, sys, types
-from pathlib import Path
-sha, after, stable_path, repository = sys.argv[1:5]
+named() {     # the release a commit's manifest names, when it names one in the form — else nothing
+  git show "$1:release-manifest.json" 2>/dev/null | python3 -I -c '
+import json, re, sys
+try:
+    tag = json.loads(sys.stdin.buffer.read()).get("release")
+except Exception:
+    tag = None
+if isinstance(tag, str) and re.fullmatch(r"v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)", tag):
+    print(tag)' || true
+}
+
+formed() {    # «OK <tag> <source>» when the commit holds a manifest of the form and exactly its files, else «REFUSED <why>»
+  python3 -I - "$1" <<'PY' || echo "REFUSED the check of this commit failed"
+import hashlib, json, re, subprocess, sys
+sha = sys.argv[1]
 def refuse(msg):          # one line of plain printable ASCII, whatever the manifest's words were, and no «#»
     line = " ".join(str(msg).split()).encode("ascii", "backslashreplace").decode()
     print("REFUSED", "".join(c if " " <= c <= "~" and c != "#" else f"\\x{ord(c):02x}" for c in line)); sys.exit(0)
@@ -127,12 +144,24 @@ extra = sorted(set(have) - set(files))
 changed = sorted(p for p in set(files) & set(have) if files[p] != have[p])
 if missing or extra or changed:
     refuse(f"files/ is not the manifest: missing {missing[:3]}, extra {extra[:3]}, different {changed[:3]}")
-def whole():              # as the code that moves `stable` reads a release: this repository's copy of it,
-    stable = types.ModuleType("stable")     # its source as it stands — no compiled file beside it is read or left
-    stable.__file__ = stable_path
+print("OK", tag, source)
+PY
+}
+
+whole() {     # «OK» when the code that moves `stable` holds the release at <sha>, named <tag>, whole — else «REFUSED <why>»
+  python3 -I - "$1" "$2" "$after" "$here/stable.py" "$repository" <<'PY' || echo "REFUSED the check of this commit failed"
+import subprocess, sys, types
+from pathlib import Path
+sha, tag, after, stable_path, repository = sys.argv[1:6]
+def refuse(msg):          # one line of plain printable ASCII, whatever the release's words were, and no «#»
+    line = " ".join(str(msg).split()).encode("ascii", "backslashreplace").decode()
+    print("REFUSED", "".join(c if " " <= c <= "~" and c != "#" else f"\\x{ord(c):02x}" for c in line)); sys.exit(0)
+try:
+    stable = types.ModuleType("stable")     # this repository's copy, from its source as it stands: no compiled
+    stable.__file__ = stable_path           # file beside it is read or left, and nothing of this script's is inherited
     sys.modules["stable"] = stable
-    exec(compile(Path(stable_path).read_bytes(), stable_path, "exec"), stable.__dict__)
-    line = tuple(git("rev-list", "--first-parent", after).decode().split())
+    exec(compile(Path(stable_path).read_bytes(), stable_path, "exec", dont_inherit=True), stable.__dict__)
+    line = tuple(subprocess.run(["git", "rev-list", "--first-parent", after], check=True, capture_output=True).stdout.decode().split())
     try:
         stable.inspect(Path("."), stable.Origin(repository, {tag: sha}, None, line), tag)
     except stable.Refused as exc:
@@ -140,23 +169,48 @@ def whole():              # as the code that moves `stable` reads a release: thi
             refuse("release-manifest.json names no topic index: a release is cut with its rules-index.md, "
                    "and one without it would keep the branch stable red for good")
         refuse(f"not whole: {exc}")
-try:
-    whole()
 except SystemExit:
     raise
 except Exception as exc:            # a copy that is missing or broken, git failing: no tag, and the reason
     refuse(f"the release could not be read by the code that moves stable (stable.py beside tag-release.sh): {type(exc).__name__}")
-print("OK", tag, source)
+print("OK")
 PY
-  ) || verdict="REFUSED the check of this commit failed"
-  read -r word rest <<<"$verdict"
+}
+
+kept() {      # what a commit holds of a release: its files/, manifest and index, as git names them
+  local name
+  for name in files release-manifest.json rules-index.md; do git rev-parse -q --verify "$1:$name" || echo none; done
+}
+
+# A release named again by a later commit of the range is that later commit's: the one main ended
+# with. (Commits land on main's own line one by one when a branch is merged by rebase, or pushed.)
+declare -A last_named
+for sha in $commits; do
+  name=$(named "$sha")
+  [ -n "$name" ] && last_named[$name]=$sha
+done
+
+refused_last=""
+for sha in $commits; do
+  name=$(named "$sha")
+  if [ -n "$name" ] && [ "${last_named[$name]}" != "$sha" ]; then
+    echo "passed over $sha: it names $name, and so does the later ${last_named[$name]} — the release is the cut main ended with"
+    continue
+  fi
+  read -r word rest <<<"$(formed "$sha")"
   if [ "$word" = OK ]; then
     read -r tag source <<<"$rest"
     if [ -n "${tag_commit[$tag]:-}" ]; then
       if [ "${tag_commit[$tag]}" = "$sha" ]; then echo "$tag is on $sha already"; continue; fi
+      if [ "$(kept "$sha")" = "$(kept "${tag_commit[$tag]}")" ]; then
+        echo "$sha holds $tag again, exactly as its tag has it (on ${tag_commit[$tag]}): main went back to it — nothing to tag"
+        continue
+      fi
       word=REFUSED; rest="tag $tag exists already, on ${tag_commit[$tag]}: a release is cut once"
     elif [ -n "$newest" ] && [ "$(printf '%s\n%s\n' "$newest" "$tag" | newest_of)" != "$tag" ]; then
       word=REFUSED; rest="$tag is not newer than $newest: releases go on one line, newest last"
+    else
+      read -r word rest <<<"$(whole "$sha" "$tag")"
     fi
   fi
   if [ "$word" != OK ]; then

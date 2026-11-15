@@ -19,15 +19,16 @@ What is compared is what the pull request brings: the paths that differ between 
 the one commit where it left <base>. One commit: a branch that crossed `main` more than once
 has several, and a diff from the one git happens to name hid a change to `.github/` that the
 merge then brought (the adversarial reading of this change) — such a pull request is not
-judged at all, it is told to rebase. With one such commit, a merge changes on `main` no path
+judged at all: it is told to take `main` in again («Update branch»), after which it left
+`main` at one commit, `main`'s own. With one such commit, a merge changes on `main` no path
 the branch did not change since it, so the branch's paths are all a merge can bring; a path
 the branch changed just as `main` did meanwhile is counted too, which only asks for a rebase.
 Nothing of the pull request is checked out or run — its paths are read, as names. A path is
 printed escaped: it is a stranger's text.
 
-Which commit of a merged branch gets the tag is not this check's: the script that tags looks
-at the commits of `main`'s own line only (.github/scripts/tag-release.sh), so what a pull
-request's earlier commits held is never tagged, however it is merged.
+Which commit of a merged branch gets the tag is not this check's but the script's that tags
+(.github/scripts/tag-release.sh): it looks at the commits of `main`'s own line only, so of a
+pull request merged by squash or by a merge commit only what `main` took is tagged.
 
 Exit 0 — a release and nothing else, or no release at all; 1 — a release mixed with something
 else; 2 — it could not be told: no single commit where it left its base, or git failed.
@@ -66,7 +67,8 @@ def changed(base: str, head: str) -> list[bytes]:
     forks = subprocess.run(["git", "merge-base", "--all", base, head], capture_output=True).stdout.decode().split()
     if len(forks) != 1:
         raise Failed(f"the pull request left main at {len(forks)} commits, not at one: what its merge would bring "
-                     f"cannot be told from its paths. Rebase it onto main as it is now")
+                     f"cannot be told from its paths. Press «Update branch» on the pull request — or rebase it "
+                     f"onto main as it is now — and this check reads it again")
     return [p for p in git("diff", "--name-only", "-z", "--no-renames", forks[0], head).split(b"\0") if p]
 
 

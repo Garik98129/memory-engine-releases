@@ -26,7 +26,7 @@ import hashlib, json, os, shutil, sys, types
 from pathlib import Path
 stable_path, release, source, raw = sys.argv[1:5]
 stable = types.ModuleType("stable"); sys.modules["stable"] = stable
-exec(compile(Path(stable_path).read_bytes(), stable_path, "exec"), stable.__dict__)
+exec(compile(Path(stable_path).read_bytes(), stable_path, "exec", dont_inherit=True), stable.__dict__)
 knob = lambda name: os.environ.get(name, "")
 for old in ("files", "rules-index.md", "release-manifest.json"):
     if os.path.isdir(old) and not os.path.islink(old): shutil.rmtree(old)
@@ -152,6 +152,7 @@ check "no refused release left a tag" '[ -z "$(tag_of v0.5.0)" ]'
 (unset GITHUB_REPOSITORY; was=$fails; expect fail "with no repository named, the script tags nothing" "GITHUB_REPOSITORY is not set"; [ "$fails" = "$was" ]) || fails=$((fails + 1))
 check "still no tag" '[ -z "$(tag_of v0.5.0)" ]'
 check "and reading a release left no compiled file beside the scripts" '[ ! -e "$scripts/__pycache__" ] && [ ! -e "$tmp/ci/.github/scripts/__pycache__" ]'
+GITHUB_REPOSITORY=other/name expect fail "a whole release is not this repository's when the run is another repository's" "built for another repository"
 expect ok "the same commit, read by the script as it stands in this repository, is tagged"
 check "v0.5.0 is on its commit" '[ "$(tag_of v0.5.0)" = "$(git rev-parse HEAD)" ]'
 
@@ -193,6 +194,22 @@ commit v0.6.3 6666666666666666666666666666666666666664; printf 'x\n' > NOTES.md 
 git checkout -q -B main origin/main && git merge -q --no-ff --no-edit mixed && push
 expect fail "a merge that brings a release and one more path is refused" "changes more than a release: NOTES.md"
 check "and has no tag" '[ -z "$(tag_of v0.6.3)" ]'
+git revert -m 1 --no-edit HEAD >/dev/null && push
+expect ok "main taken back to the release before, exactly as its tag has it, is nothing to tag and no red run" "holds v0.6.2 again"
+check "v0.6.2 stays where it was" '[ "$(tag_of v0.6.2)" != "$(git rev-parse HEAD)" ] && [ -n "$(tag_of v0.6.2)" ]'
+
+# commits that land on main's line one by one — a branch merged by rebase, or pushed: a release named twice is the later cut
+draft=$(commit v0.7.0 7777777777777777777777777777777777777770 && git rev-parse HEAD)
+final=$(commit v0.7.0 7777777777777777777777777777777777777771 && git rev-parse HEAD)
+push; expect ok "of two commits that name one release the later is the release" "passed over $draft"
+check "v0.7.0 is on the cut main ended with" '[ "$(tag_of v0.7.0)" = "$final" ]'
+draft=$(commit v0.7.1 7777777777777777777777777777777777777772 && git rev-parse HEAD)
+FILES=changed commit v0.7.1 7777777777777777777777777777777777777773; push
+expect fail "and when the later cut is broken, the earlier one does not get the tag in its place" "different ['engine/a.py']"
+check "v0.7.1 has no tag" '[ -z "$(tag_of v0.7.1)" ] && [ -n "$draft" ]'
+git checkout -q "$final" -- files release-manifest.json && printf 'and a line more\n' >> rules-index.md && git add -A && git commit -q -m "v0.7.0 again, but for its index"; push
+expect fail "a commit that holds a tagged release in all but its index is not that release again" "tag v0.7.0 exists already"
+git checkout -q "$final" -- rules-index.md && git commit -q -m "and its index too" && push      # the manifest is not changed: nothing to look at
 
 # copy-holds.py: a changed copy of the code that moves stable, against the releases tagged above
 holds="$scripts/copy-holds.py"
@@ -207,12 +224,12 @@ copy() {      # copy <exit wanted> <name> <words it must say> <base> <the copy t
 copy 0 "the copy main has is nothing to compare" "nothing changed in it" refs/remotes/origin/main "$scripts/stable.py"
 copy 0 "before this repository had a copy there is nothing to compare" "has no .github/scripts/stable.py yet" "$start" "$scripts/stable.py"
 { cat "$scripts/stable.py"; printf '# a comment more\n'; } > "$tmp/copy-comment.py"
-copy 0 "a copy changed in what judges nothing holds every release" "COPY holds: every one of the 14 releases" refs/remotes/origin/main "$tmp/copy-comment.py"
+copy 0 "a copy changed in what judges nothing holds every release" "COPY holds: every one of the 15 releases" refs/remotes/origin/main "$tmp/copy-comment.py"
 sed 's/Not at the branch this index came/Never at the branch this index came/' "$scripts/stable.py" > "$tmp/copy-words.py"
 check "(the copy for the next case differs in one word of the index)" '! cmp -s "$scripts/stable.py" "$tmp/copy-words.py"'
 copy 1 "a copy that builds the index in other words strands the releases cut before it, and is red" \
   "v0.6.2 is whole by the copy before and refused by this one" refs/remotes/origin/main "$tmp/copy-words.py"
-check "every one of them is named, and what it means is said" '[ "$(grep -c "is whole by the copy before" "$tmp/out")" = 14 ] && grep -q "could not stay on or move back to 14 of the releases" "$tmp/out"'
+check "every one of them is named, and what it means is said" '[ "$(grep -c "is whole by the copy before" "$tmp/out")" = 15 ] && grep -q "could not stay on or move back to 15 of the releases" "$tmp/out"'
 sed 's/^DELAY = .*/DELAY = timedelta(days=1)/' "$scripts/stable.py" > "$tmp/copy-delay.py"
 copy 0 "a copy that changes when a release is due, and not what a whole one is, holds them" "COPY holds" refs/remotes/origin/main "$tmp/copy-delay.py"
 printf 'def broken(:\n' > "$tmp/copy-broken.py"
@@ -220,5 +237,14 @@ copy 2 "a copy that is no code cannot be compared" "COPY ERROR" refs/remotes/ori
 printf 'x = 1\n' > "$tmp/copy-empty.py"
 copy 2 "nor one that no longer has what the comparison reads" "COPY ERROR" refs/remotes/origin/main "$tmp/copy-empty.py"
 copy 2 "nor one that is not there" "COPY ERROR" refs/remotes/origin/main "$tmp/no-such-copy.py"
+# the branch stable as it stands: moved here by the copy itself, then read by a copy whose record has another form
+(cd "$tmp/hold" && python3 -I "$scripts/stable.py" --repository owner/name --to v0.7.0 --reason "the branch, for the test") >"$tmp/out" 2>&1 || true
+check "(the copy moved the branch stable of the test's origin)" 'grep -q "^STABLE moved: none -> v0.7.0" "$tmp/out"'
+copy 0 "with a branch stable there, a copy changed in what judges nothing still holds" "and the branch stable is read as before" refs/remotes/origin/main "$tmp/copy-comment.py"
+sed 's/^RECORD = frozenset({/RECORD = frozenset({"one more", /' "$scripts/stable.py" > "$tmp/copy-record.py"
+check "(the copy for the next case wants one more key in the record)" '! cmp -s "$scripts/stable.py" "$tmp/copy-record.py"'
+copy 1 "a copy that would not read the branch as it stands is red" "the branch stable as it stands is read by the copy before and is not this one's" refs/remotes/origin/main "$tmp/copy-record.py"
+{ grep -v '^from __future__ import annotations' "$scripts/stable.py"; printf 'def probe(x: NoSuchName = 1): pass\n'; } > "$tmp/copy-annotation.py"
+copy 2 "a copy is compiled as it would run: one that leans on a future import it does not make is no code" "COPY ERROR" refs/remotes/origin/main "$tmp/copy-annotation.py"
 check "and comparing left no compiled file" '[ ! -e "$scripts/__pycache__" ] && [ -z "$(find "$tmp" -name __pycache__)" ]'
 exit $fails
