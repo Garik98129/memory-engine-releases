@@ -5,9 +5,9 @@
 # release, when, what is refused — is that file's, with its tests in the template; this one only
 # hands it what the run was started with, and passes on its exit code: 0 — moved, or nothing to
 # move; 1 — a finding; 2 — the run failed. That code ends with 1 only beside a line «STABLE
-# finding: …», and with 2 when it died on what it did not expect; a copy that does not load at
-# all ends as Python does, with 1 — so a 1 without such a line is still passed on as 2: a run
-# that died is not a finding about a release.
+# finding: …», and with 2 when it died on what it did not expect; a copy that does not load —
+# a line Python cannot read — ends as Python does, with 1. So a 1 without such a line is still
+# passed on as 2: a run that died is not a finding about a release.
 # A run that is not green ends with one line of this file's own, in plain words, that says
 # where to read and what is done about it: the lines above it are written for whoever repairs.
 #

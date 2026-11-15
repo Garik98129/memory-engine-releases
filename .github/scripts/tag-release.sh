@@ -28,7 +28,7 @@
 # `stable` reads it — this repository's own copy, stable.py beside this file, asked here before
 # the tag and not a week after it: a manifest that is no regular file or has no «published»
 # time, an index that is not the manifest's or not a text its release's topics give for this
-# repository (the copy keeps the words of every release that is out), a commit that changed
+# repository (the copy keeps the words an index was published in), a commit that changed
 # more than files/, the manifest and the index — and a
 # release with no topic index at all, which that code would be red on for good. The tag ruleset
 # forbids moving or deleting a tag, so a release tagged and then found broken stays tagged:
