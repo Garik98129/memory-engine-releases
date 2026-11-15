@@ -10,9 +10,9 @@ to bring new words as a new text beside the old; no check there refuses a kept t
 together with its fingerprint. So a copy in which a kept text was changed by one word, or taken
 out, refuses the releases published in it — each one no other kept text gives the same index
 for: the branch is then on a release that «is not whole», the
-night's run is red, no move back is possible, and only a new release moved to by hand, past
-its week, ends it (found by the reading of this change against its documents, on real
-repositories). The template's `release cut` wants the copy here to be the release's own file,
+night's run is red and a move back to such a release is refused; what ends it is the copy put
+right, or a move by hand to a release this copy still holds whole (found by the reading of this
+change against its documents, on real repositories). The template's `release cut` wants the copy here to be the release's own file,
 so such a change does arrive as a pull request to this repository — and this is where it is
 stopped: with the copy at <base> and with the one the pull request brings, every release tag is
 read, and the branch `stable` as it stands; a release whole by the first and refused by the
@@ -119,8 +119,9 @@ def main(argv: list[str] | None = None) -> int:
     stranded = was[BRANCH] is None and new[BRANCH] is not None
     if stranded:
         print(f"COPY finding: the branch stable as it stands is read by the copy before and is not this one's: "
-              f"{plain(new[BRANCH])}. Every night would be red until a move by hand, which withdraws every newer "
-              f"release. The template changed what it leaves on the branch; that is solved there first.")
+              f"{plain(new[BRANCH])}. The night's run would be red on it until the copy is put right or a move by "
+              f"hand repairs the branch, which withdraws every newer release. The template changed what it leaves "
+              f"on the branch; that is solved there first.")
     if lost or stranded:
         return 1
     whole = sum(1 for tag, reason in was.items() if tag != BRANCH and reason is None)

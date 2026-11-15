@@ -86,7 +86,7 @@ run that does not fail says «the branch does not exist yet».
 
 A red run of `stable` ends with one line in plain words. Two kinds of finding are answered by
 a hand. A release newer than the one the branch is on that is not whole is withdrawn by a run
-by hand to the release the branch is on, or to an older whole one; on a branch this code
+by hand to the release the branch is on, while that one is whole, or to an older whole one; on a branch this code
 left, a move forward withdraws nothing. A branch that is not what this code left is repaired
 by a run by hand to a whole release. A red run is
 no promise that the branch stood still: a run that finds one release broken can move to
