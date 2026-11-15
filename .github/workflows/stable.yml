@@ -1,0 +1,68 @@
+# Moves the branch `stable` — the one address a chat reads the rules at (README.md, «The branch
+# stable»; the template's docs/DESIGN.md §5, «The topic index and the branch stable»). Every
+# night: to the newest release that is whole and at least 7 days old. By hand, with a release
+# and a reason: at once, or back. Each move is one more commit on that branch: this code never
+# rewrites it, and a ruleset of the repository forbids anybody to — the second step reads that
+# ruleset every night and is red without it.
+#
+# The rule is this repository's own copy of the template's code, .github/scripts/stable.py,
+# which a pull request of its own brings here and a release never does. This file only starts
+# it, on `main`'s code and nobody else's.
+name: stable
+
+on:
+  schedule:
+    - cron: "37 3 * * *"       # every night, UTC; a minute GitHub's own queue is not full at
+  workflow_dispatch:
+    inputs:
+      to:
+        description: "By hand: the release to move to, vMAJOR.MINOR.PATCH. Empty: what the schedule would do now"
+        type: string
+        required: false
+      reason:
+        description: "By hand: why, in one line. It is kept on the branch. Needed with a release"
+        type: string
+        required: false
+      dry_run:
+        description: "Only say what would be done; move nothing"
+        type: boolean
+        default: false
+
+permissions: {}
+
+concurrency:
+  # One run at a time, and none cancelled: a move by hand started while the night's run reads
+  # waits for it, and so does one started after that — by default a newer waiting run would
+  # cancel the one already waiting. A branch that moved between a run's reading and its push
+  # refuses the push.
+  group: stable
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  move:
+    # Started by hand on another branch, it would run that branch's code: not this job's.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write          # to push the branch `stable`
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
+        with:
+          fetch-depth: 0       # whether a tag is on main is a question of all of main
+      - name: Move the branch stable
+        env:
+          TO: ${{ inputs.to }}
+          REASON: ${{ inputs.reason }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: bash .github/scripts/move-stable.sh
+      - name: The branch stable cannot be rewritten or deleted
+        # Read whatever the move came to: a ruleset switched off is a finding of its own, and
+        # nothing else here would ever show it (.github/scripts/stable-rules.py).
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -o pipefail
+          gh api "repos/$GITHUB_REPOSITORY/rules/branches/stable?per_page=100" | python3 -I .github/scripts/stable-rules.py

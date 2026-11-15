@@ -1,0 +1,42 @@
+# Says whether a release's pull request is a release and nothing else (README.md, «Pull
+# requests»): one that changes files/, release-manifest.json or rules-index.md changes nothing
+# else — so that nothing this repository runs comes in with a release (.github/scripts/pr-paths.py
+# says why). It says; what makes a red one unmergeable is a ruleset on `main` that requires this
+# check, a setting of the repository. A mixed pull request merged all the same gets no tag: the
+# script that tags refuses a commit that changed more than a release.
+#
+# On `pull_request_target`: the workflow and the script are `main`'s own, whatever the pull
+# request holds, so a pull request cannot change the check that reads it. Nothing of the pull
+# request is checked out or run; its commits are fetched and their paths compared, as names.
+# The token reads and nothing more.
+name: pr
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, synchronize, reopened, edited]     # edited: its base may have become main
+
+permissions: {}
+
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true     # only the newest head of a pull request is worth reading
+
+jobs:
+  paths:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0 — main, never the pull request
+        with:
+          fetch-depth: 0       # the commit where the pull request left main
+      - name: A release's pull request changes a release and nothing else
+        env:
+          PR: ${{ github.event.pull_request.number }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          git fetch --quiet --no-tags origin "+refs/pull/${PR}/head:refs/pr/head"
+          # The paths printed are a stranger's text: quiet.sh keeps the runner from reading a command in them.
+          bash .github/scripts/quiet.sh python3 -I .github/scripts/pr-paths.py refs/remotes/origin/main "$HEAD"

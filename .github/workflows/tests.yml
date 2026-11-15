@@ -1,0 +1,56 @@
+# Runs the tests of what this repository runs, on a pull request that changes it: the scripts
+# under .github/scripts and their workflows. On `pull_request`: the code is the pull request's
+# own, with a token that reads and nothing more — the place to try a change before it is
+# `main`'s. A release's pull request changes nothing here (workflow `pr`), so this does not
+# start on one.
+name: tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths: [".github/**"]
+
+permissions: {}
+
+concurrency:
+  group: tests-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  scripts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
+      - name: The script that tags a release
+        run: bash .github/scripts/test-tag-release.sh
+      - name: The check of a release's pull request
+        run: bash .github/scripts/test-pr-paths.sh
+      - name: What the workflow adds around the code that moves stable
+        run: bash .github/scripts/test-move-stable.sh
+      - name: That code starts on this runner and reads this repository, moving nothing
+        env:
+          DRY_RUN: "true"
+        run: |
+          # 0 — nothing to say, 1 — a finding about a release or the branch: both mean the code ran —
+          # here from a shallow checkout, which the night's run, with all of main, is not. 2 — it
+          # could not, or it died. Whether a finding is this pull request's doing is the next step's.
+          code=0
+          bash .github/scripts/move-stable.sh || code=$?
+          [ "$code" -le 1 ]
+      - name: A changed copy of that code still holds every release the copy on main holds
+        run: |
+          git fetch --quiet --no-tags --depth 1 origin "+refs/heads/main:refs/remotes/origin/main"
+          bash .github/scripts/quiet.sh python3 -I .github/scripts/copy-holds.py refs/remotes/origin/main --repository "$GITHUB_REPOSITORY"
+      - name: GitHub answers about the rules of the branch stable, and the answer can be read
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # 0 — the branch is closed, 1 — it is not, which is the repository's settings and not this
+          # pull request's: both mean the question was asked and answered. 2 — it was not.
+          set -o pipefail
+          code=0
+          gh api "repos/$GITHUB_REPOSITORY/rules/branches/stable?per_page=100" | python3 -I .github/scripts/stable-rules.py || code=$?
+          [ "$code" -le 1 ]
