@@ -30,7 +30,7 @@
 # time, an index that is not the manifest's or not a text its release's topics give for this
 # repository (the copy keeps the words an index was published in), a commit that changed
 # more than files/, the manifest and the index — and a
-# release with no topic index at all, which that code would be red on for good. The tag ruleset
+# release with no topic index at all, which that code does not move to. The tag ruleset
 # forbids moving or deleting a tag, so a release tagged and then found broken stays tagged:
 # what can be seen here is refused here. The run is red only when the newest manifest commit
 # was refused — an older refusal a later release superseded is a warning.
@@ -160,7 +160,7 @@ try:
     except stable.Refused as exc:
         if exc.before_index:
             refuse("release-manifest.json names no topic index: a release is cut with its rules-index.md, "
-                   "and one without it would keep the branch stable red for good")
+                   "and the code that moves the branch stable does not move to one without it")
         refuse(f"not whole: {exc}")
 except SystemExit:
     raise

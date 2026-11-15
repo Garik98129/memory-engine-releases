@@ -10,8 +10,9 @@
 # passed on as 2: a run that died is not a finding about a release.
 # A run that is not green ends with one line of this file's own, in plain words, that says
 # where to read and what is done about it: the lines above it are written for whoever repairs.
-# That line does not say the branch stood still: a run with a finding about a newer release
-# still moves to an older whole one, and a run can fail after its push (the reading of 15.11.2026).
+# That line says nothing of whether the branch moved, and says that it says nothing: a run that
+# finds one release broken can move to another whole one and be red all the same, in which case
+# it prints «STABLE moved» (found by the reading of 15.11.2026: the line promised the branch stayed).
 #
 # The values come from the environment and go on as arguments, never through a shell's eyes: a
 # reason is a person's sentence. What that code prints carries a release's own words — a path, a
@@ -50,8 +51,8 @@ fi
 rm -f "$said"
 echo "::$word::"
 if [ "$code" = 1 ]; then
-  echo "::error::The branch stable has a finding: see the lines «STABLE finding» in this step. A red run can still have moved the branch, to a whole release older than the one the finding is about: a line «STABLE moved» above says so, and stable.json on the branch says where it is. What is done about a finding is in README.md, «The branch stable»: a release that is not whole is withdrawn, and a branch this code did not leave is repaired, by one run by hand — Run workflow, field «to»: the release the branch should be on, field «reason»: one line."
+  echo "::error::The branch stable has a finding: see the lines «STABLE finding» in this step. This line does not say whether the branch moved: a line «STABLE moved» in this step means this run moved it. README.md, «The branch stable», says how a release is withdrawn and a branch repaired — by a run by hand: Run workflow, field «to»: a release, field «reason»: one line."
 elif [ "$code" != 0 ]; then
-  echo "::error::The run that moves the branch stable failed: see the line «ERROR» in this step. Where the branch is now is what stable.json on it says: a line «STABLE moved» above means this run moved it before it failed; without one it is most likely where it was. The next night's run tries again; a failure that repeats is most often a fault in this repository's scripts or settings, and the line «ERROR» names it."
+  echo "::error::The run that moves the branch stable failed: see what this step printed above, a line «ERROR» where there is one. This line does not say whether the branch moved: a line «STABLE moved» in this step means this run moved it, and no such line is no proof that it did not — look at the branch stable itself."
 fi
 exit "$code"
