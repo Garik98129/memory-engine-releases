@@ -236,7 +236,7 @@ copy 0 "before this repository had a copy there is nothing to compare" "has no .
 copy 0 "a copy changed in what judges nothing holds every release" "COPY holds: every one of the 17 releases" refs/remotes/origin/main "$tmp/copy-comment.py"
 sed 's/Not at the branch this index came/Never at the branch this index came/' "$scripts/stable.py" > "$tmp/copy-words.py"
 check "(the copy for the next case differs in one word of the index)" '! cmp -s "$scripts/stable.py" "$tmp/copy-words.py"'
-copy 1 "a copy that builds the index in other words strands the releases cut before it, and is red" \
+copy 1 "a copy whose text of the index was edited in place, by one word, strands the releases cut before it, and is red" \
   "v0.6.2 is whole by the copy before and refused by this one" refs/remotes/origin/main "$tmp/copy-words.py"
 check "every one of them is named, and what it means is said" '[ "$(grep -c "is whole by the copy before" "$tmp/out")" = 17 ] && grep -q "could not stay on or move back to 17 of the releases" "$tmp/out"'
 sed 's/^DELAY = .*/DELAY = timedelta(days=1)/' "$scripts/stable.py" > "$tmp/copy-delay.py"

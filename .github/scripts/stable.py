@@ -37,9 +37,11 @@ release exactly as its tag has it — `rules-index.md`, `release-manifest.json`,
 the cut: its tag is on `main`; its manifest names it; `files/` is the manifest's files, byte
 for byte, every path valid text; its index is the one the manifest holds the sha256 of, and is
 the very text this code builds from the release's own topics (`engine/rules/topics.toml`
-among its files) for this repository and this tag — so the index says nothing its topics do
-not, and a line of the topics carries no slash, no «@» and nothing of a tag's shape (`one_line`
-says what that keeps out and what it does not) — and names only files the release has; what
+among its files) for this repository and this tag — in the words of today or in any words an
+index was published in before (`INDEX_TEXTS`: a release keeps the words it was cut with) — so
+the index says nothing its topics do not, and a line of the topics carries no slash, no «@» and
+nothing of a tag's shape (`one_line` says what that keeps out and what it does not) — and names
+only files the release has; what
 `main` took is what the tag holds; and the commit that brought it to `main` changes nothing
 but those three. A release cut
 before the index existed is passed over — quietly while no release was ever moved to, as a
@@ -66,7 +68,16 @@ differ, and it is run with `-I`, so no file beside the copy is imported in a mod
 
 Exit 0 — moved, or nothing to move; 1 — a finding: a release or the branch is not as it must
 be (a whole release older than a broken one is still moved to, and the run is red all the
-same; `--dry-run` exits as the run would); 2 — the run itself failed.
+same; `--dry-run` exits as the run would); 2 — the run itself failed, or this code died on
+what it did not expect: a run that died judged nothing, so it is never a 1. Its last line says
+so, after everything said before it — the workflow keeps both streams in one log. (A copy that
+does not load at all never gets here: Python ends with 1 and no «STABLE finding» line, which
+the workflow takes for a failed run as well.)
+
+Every line it prints is one line (`shown`), what the command line is refused for among them:
+what it says of a release carries the release's own words — a path, a name out of a manifest —
+and a line break among them would start a line of its own, in this code's voice. What a person is told to do names the fields of the form the
+workflow is started with, «to» and «reason», beside the flags they become.
 """
 from __future__ import annotations
 
@@ -98,6 +109,7 @@ TOPICS = RULES + "topics.toml"              # the source of the index, a file of
 REGULAR = "100644"
 EMPTY_TREE = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
 SCHEDULE, HAND = "the schedule", "by hand"
+NOT_LEFT = "a branch this code did not leave"   # what a repair says it came from: the branch was there, and on no release this code can name
 RECORD = frozenset({"release", "commit", "moved", "how", "reason", "withdrawn"})
 _HEX64 = re.compile(r"[0-9a-f]{64}")
 _HEX40 = re.compile(r"[0-9a-f]{40}")
@@ -149,6 +161,14 @@ def stamp(when: datetime) -> str:
     return when.astimezone(timezone.utc).strftime(PUBLISHED_FORMAT)
 
 
+def shown(text: object) -> str:
+    """The text on one line, as this code prints it: every character that does not print — a
+    line break of any kind, a control, a format mark, half of a pair — is written out as its
+    escape. A release's own words go into what is said of it, and the line that starts «STABLE
+    moved» or «STABLE finding» must be this code's."""
+    return "".join(c if c.isprintable() else c.encode("unicode_escape").decode("ascii") for c in str(text))
+
+
 def one_line(text: object) -> bool:
     """One plain line an index may carry from the topics: text with no line break, no bar of a
     table cell, no slash, «@» or angle bracket — in any width or look-alike form —, nothing of
@@ -164,20 +184,10 @@ def one_line(text: object) -> bool:
             and not any(unicodedata.category(c) in NO_KINDS for c in text))
 
 
-def index_text(source: bytes, repository: str, tag: str) -> str:
-    """The topic index of the release `tag`, from its topics (`engine/rules/topics.toml`), for a
-    reader in `repository`. The one place the index is written out: `release cut` publishes
-    exactly this text (`engine/setup/topics.py`), and a release is moved to only when the index
-    it published is this text again — so an index says nothing its topics do not say, and names
-    no repository but its own and no release but its own and the minimal engine its topics
-    name, which is never newer than itself. Refused when the source is not of the form."""
-    if not _REPOSITORY.fullmatch(repository):
-        raise Refused(f"{repository!r} is not a repository's owner/name")
-    key(tag)
-    try:
-        data = tomllib.loads(source.decode("utf-8"))
-    except (UnicodeDecodeError, tomllib.TOMLDecodeError, RecursionError):
-        raise Refused(f"{TOPICS} cannot be read") from None
+def _index_1(data: dict, repository: str, tag: str) -> str:
+    """The index in its first words: those the first release with an index is cut in. From that
+    release on it is kept as it is (`INDEX_TEXTS`): every word it writes, and what it asks of
+    the topics before it writes."""
     if set(data) - TOP_KEYS:
         raise Refused(f"{TOPICS} has keys this code does not know: {', '.join(sorted(set(data) - TOP_KEYS)[:5])}")
     about, topics, least = data.get("about"), data.get("topic"), data.get("min_engine")
@@ -225,8 +235,81 @@ def index_text(source: bytes, repository: str, tag: str) -> str:
         *rows]) + "\n"
 
 
+# Every text an index was ever published in, oldest first; the last is what `release cut`
+# publishes now. A release is whole only while the index it published is the text this code
+# builds from its topics, byte for byte — so a text that is edited here, by one word, refuses
+# every release cut with it: the branch is then on a release that «is not whole», every night is
+# red and no move back is possible (found on fixtures by the reading of the change that
+# brought this code to the repository of releases). So, from the first release cut with an
+# index on, a text is never edited and never taken out: new words are a new function, added at
+# the end. A test holds each text to its fingerprint; the repository of releases reads a
+# changed copy of this file against the releases that are out and is red when one would be
+# refused (`copy-holds.py` there — a check of the pull request, which its reader reads). What
+# the texts lean on together — `one_line`, the keys and the patterns of names, the paths,
+# `index_names` — is not kept per text: narrowing it refuses the releases that no longer pass,
+# and that same check there is what shows it before the copy is merged. Any kept text is taken
+# for any release, whenever it was cut: a text is not bound to the releases of its day.
+INDEX_TEXTS = (_index_1,)
+
+
+def _source(source: bytes, repository: str, tag: str) -> dict:
+    """The topics as their file gives them, read and no more: what form they must have is each
+    text's own to ask. Refused for a repository or a file that cannot be read as one."""
+    if not _REPOSITORY.fullmatch(repository):
+        raise Refused(f"{repository!r} is not a repository's owner/name")
+    key(tag)
+    try:
+        return tomllib.loads(source.decode("utf-8"))
+    except (UnicodeDecodeError, tomllib.TOMLDecodeError, RecursionError):
+        raise Refused(f"{TOPICS} cannot be read") from None
+
+
+def index_texts(source: bytes, repository: str, tag: str) -> list[str]:
+    """Every text the topics of the release `tag` give as its index, the newest words first: one
+    for each of `INDEX_TEXTS` that takes these topics. Refused, with the reason of the newest,
+    when none does. A text that does not take the topics is passed over, however it says so —
+    one that dies on them too (a newer text reading a key older topics lack, a number no text
+    can print): were its death the answer, the older words would never be tried, and the
+    releases cut in them would be refused all the same."""
+    data = _source(source, repository, tag)
+    texts: list[str] = []
+    why: Refused | None = None
+    for build in reversed(INDEX_TEXTS):
+        try:
+            texts.append(_built(build, data, repository, tag))
+        except Refused as exc:
+            why = why or exc
+    if not texts:
+        raise why or Refused(f"{TOPICS} gives no index: this code holds no text to write one in")
+    return texts
+
+
+def _built(build, data: dict, repository: str, tag: str) -> str:
+    """The text `build` writes from the topics — or Refused, whatever it died of on them."""
+    try:
+        return build(data, repository, tag)
+    except Refused:
+        raise
+    except (ValueError, OverflowError, RecursionError, KeyError, TypeError, IndexError) as exc:       # as `inspect` has them
+        raise Refused(f"{TOPICS} is not what an index is written from ({type(exc).__name__})") from None
+
+
+def index_text(source: bytes, repository: str, tag: str) -> str:
+    """The topic index of the release `tag`, from its topics (`engine/rules/topics.toml`), for a
+    reader in `repository`, in the words of today — the last of `INDEX_TEXTS`. The one place the
+    index is written out: `release cut` publishes exactly this text (`engine/setup/topics.py`),
+    and a release is moved to only when the index it published is a text this code builds from
+    its topics again — so an index says nothing its topics do not say, and names no repository
+    but its own and no release but its own and the minimal engine its topics name, which is
+    never newer than itself. Refused when the source is not of the form the words of today ask."""
+    return _built(INDEX_TEXTS[-1], _source(source, repository, tag), repository, tag)
+
+
 def index_names(text: str) -> list[str]:
-    """The paths under `files/` an index names, as the lines of its table give them."""
+    """The paths under `files/` an index names, as the lines of its table give them. One reading
+    for every text of `INDEX_TEXTS`, because every text so far writes a path this way; a text
+    that wrote it another way would need its own reading here — without one, the check that a
+    release has every file its index names would pass that text by."""
     return sorted(set(re.findall(r"`" + FILES + r"/(" + re.escape(RULES) + r"[a-z][a-z0-9-]*\.md)`", text)))
 
 
@@ -319,9 +402,9 @@ def committed(repo: Path, commit: str) -> datetime:
 def entered(repo: Path, at: Origin, tag: str, commit: str) -> str:
     """The commit of main's own line that brought the release in: the tagged commit itself when
     the release was squashed or pushed there, else the oldest commit of that line the tagged
-    one is an ancestor of — the merge that brought its branch, however the branch was built
-    (that repository's workflow `tag` then tags a commit of the branch, dated by its author).
-    Refused for a tag that is on no line of `main`."""
+    one is an ancestor of — the merge that brought its branch, however the branch was built (a
+    tag set by hand on a commit of the branch, dated by its author; that repository's workflow
+    `tag` tags the merge itself). Refused for a tag that is on no line of `main`."""
     if commit in at.line:
         return commit
     try:
@@ -396,10 +479,11 @@ def _inspect(repo: Path, at: Origin, tag: str) -> Release:
     if TOPICS not in content:
         raise Refused(f"{tag} has an index and no {TOPICS} to hold it to")
     try:
-        text = index_text(content[TOPICS], at.repository, tag)
+        texts = index_texts(content[TOPICS], at.repository, tag)
     except Refused as exc:
         raise Refused(f"the topics of {tag} give no index: {exc}") from None
-    if raw != text.encode("utf-8"):
+    text = next((t for t in texts if raw == t.encode("utf-8")), None)
+    if text is None:
         raise Refused(f"{INDEX_FILE} of {tag} is not the index of its own topics for {at.repository}: it was "
                       f"edited, or built for another repository or release")
     missing = [f"{FILES}/{name}" for name in index_names(text) if name not in listed]
@@ -538,7 +622,9 @@ def by_hand(repo: Path, at: Origin, now_on: State | None, to: str, repair: bool 
 def move(repo: Path, tip: str | None, release: Release, was: str | None, withdrawn: tuple[str, ...],
          how: str, reason: str, now: datetime, push: bool = True) -> str:
     """One more commit on `stable`: the release as its tag has it, and the record. Pushed without
-    force, so a branch that moved meanwhile refuses it. Returns the commit."""
+    force, so a branch that moved meanwhile refuses it. Returns the commit. `was` — what the
+    commit's first line says the branch came from: a release, «none» while there was no branch,
+    or, for a repair, that the branch was not this code's (`NOT_LEFT`)."""
     record = {"release": release.tag, "commit": release.commit, "moved": stamp(now), "how": how, "reason": reason,
               "withdrawn": list(withdrawn)}
     text = json.dumps(record, indent=2, sort_keys=True, ensure_ascii=True) + "\n"
@@ -564,8 +650,31 @@ def plain(reason: str) -> bool:
                         for c in reason))
 
 
+class _Arguments(argparse.ArgumentParser):
+    """What the command line is refused for, on one line: argparse repeats a stranger's argument
+    as it came, line breaks and all."""
+
+    def error(self, message: str):
+        _error(f"ERROR {message}")
+        raise SystemExit(2)
+
+
+def _error(text: str) -> None:
+    """The line of a run that failed, after everything the run said before it: the workflow reads
+    both streams as one, and a stream that is not a terminal keeps its lines until it is full —
+    without this the error stood above the lines it speaks of. A stream that is closed or not
+    there is passed over: saying the error must not be what ends the run, with another code."""
+    for stream, line in ((sys.stdout, None), (sys.stderr, shown(text))):
+        try:                                # a stream closed before the start is None, one closed since refuses
+            if line is not None:
+                stream.write(line + "\n")
+            stream.flush()
+        except (OSError, ValueError, AttributeError):
+            pass
+
+
 def main(argv: list[str] | None = None, now: datetime | None = None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap = _Arguments(description=__doc__.splitlines()[0])
     ap.add_argument("--repo", type=Path, default=Path("."), help="a checkout of the repository of releases")
     ap.add_argument("--repository", required=True, help="that repository's owner/name: the one an index must name")
     ap.add_argument("--to", help="by hand: the release to move `stable` to, vMAJOR.MINOR.PATCH")
@@ -580,11 +689,12 @@ def main(argv: list[str] | None = None, now: datetime | None = None) -> int:
         if not _REPOSITORY.fullmatch(args.repository):
             raise Failed(f"--repository {args.repository!r} is not an owner/name")
         if (args.to is None) != (args.reason is None):
-            raise Failed("--to and --reason go together: a move by hand names its release and says why")
+            raise Failed("the fields «to» and «reason» (--to, --reason) go together: a move by hand names its "
+                         "release and says why")
         if args.to is not None and not TAG_RE.fullmatch(args.to):
-            raise Failed(f"--to {args.to!r} is not a release tag vMAJOR.MINOR.PATCH")
+            raise Failed(f"the field «to» (--to) {args.to!r} is not a release tag vMAJOR.MINOR.PATCH")
         if args.reason is not None and not plain(args.reason.strip()):
-            raise Failed("--reason is one line a person can read, 1 to 200 characters")
+            raise Failed("the field «reason» (--reason) is one line a person can read, 1 to 200 characters")
         at = origin(args.repo, args.repository)
         found: list[str] = []
         repaired = False
@@ -592,42 +702,54 @@ def main(argv: list[str] | None = None, now: datetime | None = None) -> int:
             now_on = state(args.repo, at, at.tip, now)
         except Broken as exc:
             if args.to is None:
-                print(f"STABLE finding: {exc} — the schedule does not move a branch it did not leave; "
-                      f"repair it by hand: --to <release> --reason <why>")
+                print(shown(f"STABLE finding: {exc} — the schedule does not move a branch it did not leave; "
+                            f"repair it by one run by hand: the field «to» (--to) — the release the branch "
+                            f"should be on, the field «reason» (--reason) — why, in one line"))
                 return 1
             now_on, repaired = None, True
-            print(f"STABLE note: {exc} — repaired by this move, which withdraws every release newer than {args.to}")
+            print(shown(f"STABLE note: {exc} — not as this code left it; the move asked for repairs it if it is made, "
+                        f"and withdraws every release newer than {args.to}"))
         was = now_on.release if now_on else None
+        came_from = NOT_LEFT if repaired else was or "none"     # what the move says it came from
         if args.to is not None:
             try:
                 release, withdrawn = by_hand(args.repo, at, now_on, args.to, repaired)
             except Refused as exc:
-                print(f"STABLE finding: not moved to {args.to}: {exc}")
+                print(shown(f"STABLE finding: not moved to {args.to}: {exc}"))
                 return 1
             how, reason = HAND, args.reason.strip()
             if now_on and not repaired and release.tag == was and withdrawn == now_on.withdrawn:
-                print(f"STABLE stays on {was}: it is there already, nothing newer to withdraw")
+                print(shown(f"STABLE stays on {was}: it is there already, nothing newer to withdraw"))
                 return 0
         else:
             release, said, found = by_schedule(args.repo, at, now_on, now)
             for line in said:
-                print(f"STABLE note: {line}")
+                print(shown(f"STABLE note: {line}"))
             for line in found:
-                print(f"STABLE finding: {line}")
+                print(shown(f"STABLE finding: {line}"))
             if release is None:
-                print(f"STABLE stays on {was or 'no release — the branch does not exist yet'}: nothing to move to")
+                print(shown(f"STABLE stays on {was or 'no release — the branch does not exist yet'}: nothing to move to"))
                 return 1 if found else 0
             how, reason = SCHEDULE, f"{release.tag} is whole and at least {DELAY.days} days old"
             withdrawn = now_on.withdrawn if now_on else ()
         if args.dry_run:
-            print(f"STABLE would move: {was or 'none'} -> {release.tag} ({how}); withdrawn: {', '.join(withdrawn) or 'none'}")
+            print(shown(f"STABLE would move: {came_from} -> {release.tag} ({how}); "
+                        f"withdrawn: {', '.join(withdrawn) or 'none'}"))
             return 1 if found else 0
-        commit = move(args.repo, at.tip, release, was, withdrawn, how, reason, now)
-        print(f"STABLE moved: {was or 'none'} -> {release.tag} ({how}), commit {commit}; "
-              f"withdrawn: {', '.join(withdrawn) or 'none'}")
+        commit = move(args.repo, at.tip, release, came_from, withdrawn, how, reason, now)
+        print(shown(f"STABLE moved: {came_from} -> {release.tag} ({how}), commit {commit}; "
+                    f"withdrawn: {', '.join(withdrawn) or 'none'}"))
         return 1 if found else 0
     except Failed as exc:
-        print(f"ERROR {exc}", file=sys.stderr)
+        _error(f"ERROR {exc}")
+        return 2
+    except Exception as exc:        # not a finding: a 1 says a release or the branch was judged, and this run judged nothing
+        at = exc.__traceback__
+        while at is not None and at.tb_next is not None:
+            at = at.tb_next
+        where = f", at {Path(at.tb_frame.f_code.co_filename).name} line {at.tb_lineno}" if at is not None else ""
+        _error(f"ERROR this code died on what it did not expect ({type(exc).__name__}: {str(exc)[:300]}{where}): "
+               f"the run failed — what it said before this line is not its answer")
         return 2
 
 

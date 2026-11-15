@@ -26,14 +26,19 @@ switched off in this repository's settings; the script cannot see that setting. 
 holds exactly a release already tagged — `main` taken back to it — is nothing to tag. And only
 a release that is whole as the code that moves the branch `stable` reads it (below) — asked
 before the tag, because a tag cannot be taken back: a release with no topic index, with an
-index that is not its own topics' text, or whose commit changed anything beside `files/`, the
+index that is no text its own topics give, or whose commit changed anything beside `files/`, the
 manifest and the index gets none.
 A run is red when the newest manifest on `main` was refused; an older refusal a later
 release superseded is a warning. A red run that refused a release is a finding to fix in
 the manifest, not a tag to set by hand. Only when the tag could not be pushed at all (a permission or an HTTP error) does the
 owner set it by hand — on the release's own commit, which is not `main` once `main` has gone
-on: nothing checks a tag set by hand, and one on another commit is a release the branch
-`stable` refuses for good. The steps are in the template's `docs/DESIGN.md` §5 («Releases and
+on: nothing checks a tag set by hand before it is set, and one on another commit is held to
+what it holds and to what the commit of `main`'s own line that brought it changed — the
+tagged commit itself where it is on that line, else the merge that brought its branch —, not
+to the cut that was read. Where that commit changed anything beside a release, or the
+manifest at the tag names another release, the tagged release is one the branch `stable`
+refuses for good; a later commit of that line that cut the same release again is one the
+branch would move to. The steps are in the template's `docs/DESIGN.md` §5 («Releases and
 channels»).
 
 Tags `v*` are never moved or deleted: a tag ruleset forbids it. Old manifests stay here for
@@ -55,8 +60,9 @@ code, `.github/scripts/stable.py`:
 - **Every night** — to the newest release that is whole and at least 7 days old, the delay of
   the channel `stable` in a person's repository. Whole is read again here: the tag is on
   `main`, `files/` is the manifest's files byte for byte, the index is the manifest's and is
-  the very text its release's topics give, and the commit that brought the release to `main`
-  changed nothing but `files/`, the manifest and the index.
+  a text its release's topics give — in any of the words the copy keeps: today's, or those
+  an index was published in before —, and the commit that brought the release to `main` changed
+  nothing but `files/`, the manifest and the index.
 - **By hand** — Actions → `stable` → «Run workflow», on `main`: field «to», the release;
   field «reason», why, in one line. For a fix that cannot wait its week, or to move back.
   Moving back, or naming the release the branch is on already, withdraws every release newer
@@ -114,7 +120,8 @@ What holds that, and what does not:
   first.
 - That pull request is the one place where the copy changes, and the workflow `tests` reads
   it for what it would do to what is already out (`.github/scripts/copy-holds.py`): a copy by
-  which a release whole today would be refused — the index built in other words is enough —
+  which a release whole today would be refused — a kept text of the index changed by one
+  word, or taken out, is enough —
   or the branch `stable` as it stands would not be read is red, because the branch could then
   neither stay where it is nor move back. A copy that holds more than the one before is not
   judged there: that is read as code.

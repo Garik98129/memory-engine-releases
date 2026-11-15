@@ -4,9 +4,12 @@ it held (workflow `tests`).
     python3 -I copy-holds.py <base> --repository OWNER/NAME [--copy PATH]
 
 The code that moves the branch `stable` builds a release's index again from the release's own
-topics, and moves only to a release whose published index is that text, byte for byte. So a
-copy that builds another text — one word of `index_text` changed in the template — refuses
-every release published before it: the branch is then on a release that «is not whole», the
+topics, and moves only to a release whose published index is such a text, byte for byte. The
+template's rule is to keep every text an index was published in (`INDEX_TEXTS` in the copy) and
+to bring new words as a new text beside the old; no check there refuses a kept text edited
+together with its fingerprint. So a copy in which a kept text was changed by one word, or taken
+out, refuses the releases published in it — each one no other kept text gives the same index
+for: the branch is then on a release that «is not whole», the
 night's run is red, no move back is possible, and only a new release moved to by hand, past
 its week, ends it (found by the reading of this change against its documents, on real
 repositories). The template's `release cut` wants the copy here to be the release's own file,
