@@ -18,10 +18,11 @@ than the newest release tag, and whose `files/` is exactly the manifest's files;
 on one line (`.github/scripts/tag-release.sh`; its test:
 `bash .github/scripts/test-tag-release.sh`). `main`'s own line: a pull request merged by a
 merge commit is tagged on the merge, which holds what `main` took, and what its branch held
-on the way is not looked at; where commits land on that line one by one — a branch merged by
-rebase, a push — a release named by two of them is the later one's, and two commits that name
-two releases are two releases. So a release's pull request is merged by squash or by a merge
-commit, and merging by rebase is switched off in this repository's settings. A commit that
+on the way is not looked at. Where commits land on that line one by one — a branch merged by
+rebase, a push — each is looked at, as two pull requests merged in a row are: the first to
+name a release has its tag, and the script does not tell a draft from the cut meant. So a
+release's pull request is merged by squash or by a merge commit, and merging by rebase is
+switched off in this repository's settings; the script cannot see that setting. A commit that
 holds exactly a release already tagged — `main` taken back to it — is nothing to tag. And only
 a release that is whole as the code that moves the branch `stable` reads it (below) — asked
 before the tag, because a tag cannot be taken back: a release with no topic index, with an
@@ -126,7 +127,8 @@ cannot make them, and only the first is read by a run:
   a pull request, would stop the workflow's own push);
 - a branch ruleset for `main`: «Require a pull request before merging», the status check
   `paths` required, «Block force pushes», «Restrict deletions»;
-- pull requests merged by squash or by a merge commit: «Allow rebase merging» off;
+- pull requests merged by squash or by a merge commit: «Allow rebase merging» off — with it
+  on, a pull request's commits land on `main` one by one and an earlier cut can take the tag;
 - the tag ruleset for `v*`, as it is: no move, no deletion, nobody past it.
 
 The workflow `tests` runs on a pull request that changes `.github/`: the scripts' tests

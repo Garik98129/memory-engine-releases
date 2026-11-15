@@ -121,8 +121,10 @@ def main(argv: list[str] | None = None) -> int:
     if lost or stranded:
         return 1
     whole = sum(1 for tag, reason in was.items() if tag != BRANCH and reason is None)
-    print(f"COPY holds: every one of the {whole} releases whole by the copy before is whole by this one, "
-          f"and the branch stable is read as before")
+    branch = ("the branch stable is read as before" if was[BRANCH] is None else
+              f"the branch stable is read as its own by neither copy — by the one before: {plain(was[BRANCH])} — "
+              f"which is not this pull request's doing")
+    print(f"COPY holds: every one of the {whole} releases whole by the copy before is whole by this one, and {branch}")
     return 0
 
 

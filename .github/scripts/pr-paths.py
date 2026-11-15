@@ -28,7 +28,9 @@ printed escaped: it is a stranger's text.
 
 Which commit of a merged branch gets the tag is not this check's but the script's that tags
 (.github/scripts/tag-release.sh): it looks at the commits of `main`'s own line only, so of a
-pull request merged by squash or by a merge commit only what `main` took is tagged.
+pull request merged by squash or by a merge commit only what `main` took is tagged. Merged by
+rebase, its commits would each be looked at — which is why that way of merging is switched off
+in this repository's settings.
 
 Exit 0 — a release and nothing else, or no release at all; 1 — a release mixed with something
 else; 2 — it could not be told: no single commit where it left its base, or git failed.
