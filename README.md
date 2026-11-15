@@ -80,14 +80,18 @@ write access is not prevented; the code tells such a push from its own moves and
 building on it, with one exception it names: a whole release pushed with a record that says
 «by hand».
 
-Until a release with an index is a week old the branch does not exist: the night's run says
-so, and is green once the ruleset is there.
+This code makes the branch at its first move: the schedule's, once a release with an index is
+whole and a week old, or a hand's. While there is no branch and nothing to move to, a night's
+run that does not fail says «the branch does not exist yet».
 
-A red run of `stable` ends with one line in plain words. A finding stays red until it is
-answered: a release newer than the one the branch is on that is not whole — a hand withdraws
-it by a run to the release the branch should be on —, or a branch that is not what this code
-left, which a run by hand repairs. While a run is red the branch stays where it was: a chat
-reads the release it read before, never a broken one.
+A red run of `stable` ends with one line in plain words. Two kinds of finding are answered by
+a hand. A release newer than the one the branch is on that is not whole is withdrawn by a run
+by hand to the release the branch is on, while that one is whole, or to an older whole one; on a branch this code
+left, a move forward withdraws nothing. A branch that is not what this code left is repaired
+by a run by hand to a whole release. A red run is
+no promise that the branch stood still: a run that finds one release broken can move to
+another, whole one in the same run, and then prints a line «STABLE moved». What a run moves
+to is a release it has just read as whole.
 
 GitHub switches a schedule off in a public repository after 60 days without activity in it,
 and writes to the owner; a workflow switched off stays off until it is enabled again (Actions

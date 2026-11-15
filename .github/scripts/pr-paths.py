@@ -6,9 +6,9 @@ A release is three things at the top of this repository: `files/`, `release-mani
 `rules-index.md`. A pull request that changes any of them changes nothing else, for two reasons.
 
 A tag is never taken back. The code that moves the branch `stable` (.github/scripts/stable.py)
-refuses a release whose commit on `main` changed more than those three, and stays red on it
-until a hand withdraws the release — so it is said here, before the merge, while the pull
-request can still be split.
+refuses a release whose commit on `main` changed more than those three, and the night is red
+for it until a hand withdraws the release or the branch moves on to a newer whole one — so it
+is said here, before the merge, while the pull request can still be split.
 
 And what runs here must not come with what it judges. `.github/` holds the code that tags a
 release and decides when one is trusted; a change to it comes by a pull request of its own,

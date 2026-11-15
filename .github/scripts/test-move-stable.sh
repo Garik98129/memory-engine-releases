@@ -17,6 +17,8 @@ if os.environ.get("STUB_DIES"):
     raise RuntimeError("an error the code did not expect")
 if os.environ.get("STUB_EXIT") == "1":
     print("STABLE finding: a release is not whole")
+if os.environ.get("STUB_MOVED"):
+    print("STABLE moved: v0.1.12 -> v0.1.13 (the schedule), commit 0; withdrawn: none")
 sys.exit(int(os.environ.get("STUB_EXIT", "0")))
 PY
 printf 'raise SystemExit("planted")\n' > "$tmp/scripts/json.py"      # beside the copy: never imported
@@ -33,7 +35,7 @@ run() {       # run <name> <exit wanted> <the ARGS line wanted, as JSON> — the
 }
 check() { if eval "$2"; then echo "ok   $1"; else echo "FAIL $1"; cat "$tmp/out"; fails=$((fails + 1)); fi; }
 export GITHUB_REPOSITORY=owner/name
-unset TO REASON DRY_RUN STUB_EXIT STUB_DIES
+unset TO REASON DRY_RUN STUB_EXIT STUB_DIES STUB_MOVED
 
 run "the schedule: the repository and nothing more" 0 '["--repository", "owner/name"]'
 check "the copy beside the script is the one run, with the library's modules" 'grep -qx "JSON the library'"'"'s" "$tmp/out"'
@@ -59,10 +61,19 @@ DRY_RUN=true run "a dry run" 0 '["--repository", "owner/name", "--dry-run"]'
 DRY_RUN=true TO=v0.1.13 REASON=why run "a dry run by hand" 0 '["--repository", "owner/name", "--to=v0.1.13", "--reason=why", "--dry-run"]'
 DRY_RUN=True run "only «true» is a dry run" 0 '["--repository", "owner/name"]'
 STUB_EXIT=1 run "a finding is passed on" 1 '["--repository", "owner/name"]'
-check "the commands are started again after it, and one line in plain words says what is done about a finding" \
-  '[ "$(closing)" = "$(($(wc -l < "$tmp/out") - 1))" ] && tail -n 1 "$tmp/out" | grep -q "^::error::The branch stable has a finding.*field «to».*field «reason»"'
+check "the commands are started again after it, and one line in plain words says where what is done about a finding is written" \
+  '[ "$(closing)" = "$(($(wc -l < "$tmp/out") - 1))" ] && tail -n 1 "$tmp/out" | grep -q "^::error::The branch stable has a finding.*README.md.*field «to».*field «reason»"'
+check "that line does not say the branch stayed: it says it does not say, and names the line «STABLE moved»" \
+  'tail -n 1 "$tmp/out" | grep -q "does not say whether the branch moved: a line «STABLE moved» in this step means this run moved it" && ! tail -n 1 "$tmp/out" | grep -qi "stays"'
+STUB_EXIT=1 STUB_MOVED=1 run "the run stable.py makes when one release is broken and it moves to another: red, with its «STABLE moved»" 1 '["--repository", "owner/name"]'
+check "the line «STABLE moved» stands in the log, and the last line does not deny it" \
+  'grep -qx "STABLE moved: v0.1.12 -> v0.1.13 (the schedule), commit 0; withdrawn: none" "$tmp/out" && tail -n 1 "$tmp/out" | grep -q "does not say whether the branch moved" && ! tail -n 1 "$tmp/out" | grep -qi "stays"'
 STUB_EXIT=2 run "a failed run is passed on" 2 ''
-check "with a line of its own, after the commands are started again" '[ "$(closing)" = "$(($(wc -l < "$tmp/out") - 1))" ] && tail -n 1 "$tmp/out" | grep -q "^::error::The run that moves the branch stable failed"'
+check "with a line of its own, after the commands are started again" '[ "$(closing)" = "$(($(wc -l < "$tmp/out") - 1))" ] && tail -n 1 "$tmp/out" | grep -q "^::error::The run that moves the branch stable failed: see what this step printed above"'
+check "that line does not say the branch stayed either, nor that an «ERROR» line is there" \
+  'tail -n 1 "$tmp/out" | grep -q "a line «ERROR» where there is one.*does not say whether the branch moved.*no such line is no proof that it did not" && ! tail -n 1 "$tmp/out" | grep -qi "stays"'
+STUB_EXIT=120 run "any other code — Python's 120, say — is passed on as it is" 120 ''
+check "with the same line of a failed run" 'tail -n 1 "$tmp/out" | grep -q "^::error::The run that moves the branch stable failed: see what this step printed above.*does not say whether the branch moved"'
 STUB_DIES=1 run "code that died on an error is a failed run, not a finding" 2 '["--repository", "owner/name"]'
 check "and the run says so, with the error above it" \
   'grep -q "RuntimeError" "$tmp/out" && grep -q "^ERROR .* it died" "$tmp/out" && tail -n 1 "$tmp/out" | grep -q "^::error::The run that moves the branch stable failed"'
