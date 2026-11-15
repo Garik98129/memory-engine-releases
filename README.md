@@ -32,8 +32,11 @@ A run is red when the newest manifest on `main` was refused; an older refusal a 
 release superseded is a warning. A red run that refused a release is a finding to fix in
 the manifest, not a tag to set by hand. Only when the tag could not be pushed at all (a permission or an HTTP error) does the
 owner set it by hand — on the release's own commit, which is not `main` once `main` has gone
-on: nothing checks a tag set by hand, and one on another commit is a release the branch
-`stable` refuses for good. The steps are in the template's `docs/DESIGN.md` §5 («Releases and
+on: nothing checks a tag set by hand before it is set, and one on another commit is held to
+what that commit holds and brought, not to the cut that was read. A commit that changed
+anything beside a release, or whose manifest names another release, is then a release the
+branch `stable` refuses for good; a later commit that cut the same release again is one the
+branch would move to. The steps are in the template's `docs/DESIGN.md` §5 («Releases and
 channels»).
 
 Tags `v*` are never moved or deleted: a tag ruleset forbids it. Old manifests stay here for
@@ -55,8 +58,9 @@ code, `.github/scripts/stable.py`:
 - **Every night** — to the newest release that is whole and at least 7 days old, the delay of
   the channel `stable` in a person's repository. Whole is read again here: the tag is on
   `main`, `files/` is the manifest's files byte for byte, the index is the manifest's and is
-  the very text its release's topics give, and the commit that brought the release to `main`
-  changed nothing but `files/`, the manifest and the index.
+  a text its release's topics give — in the words of today, or in words the copy keeps from
+  the day the release was cut —, and the commit that brought the release to `main` changed
+  nothing but `files/`, the manifest and the index.
 - **By hand** — Actions → `stable` → «Run workflow», on `main`: field «to», the release;
   field «reason», why, in one line. For a fix that cannot wait its week, or to move back.
   Moving back, or naming the release the branch is on already, withdraws every release newer
