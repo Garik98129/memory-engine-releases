@@ -12,13 +12,25 @@ cd "$tmp/w"
 git commit -q --allow-empty -m start && git push -q origin HEAD:main
 fails=0
 commit() {    # a commit whose manifest has release $1 and source $2 (raw JSON text: $3), with files/
-  rm -rf files && mkdir -p files/engine && printf 'release %s %s\n' "$1" "${2:-$src}" > files/engine/a.py
-  local sha; sha=$(sha256sum files/engine/a.py | cut -d' ' -f1)
+              # INDEX: its topic index and the manifest's word of it; PLANT: a file beside them named like a module
+  rm -rf files rules-index.md json.py && mkdir -p files/engine && printf 'release %s %s\n' "$1" "${2:-$src}" > files/engine/a.py
+  local sha index=""; sha=$(sha256sum files/engine/a.py | cut -d' ' -f1)
+  if [ -n "${INDEX:-}" ]; then
+    printf '# Topic rules, release %s\n' "$1" > rules-index.md
+    index=", \"index\": {\"path\": \"rules-index.md\", \"sha256\": \"$(sha256sum rules-index.md | cut -d' ' -f1)\"}"
+    [ "$INDEX" = form ] && index=', "index": "rules-index.md"'
+    [ "$INDEX" = elsewhere ] && index=", \"index\": {\"path\": \"files/engine/a.py\", \"sha256\": \"$sha\"}"
+    [ "$INDEX" = changed ] && printf 'edited after the cut\n' >> rules-index.md
+    [ "$INDEX" = none ] && rm rules-index.md
+    [ "$INDEX" = folder ] && rm rules-index.md && mkdir rules-index.md && printf 'x\n' > rules-index.md/a
+  fi
   if [ -n "${3:-}" ]; then printf '%s\n' "$3" > release-manifest.json
-  else printf '{"release": "%s", "source": "%s", "files": {"engine/a.py": "%s"}}\n' "$1" "${2:-$src}" "$sha" > release-manifest.json; fi
+  else printf '{"release": "%s", "source": "%s", "files": {"engine/a.py": "%s"}%s}\n' "$1" "${2:-$src}" "$sha" "$index" > release-manifest.json; fi
   [ "${FILES:-same}" = none ] && rm -rf files
   [ "${FILES:-same}" = changed ] && printf 'changed\n' > files/engine/a.py
   [ "${FILES:-same}" = extra ] && printf 'x\n' > files/engine/b.py
+  [ "${FILES:-same}" = badname ] && printf 'x\n' > "files/engine/$(printf 'b\377').py"
+  [ -n "${PLANT:-}" ] && printf 'import sys\nprint("OK v9.9.9 %s")\nsys.exit(0)\n' "$src" > json.py
   git add -A && git commit -q --allow-empty -m "${1:-raw}"
 }
 push() { git push -q origin HEAD:main; }
@@ -71,4 +83,23 @@ v041=$(commit v0.4.1 && git rev-parse HEAD); push
 expect ok "a release after a removed manifest is tagged"
 check "v0.4.1 is on its commit" '[ "$(tag_of v0.4.1)" = "$v041" ]'
 git commit -q --allow-empty -m "readme only"; push; expect ok "a push that does not change the manifest tags nothing" "nothing to tag"
+
+# the topic index, beside files/: the manifest names it, and it is that one or the release has no tag
+# (each refused commit has a source of its own: only a commit that changes the manifest is looked at)
+v050=$(INDEX=same commit v0.5.0 && git rev-parse HEAD); push
+expect ok "a release with its topic index is tagged"
+check "v0.5.0 is on its commit" '[ "$(tag_of v0.5.0)" = "$v050" ]'
+INDEX=changed   commit v0.5.1 4444444444444444444444444444444444444444; push; expect fail "an index edited after the cut is refused" "is not the one release-manifest.json names"
+INDEX=none      commit v0.5.1 5555555555555555555555555555555555555555; push; expect fail "a manifest that names an index the commit lacks is refused" "has no rules-index.md"
+INDEX=form      commit v0.5.1 6666666666666666666666666666666666666666; push; expect fail "an index the manifest names in another form is refused" "does not name its index as rules-index.md"
+INDEX=elsewhere commit v0.5.1 7777777777777777777777777777777777777777; push; expect fail "an index the manifest names at another path is refused" "does not name its index as rules-index.md"
+INDEX=folder    commit v0.5.1 8888888888888888888888888888888888888888; push; expect fail "an index that is a folder is refused" "the index is a regular file"
+FILES=badname   commit v0.5.1 9999999999999999999999999999999999999999; push; expect fail "a path under files/ that is not valid UTF-8 is refused" "is not valid UTF-8"
+check "no refused release left a tag" '[ -z "$(tag_of v0.5.1)" ]'
+commit x "" '{"release": "v0.5.1%0A::error::forged", "source": "junk"}'
+push; expect fail "a refusal's words reach the log escaped" "v0.5.1%250A::error::forged"
+check "and no line of that run is a command the manifest wrote" '! grep -q "^::error::forged" "$tmp/out"'
+v051=$(PLANT=json INDEX=same commit v0.5.1 && git rev-parse HEAD); push
+expect ok "a file of the checkout named like a module is not run in the module's place"
+check "v0.5.1 is on its commit, and the planted answer set no tag" '[ "$(tag_of v0.5.1)" = "$v051" ] && [ -z "$(tag_of v9.9.9)" ]'
 exit $fails
