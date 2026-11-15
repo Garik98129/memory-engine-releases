@@ -9,6 +9,11 @@ see being switched off. So the night's run reads it: GitHub's answer on standard
 rules of every active ruleset that covers the branch, an array of objects with a `type` — must
 hold `deletion` and `non_fast_forward`.
 
+What this does not see: who a ruleset lets past it (its bypass list is not in that answer — it
+is kept empty by hand), and the older «branch protection rules», which that answer leaves out:
+the closing must be a ruleset. The answer is asked for a hundred rules at a time; a branch
+under more than that is told from the first hundred.
+
 Exit 0 — both are there; 1 — a finding: one is missing; 2 — the answer could not be read.
 """
 from __future__ import annotations
@@ -34,7 +39,8 @@ def main() -> int:
               f"stable can be rewritten or removed. Settings → Rules → Rulesets: a branch ruleset for "
               f"«stable», active, with «Restrict deletions» and «Block force pushes» (README.md).")
         return 1
-    print("RULES the branch stable is closed to a forced push and to deletion")
+    print("RULES an active ruleset forbids a forced push to the branch stable and its deletion "
+          "(whom that ruleset lets past it is not in GitHub's answer: its bypass list is kept empty by hand)")
     return 0
 
 

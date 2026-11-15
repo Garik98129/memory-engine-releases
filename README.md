@@ -11,13 +11,17 @@ update to fetch without a token; `files/.github/workflows/` is not where GitHub 
 workflows, so nothing there runs here. Both are written by `python -m engine.setup.release cut`
 in the template, which refuses to publish any number, address or token but listed test values.
 
-The workflow `tag` sets each tag: every commit on `main` after the newest release tag that
-changed `release-manifest.json` gets the tag its manifest names, oldest first, whatever
-order the runs take — only a release `vMAJOR.MINOR.PATCH` whose tag is new and newer than
-the newest release tag, and whose `files/` is exactly the manifest's files; releases go on
-one line; a path under `files/` that is not valid UTF-8 and a topic index that is not the one the
-manifest names are refused too (`.github/scripts/tag-release.sh`; its test:
-`bash .github/scripts/test-tag-release.sh`).
+The workflow `tag` sets each tag: every commit of `main`'s own line after the newest release
+tag that changed `release-manifest.json` gets the tag its manifest names, oldest first,
+whatever order the runs take — only a release `vMAJOR.MINOR.PATCH` whose tag is new and newer
+than the newest release tag, and whose `files/` is exactly the manifest's files; releases go
+on one line (`.github/scripts/tag-release.sh`; its test:
+`bash .github/scripts/test-tag-release.sh`). `main`'s own line: a pull request merged by a
+merge commit is tagged on the merge, which holds what `main` took, and what its branch held
+on the way is never tagged. And only a release that is whole as the code that moves the branch
+`stable` reads it (below) — asked before the tag, because a tag cannot be taken back: a
+release with no topic index, with an index that is not its own topics' text, or whose commit
+changed anything beside `files/`, the manifest and the index gets none.
 A run is red when the newest manifest on `main` was refused; an older refusal a later
 release superseded is a warning. A red run that refused a release is a finding to fix in
 the manifest, not a tag to set by hand. Only when the tag could not be pushed at all (a permission or an HTTP error) does the
@@ -29,12 +33,13 @@ good; the gate refuses a rollback by the order of releases, not by a missing man
 
 ## The branch `stable`
 
-A chat that has no repository of its own reads the engine's rules here, at one address that
-never changes: the branch `stable`, the file `rules-index.md`. From the release that brings it
-on, a release has that index beside `files/` — which rules files a topic needs, all of them,
-and the release they belong to. The index tells the chat to read those files at its release's
-tag, not at the branch: a tag never moves, so a move of the branch between two reads mixes
-nothing.
+The branch `stable` is one address that never changes, for a chat that has no repository of
+its own and reads the engine's rules here: the branch `stable`, the file `rules-index.md`.
+(The chats' instruction fields still name a release's tag; the template's step that replaces
+them will name this address.) From the release that brings it on, a release has that index
+beside `files/` — which rules files a topic needs, all of them, and the release they belong
+to. The index tells the chat to read those files at its release's tag, not at the branch: a
+tag never moves, so a move of the branch between two reads mixes nothing.
 
 The workflow `stable` moves the branch, with this repository's own copy of the template's
 code, `.github/scripts/stable.py`:
@@ -44,44 +49,65 @@ code, `.github/scripts/stable.py`:
   `main`, `files/` is the manifest's files byte for byte, the index is the manifest's and is
   the very text its release's topics give, and the commit that brought the release to `main`
   changed nothing but `files/`, the manifest and the index.
-- **By hand** — Actions → `stable` → «Run workflow», on `main`, with the release and a reason
-  in one line. For a fix that cannot wait its week, or to move back. Moving back, or naming
-  the release the branch is on already, withdraws every release newer than it: the night's
-  run passes those over, and one of them returns only by a move to it by hand. «Only say what
-  would be done» moves nothing.
+- **By hand** — Actions → `stable` → «Run workflow», on `main`: field «to», the release;
+  field «reason», why, in one line. For a fix that cannot wait its week, or to move back.
+  Moving back, or naming the release the branch is on already, withdraws every release newer
+  than it: the night's run passes those over, and one of them returns only by a move to it by
+  hand. «Only say what would be done» moves nothing.
 
 Every move is one more commit on the branch — the release as its tag has it, and `stable.json`:
-the release, when, how, why, the releases withdrawn. Moving back is a commit too; the branch
-is never rewritten, and a ruleset forbids a forced push to it and its deletion. Until a
-release with an index is a week old the branch does not exist, and the night's run says so
-and is green.
+the release, when, how, why, the releases withdrawn. Moving back is a commit too: the code
+never rewrites the branch. That nobody else does is a setting of this repository, not a
+property of the code: a branch ruleset for `stable`, active, with «Restrict deletions» and
+«Block force pushes» and an empty bypass list. The same run reads that ruleset every night
+and is red without it (`.github/scripts/stable-rules.py`; it cannot see the bypass list). A
+ruleset that lets only that workflow push is not set up here, so a push by somebody with
+write access is not prevented; the code tells such a push from its own moves and stops
+building on it, with one exception it names: a whole release pushed with a record that says
+«by hand».
 
-A red run of `stable` is a finding, and it stays red until it is answered: a release newer
-than the one the branch is on that is not whole — a tag cannot be taken back, so a hand
-withdraws it by moving to the release the branch should be on —, or a branch that is not what
-this code left, which a move by hand repairs. Nobody pushes to `stable` but that workflow; the
-code tells a push it did not make from its own, with one exception it names — a whole release
-pushed with a record that says «by hand».
+Until a release with an index is a week old the branch does not exist: the night's run says
+so, and is green once the ruleset is there.
+
+A red run of `stable` ends with one line in plain words. A finding stays red until it is
+answered: a release newer than the one the branch is on that is not whole — a hand withdraws
+it by a run to the release the branch should be on —, or a branch that is not what this code
+left, which a run by hand repairs. While a run is red the branch stays where it was: a chat
+reads the release it read before, never a broken one.
 
 GitHub switches a schedule off in a public repository after 60 days without activity in it,
 and writes to the owner; a workflow switched off stays off until it is enabled again (Actions
-→ `stable` → «Enable workflow»). While it sleeps the branch stays where it is — a chat reads
-the release it read before, never a broken one.
+→ `stable` → «Enable workflow»). While it sleeps the branch stays where it is.
 
 ## Pull requests
 
-`main` changes by pull requests of two kinds, never mixed: a **release** — `files/`,
-`release-manifest.json`, `rules-index.md`, written by the template's `release cut` and nothing
-else — and a change to **what this repository runs** — `.github/`, this file. The workflow
-`pr` holds the line (`.github/scripts/pr-paths.py`): a pull request that changes a release's
-paths and anything else is red. The code that tags a release and decides when one is trusted
-must not come in with the release it judges; and a release whose commit changed more is never
-moved to by `stable`, with a tag that cannot be taken back. `release cut` refuses a release
-while `.github/scripts/stable.py` here is not the release's own `engine/setup/stable.py`: when
-the template changes that file, a pull request brings the copy here first.
+`main` is meant to change by pull requests of two kinds, never mixed: a **release** —
+`files/`, `release-manifest.json`, `rules-index.md`, written by the template's `release cut`
+and nothing else — and a change to **what this repository runs** — `.github/`, this file.
+The code that tags a release and decides when one is trusted must not come in with the
+release it judges.
 
-The workflow `tests` runs the scripts' tests on a pull request that changes `.github/`:
-`bash .github/scripts/test-tag-release.sh`, `test-pr-paths.sh`, `test-move-stable.sh`, then
-one dry run of the code that moves `stable` and one reading of the branch's rules, both
-against this repository. The tests of that code itself are the template's
-(`engine/setup/tests/test_stable.py`).
+What holds that, and what does not:
+
+- The workflow `pr` says, on every pull request, whether it mixes the two
+  (`.github/scripts/pr-paths.py`): red when it changes a release's paths and anything else.
+  It runs `main`'s own code, never the pull request's. It only says: a red pull request can
+  still be merged unless a ruleset on `main` requires the check `paths` — a setting of this
+  repository.
+- A mixed pull request merged all the same gets no tag: the script that tags refuses a commit
+  that changed more than a release. So does a direct push to `main` that mixes them.
+- `release cut` refuses a release while `.github/scripts/stable.py` in the checkout it writes
+  into is not the release's own `engine/setup/stable.py` — so a release is cut into a checkout
+  of `main`, and when the template changes that file, a pull request brings the copy here
+  first.
+- That pull request is the one place where the copy changes, and the workflow `tests` reads
+  it for what it would do to the releases already out (`.github/scripts/copy-holds.py`): a
+  copy by which a release whole today would be refused — the index built in other words is
+  enough — is red, because the branch could then neither stay on that release nor move back
+  to it.
+
+The workflow `tests` runs on a pull request that changes `.github/`: the scripts' tests
+(`bash .github/scripts/test-tag-release.sh`, `test-pr-paths.sh`, `test-move-stable.sh`), one
+dry run of the code that moves `stable` and one reading of the branch's rules, both against
+this repository, and the comparison of the copy. The tests of that code itself are the
+template's (`engine/setup/tests/test_stable.py`).

@@ -1,21 +1,35 @@
 #!/usr/bin/env bash
-# Tags the releases on main that have no tag yet (workflow `tag`): every commit after the newest
-# release tag, up to <after>, that changed release-manifest.json, oldest first, gets the tag its
-# manifest names. A run that came late — after a newer push's run — finds those releases tagged
-# already and does nothing, so no release is skipped whatever order the runs take. A commit
-# whose tag is already on it is passed over. A manifest that is not a release, a files/ that is
-# not exactly the manifest's files — a path there that is not valid UTF-8 among it —, a topic
-# index (rules-index.md) that is not the one the manifest names, a tag that exists on another
-# commit or one not newer than the newest is refused; the run is red only when the newest
-# manifest commit was refused — an older refusal a later release superseded is a warning. Only
-# creates tags: the tag ruleset forbids moving or deleting one — which is why what can be seen
-# here is refused here: a release tagged and then found broken stays tagged.
+# Tags the releases on main that have no tag yet (workflow `tag`): every commit of main's own
+# line after the newest release tag, up to <after>, that changed release-manifest.json, oldest
+# first, gets the tag its manifest names. A run that came late — after a newer push's run —
+# finds those releases tagged already and does nothing, so no release is skipped whatever order
+# the runs take. A commit whose tag is already on it is passed over.
+#
+# Main's own line — its first parents — and no other commit: what a merged branch held on its
+# way is never tagged. A pull request merged by a merge commit is tagged on that merge, which
+# holds what main took; its branch's commits, which nobody read as the release, are not looked
+# at. (Before, every commit that touched the manifest was: a branch whose earlier commit named
+# the same release got the tag on that commit — the adversarial reading of this change.)
+#
+# Refused: a manifest that is not a release; a files/ that is not exactly the manifest's files,
+# a path there that is not valid UTF-8 among it; a tag that exists on another commit or one not
+# newer than the newest; and a release that is not whole as the code that moves the branch
+# `stable` reads it — this repository's own copy, stable.py beside this file, asked here before
+# the tag and not a week after it: a manifest that is no regular file or has no «published»
+# time, an index that is not the manifest's or not the very text its release's topics give for
+# this repository, a commit that changed more than files/, the manifest and the index — and a
+# release with no topic index at all, which that code would be red on for good. The tag ruleset
+# forbids moving or deleting a tag, so a release tagged and then found broken stays tagged:
+# what can be seen here is refused here. The run is red only when the newest manifest commit
+# was refused — an older refusal a later release superseded is a warning.
 #
 # Python runs with -I: the checkout is the working directory, and without it a file of the
 # checkout named like a module (json.py) would be imported in the module's place. What is said
 # of a refusal is printed escaped: it carries a manifest's own words.
 set -euo pipefail
 after="${1:?usage: tag-release.sh <after>}"
+here="$(cd "$(dirname "$0")" && pwd)"
+repository="${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is not set, the owner/name of this repository}"
 release_re='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
 
 tags() {   # «sha tag» of every release tag on origin, a lightweight tag's own commit
@@ -37,10 +51,8 @@ for name, sha in commits.items():
     print(sha, name)'
 }
 newest_of() { sort -V | tail -n 1; }
-said() {   # a refusal as a workflow command's text may carry it: «%» and line ends escaped
-  local s=${1//%/%25}
-  s=${s//$'\r'/%0D}
-  printf '%s' "${s//$'\n'/%0A}"
+said() {   # a refusal as a workflow command's text may carry it: «%» escaped — it is one line of plain ASCII already
+  printf '%s' "${1//%/%25}"
 }
 
 declare -A tag_commit
@@ -51,17 +63,19 @@ if [ -n "$newest" ] && git cat-file -e "${tag_commit[$newest]}^{commit}" 2>/dev/
 else
   range="$after"
 fi
-commits=$(git rev-list --reverse "$range" -- release-manifest.json)
+commits=$(git rev-list --reverse --first-parent "$range" -- release-manifest.json)
 [ -n "$commits" ] || { echo "no release on main after ${newest:-the start} — nothing to tag"; exit 0; }
 last=$(printf '%s\n' "$commits" | tail -n 1)
 
 refused_last=""
 for sha in $commits; do
-  verdict=$(python3 -I - "$sha" <<'PY'
-import hashlib, json, re, subprocess, sys
-sha = sys.argv[1]
-def refuse(msg):          # one line of plain ASCII, whatever the manifest's words were
-    print("REFUSED", " ".join(msg.split()).encode("ascii", "backslashreplace").decode()); sys.exit(0)
+  verdict=$(python3 -I - "$sha" "$after" "$here/stable.py" "$repository" <<'PY'
+import hashlib, json, re, subprocess, sys, types
+from pathlib import Path
+sha, after, stable_path, repository = sys.argv[1:5]
+def refuse(msg):          # one line of plain printable ASCII, whatever the manifest's words were, and no «#»
+    line = " ".join(str(msg).split()).encode("ascii", "backslashreplace").decode()
+    print("REFUSED", "".join(c if " " <= c <= "~" and c != "#" else f"\\x{ord(c):02x}" for c in line)); sys.exit(0)
 def git(*args):
     return subprocess.run(["git", *args], check=True, capture_output=True).stdout
 def check():
@@ -113,21 +127,25 @@ extra = sorted(set(have) - set(files))
 changed = sorted(p for p in set(files) & set(have) if files[p] != have[p])
 if missing or extra or changed:
     refuse(f"files/ is not the manifest: missing {missing[:3]}, extra {extra[:3]}, different {changed[:3]}")
-index = m.get("index")          # the topic index, beside files/; a release cut before it existed names none
-if index is not None:
-    if not isinstance(index, dict) or set(index) != {"path", "sha256"} or index["path"] != "rules-index.md":
-        refuse("release-manifest.json does not name its index as rules-index.md with a sha256")
+def whole():              # as the code that moves `stable` reads a release: this repository's copy of it,
+    stable = types.ModuleType("stable")     # its source as it stands — no compiled file beside it is read or left
+    stable.__file__ = stable_path
+    sys.modules["stable"] = stable
+    exec(compile(Path(stable_path).read_bytes(), stable_path, "exec"), stable.__dict__)
+    line = tuple(git("rev-list", "--first-parent", after).decode().split())
     try:
-        entry = git("ls-tree", "-z", sha, "--", "rules-index.md").split(b"\0")[0]
-    except subprocess.CalledProcessError as exc:
-        refuse(f"rules-index.md could not be read: {exc}")
-    if not entry:
-        refuse("release-manifest.json names an index and this commit has no rules-index.md")
-    mode, kind, blob = entry.split(b"\t", 1)[0].decode().split()
-    if (mode, kind) != ("100644", "blob"):
-        refuse(f"rules-index.md has mode {mode}; the index is a regular file")
-    if hashlib.sha256(git("cat-file", "blob", blob)).hexdigest() != index["sha256"]:
-        refuse("rules-index.md is not the one release-manifest.json names: their sha256 differ")
+        stable.inspect(Path("."), stable.Origin(repository, {tag: sha}, None, line), tag)
+    except stable.Refused as exc:
+        if exc.before_index:
+            refuse("release-manifest.json names no topic index: a release is cut with its rules-index.md, "
+                   "and one without it would keep the branch stable red for good")
+        refuse(f"not whole: {exc}")
+try:
+    whole()
+except SystemExit:
+    raise
+except Exception as exc:            # a copy that is missing or broken, git failing: no tag, and the reason
+    refuse(f"the release could not be read by the code that moves stable (stable.py beside tag-release.sh): {type(exc).__name__}")
 print("OK", tag, source)
 PY
   ) || verdict="REFUSED the check of this commit failed"

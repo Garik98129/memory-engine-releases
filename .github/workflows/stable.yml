@@ -1,8 +1,9 @@
 # Moves the branch `stable` — the one address a chat reads the rules at (README.md, «The branch
 # stable»; the template's docs/DESIGN.md §5, «The topic index and the branch stable»). Every
 # night: to the newest release that is whole and at least 7 days old. By hand, with a release
-# and a reason: at once, or back. Each move is one more commit on that branch; nothing on it is
-# ever rewritten.
+# and a reason: at once, or back. Each move is one more commit on that branch: this code never
+# rewrites it, and a ruleset of the repository forbids anybody to — the second step reads that
+# ruleset every night and is red without it.
 #
 # The rule is this repository's own copy of the template's code, .github/scripts/stable.py,
 # which a pull request of its own brings here and a release never does. This file only starts
@@ -31,9 +32,12 @@ permissions: {}
 
 concurrency:
   # One run at a time, and none cancelled: a move by hand started while the night's run reads
-  # waits for it. A branch that moved between a run's reading and its push refuses the push.
+  # waits for it, and so does one started after that — by default a newer waiting run would
+  # cancel the one already waiting. A branch that moved between a run's reading and its push
+  # refuses the push.
   group: stable
   cancel-in-progress: false
+  queue: max
 
 jobs:
   move:
@@ -61,4 +65,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -o pipefail
-          gh api "repos/$GITHUB_REPOSITORY/rules/branches/stable" | python3 -I .github/scripts/stable-rules.py
+          gh api "repos/$GITHUB_REPOSITORY/rules/branches/stable?per_page=100" | python3 -I .github/scripts/stable-rules.py

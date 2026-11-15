@@ -15,12 +15,22 @@ release and decides when one is trusted; a change to it comes by a pull request 
 which its own reader reads as code. The template's `release cut` never writes there; this
 holds a pull request that was made to do it all the same.
 
-What is compared is what the pull request brings: the paths that differ between <head> and the
-commit where it left <base>. Nothing of the pull request is checked out or run — its paths are
-read, as names. A path is printed escaped: it is a stranger's text.
+What is compared is what the pull request brings: the paths that differ between <head> and
+the one commit where it left <base>. One commit: a branch that crossed `main` more than once
+has several, and a diff from the one git happens to name hid a change to `.github/` that the
+merge then brought (the adversarial reading of this change) — such a pull request is not
+judged at all, it is told to rebase. With one such commit, a merge changes on `main` no path
+the branch did not change since it, so the branch's paths are all a merge can bring; a path
+the branch changed just as `main` did meanwhile is counted too, which only asks for a rebase.
+Nothing of the pull request is checked out or run — its paths are read, as names. A path is
+printed escaped: it is a stranger's text.
+
+Which commit of a merged branch gets the tag is not this check's: the script that tags looks
+at the commits of `main`'s own line only (.github/scripts/tag-release.sh), so what a pull
+request's earlier commits held is never tagged, however it is merged.
 
 Exit 0 — a release and nothing else, or no release at all; 1 — a release mixed with something
-else; 2 — it could not be told.
+else; 2 — it could not be told: no single commit where it left its base, or git failed.
 """
 from __future__ import annotations
 
@@ -46,15 +56,17 @@ def git(*args: str) -> bytes:
 
 
 def changed(base: str, head: str) -> list[bytes]:
-    """The paths the pull request brings: what differs between `head` and the commit where it
-    left `base`. A rename is its two paths, the old and the new."""
+    """The paths the pull request brings: what differs between `head` and the one commit where
+    it left `base`. A rename is its two paths, the old and the new. Failed when there is no
+    such single commit."""
     for rev in (base, head):
         if not _REV.fullmatch(rev):
             raise Failed(f"{rev!a} is not a commit's sha or a ref")
         git("cat-file", "-e", f"{rev}^{{commit}}")
-    forks = git("merge-base", base, head).decode().split()
+    forks = subprocess.run(["git", "merge-base", "--all", base, head], capture_output=True).stdout.decode().split()
     if len(forks) != 1:
-        raise Failed("the pull request has no single commit where it left its base")
+        raise Failed(f"the pull request left main at {len(forks)} commits, not at one: what its merge would bring "
+                     f"cannot be told from its paths. Rebase it onto main as it is now")
     return [p for p in git("diff", "--name-only", "-z", "--no-renames", forks[0], head).split(b"\0") if p]
 
 
@@ -63,8 +75,11 @@ def of_release(path: bytes) -> bool:
 
 
 def shown(paths: list[bytes]) -> str:
+    """The first paths, each on the line and in plain ASCII: no line break, and no «#» to open the
+    runner's older form of a command, which it reads anywhere in a line."""
     more = f" and {len(paths) - SHOWN} more" if len(paths) > SHOWN else ""
-    return ", ".join(ascii(p.decode("utf-8", "backslashreplace")) for p in sorted(paths)[:SHOWN]) + more
+    return ", ".join(ascii(p.decode("utf-8", "backslashreplace")).replace("#", "\\x23")
+                     for p in sorted(paths)[:SHOWN]) + more
 
 
 def main(argv: list[str]) -> int:
