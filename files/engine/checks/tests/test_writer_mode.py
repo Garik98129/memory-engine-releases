@@ -19,7 +19,9 @@ from engine.setup import release
 NOW = datetime.fromisoformat(COMMITTED) + timedelta(hours=1)
 CHAT_WRITES = VALID_CONFIG.replace(b'read_budget_bytes = 16384\n', b'read_budget_bytes = 16384\nwriter = "chat"\n')
 NO_BOT = CHAT_WRITES.replace(b'writer = "chat"\n', b'writer = "chat"\nbot = false\n')
-SOLO = {"engine/rules/fields/solo.md": b"Chat that writes: safety rules.\n"}
+SOLO = {"engine/rules/fields/solo.md": b"Chat that writes: safety rules.\n",
+        # where no bot runs, the one text for everybody — nothing of the user's is joined to it (DESIGN_PHASE3 §4)
+        "engine/rules/fields/fixed.md": b"The one text for everybody: safety rules.\n"}
 # The engine's platform table: C3 holds platform.name to it once the chat writes (DESIGN_PHASE3 §4).
 SOLO["engine/platforms.toml"] = (Path(__file__).resolve().parents[2] / "platforms.toml").read_bytes()
 
@@ -149,12 +151,63 @@ class N5AndN7(unittest.TestCase):
                          ["the chat field changed more than 36 h ago and is not reinstalled: "
                           "user/fields/installed.toml does not match it"])
         self.assertEqual(behind.check(self.repo.path, head, late),
-                         ["field chat: the installed text is not its master (engine/rules/fields/solo.md and her "
+                         ["field chat: the installed text is not its master (engine/rules/fields/solo.md and the user's "
                           "part) — the trusted contact installs it and records it"],
                          "no line about a bot's field, and the bot is not sent to join chat.md (ROUT-9)")
         head = self.repo.commit({"user/fields/installed.toml": record(solo)})
         self.assertEqual(drift.check(self.repo.path, head, late), [])
         self.assertEqual(behind.check(self.repo.path, head, late), [])
+
+
+class TheOneText(unittest.TestCase):
+    """Where the chat writes and no bot runs, the field is one text for everybody: the user's part is not
+    joined to it (docs/DESIGN_PHASE3.md §4). With a bot — the pilot's way out — it is `solo.md` and
+    the user's part, as before."""
+
+    FIXED = "engine/rules/fields/fixed.md"
+
+    def test_which_installations_hold_it(self):
+        no_bot = {"platform": {"writer": "chat", "bot": False, "name": "chatgpt"}}
+        self.assertTrue(limits_check.fixed(no_bot))
+        self.assertEqual(limits_check.fields(no_bot)["chat"][:2], (limits_check.FIXED, "user/fields/chat.md"),
+                         "every platform the same text: ChatGPT has no page field of its own here")
+        for config in ({"platform": {"writer": "chat"}}, {"platform": {"writer": "chat", "bot": True}},
+                       {"platform": {"bot": False}}, {"platform": {"writer": "bot", "bot": False}}, {}, None,
+                       {"platform": {"writer": "chat", "bot": "false"}}):
+            self.assertFalse(limits_check.fixed(config), config)
+            self.assertNotEqual(limits_check.fields(config)["chat"][0], limits_check.FIXED, config)
+
+    def test_what_she_pastes_is_the_text_alone_and_in_every_other_installation_the_two_joined(self):
+        text, part = "The one text.\n", "Who: a test person.\n"
+        self.assertEqual(limits_check.installed({"platform": {"writer": "chat", "bot": False}}, text, part),
+                         "The one text.")
+        for config in ({"platform": {"writer": "chat"}}, {}):
+            self.assertEqual(limits_check.installed(config, text, part), limits_check.assemble(text, part))
+
+    def judged(self, files: dict) -> list[str]:
+        repo = Repo({**BASE_FILES, **SOLO, "user/config.toml": NO_BOT, **files})
+        self.addCleanup(repo.close)
+        return messages(limits_check.check(repo.path, repo.base, repo.base))
+
+    def test_c6_measures_the_text_alone_and_her_part_by_itself(self):
+        """The user's part does not eat the text's room any more, and the text none of the user's: each is held to
+        the field's limit alone. A part over it is still refused — the user's AI reads it, in the user's first
+        message and on the user's map."""
+        self.assertEqual(self.judged({self.FIXED: b"x" * 4000, "user/fields/chat.md": b"y" * 4000}), [])
+        self.assertEqual(self.judged({self.FIXED: b"x" * 4001}),
+                         ["the chat field would be 4001 characters, the limit is 4000"])
+        self.assertEqual(self.judged({"user/fields/chat.md": b"y" * 4001}),
+                         ["user/fields/chat.md is 4001 characters, the limit is 4000"])
+        self.assertEqual(self.judged({"engine/rules/fields/solo.md": b"z" * 9000}), [],
+                         "solo.md is not this installation's field")
+
+    def test_a_text_or_a_part_that_is_missing_is_said(self):
+        repo = Repo({**BASE_FILES, **SOLO, "user/config.toml": NO_BOT})
+        self.addCleanup(repo.close)
+        for path in (self.FIXED, "user/fields/chat.md"):
+            head = repo.commit({path: None})
+            self.assertIn(f"{path} is missing", messages(limits_check.check(repo.path, repo.base, head)))
+            repo.checkout(repo.base)
 
 
 class NoBot(unittest.TestCase):
@@ -179,7 +232,7 @@ class NoBot(unittest.TestCase):
         self.repo.close()
         self.report.unlink(missing_ok=True)
 
-    def test_n4_n5_and_n7_say_they_do_not_run(self):
+    def test_n4_and_n5_say_they_do_not_run_and_n7_reads_the_rules_instead(self):
         late = NOW + timedelta(hours=48)      # with a bot, the unrecorded field would be an N5 alarm by now
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
@@ -188,8 +241,12 @@ class NoBot(unittest.TestCase):
                                "--branches", "refs/heads/"], api=self.api, now=late)
         report = json.loads(self.report.read_text(encoding="utf-8"))
         self.assertEqual(code, 0, out.getvalue())
-        self.assertIn("N4 NOTE N4, N5 and N7 do not run: this installation has no bot (platform.bot = false)",
-                      out.getvalue())
+        self.assertIn("N4 NOTE N4 and N5 do not run: this installation has no bot (platform.bot = false); its AI "
+                      "holds the one text for everybody", out.getvalue())
+        # The one text sends its AI to the rules on `stable`: N7 there is the engine against them
+        # (min_engine). The tests reach no network, so it says it could not read them, and judges nothing.
+        self.assertIn("N7 NOTE the rules on stable could not be read, the engine is not compared", out.getvalue())
+        self.assertNotIn("rules", report)
         self.assertEqual(report["skipped"], ["N4", "N5"])
         self.assertNotIn("todo", report, "no list for a bot: its Issue is left alone")
         self.assertEqual((report["N4"], report["N5"]), ([], []))

@@ -251,7 +251,7 @@ def _count(value: object) -> bool:
 
 
 DAY_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
-# Her decision that she removed a base: the base's id as N3's line names it (data/<id>) and
+# The user's decision that the user removed a base: the base's id as N3's line names it (data/<id>) and
 # the day the line says it went — so it ends that one loss, not a later one of the same base.
 REMOVED_RE = re.compile(r"([0-9A-Za-z-]{1,80})@(\d{4}-\d{2}-\d{2})")
 
@@ -280,7 +280,7 @@ def held_bases(previous: dict | None, bases: dict[str, dict], excluded: set[str]
     the day it went — and every night reports it in the same words, so the alarm stays
     open and the held lines bring no new comment. It ends when the base has its rows back
     (any, for a small base; at least half, for a big one), or when `notion.removed_bases`
-    records her decision for that base and that day (`<id>@<day>`) — taken only for a base
+    records the user's decision for that base and that day (`<id>@<day>`) — taken only for a base
     already held, so the night a base goes is always reported, and an old decision does
     not end a later loss. A base the config excludes by its own id or its database's is
     reported the night it goes and not held: that exclusion is a protected change (C3). A
@@ -303,14 +303,14 @@ def held_bases(previous: dict | None, bases: dict[str, dict], excluded: set[str]
                 candidates[sid] = (before["rows"], today)
     out: list[str] = []
     held: dict[str, dict] = {}
-    until = "held until {back} or notion.removed_bases records that she removed it"
+    until = "held until {back} or notion.removed_bases records that the user removed it"
     for sid, (rows, since) in sorted(candidates.items()):
         now = bases.get(sid)
         n = now.get("rows", 0) if isinstance(now, dict) else 0
         if n and (rows < BASE_MIN_ROWS or n * 2 >= rows):
             continue                                    # its rows are back: the cause is gone
         if sid in carried and ((sid, since) in removed or sid in excluded):
-            continue                                    # her recorded decision, or a protected exclusion
+            continue                                    # the user's recorded decision, or a protected exclusion
         plural = "s" if rows != 1 else ""
         if n:
             out.append(f"the base data/{sid} lost more than half of its {rows} rows since {since}; "

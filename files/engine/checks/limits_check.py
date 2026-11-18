@@ -13,6 +13,12 @@ is caught as well as a person's longer text.
 Which fields exist follows `platform.writer` (docs/DESIGN_PHASE3.md §6a): while the bot
 writes — phase 1, the pilot, and every config without the key — the chat's field and the
 bot's; once the chat writes, the chat's field alone, with the hard part from `solo.md`.
+
+Where the chat writes and no bot runs — every installation `setup` makes — the field is one
+text for everybody, `fixed.md`, pasted once and never joined with anything of the user's
+(docs/DESIGN_PHASE3.md §4): the user's part is not in the field, it reaches the user's AI in the first
+message of the user's installation and lives on the user's map (`installed`). C6 then measures that text
+alone, and the user's part by itself.
 """
 from __future__ import annotations
 
@@ -33,7 +39,10 @@ SOLO = "engine/rules/fields/solo.md"
 # of the file (built by engine/setup/blob.py; ChatGPT, the owner's tests of 12.11.2026).
 SOLO_BLOB = "engine/rules/fields/solo-blob.md"
 BLOB_RULES = ("chatgpt",)               # platform.name of those platforms
-WRITERS = ("bot", "chat")               # platform.writer: who writes her Notion, mail and calendar
+# The one text for everybody, where the chat writes and no bot runs: the rules by an address that
+# never changes — the branch `stable` of the repository of releases — and nothing of the user's in it.
+FIXED = "engine/rules/fields/fixed.md"
+WRITERS = ("bot", "chat")               # platform.writer: who writes the user's Notion, mail and calendar
 CONFIG = "user/config.toml"
 
 
@@ -50,16 +59,26 @@ def writer(config: dict | None) -> str:
 
 
 def has_bot(config: dict | None) -> bool:
-    """Whether a bot runs her routines and posts the daily mark: true unless the config says
+    """Whether a bot runs the user's routines and posts the daily mark: true unless the config says
     false — so N4, N5 and N7 stay on for every installation that had a bot."""
     value = _platform(config).get("bot")
     return value if isinstance(value, bool) else True
 
 
+def fixed(config: dict | None) -> bool:
+    """Whether the user's AI holds the one text for everybody: the chat writes and no bot runs. The user's part
+    is then not a part of the field (`installed`)."""
+    return writer(config) == "chat" and not has_bot(config)
+
+
 def fields(config: dict | None) -> dict[str, tuple[str, str, str, str]]:
-    """The instruction fields of this installation, as FIELDS reads them."""
+    """The instruction fields of this installation, as FIELDS reads them. With the one text for
+    everybody the person's path is still the user's part — what the first message tells the user's AI of the user —
+    but `installed` does not join it to the field."""
     if writer(config) == "chat":
         _engine, person, key, floor = FIELDS["chat"]
+        if fixed(config):
+            return {"chat": (FIXED, person, key, floor)}
         solo = SOLO_BLOB if _platform(config).get("name") in BLOB_RULES else SOLO
         return {"chat": (solo, person, key, floor)}
     return dict(FIELDS)
@@ -77,6 +96,12 @@ ROUTINE_KEYS = ("routine_limit", "routine_limit_max")
 def assemble(engine_part: str, person_part: str) -> str:
     """The installed text of a field: the engine part, one empty line, the person's part."""
     return engine_part.strip("\n") + "\n\n" + person_part.strip("\n")
+
+
+def installed(config: dict | None, engine_part: str, person_part: str) -> str:
+    """The text the user pastes into the user's AI: the one text for everybody as it is — nothing of the user's is
+    joined to it — or, in every other installation, the engine part and the user's part (`assemble`)."""
+    return engine_part.strip("\n") if fixed(config) else assemble(engine_part, person_part)
 
 
 def length(text: str) -> int:
@@ -127,9 +152,13 @@ def check(repo: Path, base: str, head: str) -> list[Finding]:
         person_part = _text(repo, head, person_path, findings)
         if engine_part is None or person_part is None:
             continue
-        size = length(assemble(engine_part, person_part))
+        size = length(installed(config, engine_part, person_part))
         if size > limit:
             findings.append(Finding("C6", f"the {name} field would be {size} characters, the limit is {limit}"))
+        if fixed(config) and (size := length(person_part.strip("\n"))) > limit:
+            # The user's part is not in the field, but the user's AI still reads it — in the user's first message, then on
+            # the user's map: it stays a few lines, held to the same limit.
+            findings.append(Finding("C6", f"{person_path} is {size} characters, the limit is {limit}"))
 
     limit = _limit(platform, floors, *ROUTINE_KEYS)
     for path_b in sorted(gitio.tree(repo, head, ROUTINES)):

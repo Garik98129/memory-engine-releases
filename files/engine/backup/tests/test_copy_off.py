@@ -5,21 +5,18 @@ installation made before the key, the pilot's included."""
 import contextlib
 import io
 import json
-import os
-import subprocess
 import tempfile
 import unittest
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from engine.backup import run
+from engine.backup import night, run
 from engine.checks import config_check, watch
 from engine.checks.paths_check import PERSON
 from engine.checks.tests.fakeapi import REPO, FakeApi
 from engine.checks.tests.helpers import BASE_FILES, COMMITTED, VALID_CONFIG, Repo
 
 OFF = VALID_CONFIG + b"\n[notion]\nbackup = false\n"
-WORKFLOW = Path(__file__).resolve().parents[2] / "workflows" / "backup.yml"
 NOW = datetime.fromisoformat(COMMITTED) + timedelta(hours=1)
 
 
@@ -69,41 +66,35 @@ class Run(unittest.TestCase):
         self.assertFalse(config_check.copy_on({"notion": {"backup": False}}))
 
 
-def commit_step() -> str:
-    """The literal `run: |` of the step «Commit and push the copy»."""
-    lines = WORKFLOW.read_text(encoding="utf-8").splitlines()
-    start = next(i for i, line in enumerate(lines) if line.strip() == "- name: Commit and push the copy")
-    i = next(j for j in range(start, len(lines)) if lines[j].strip() == "run: |")
-    indent = len(lines[i + 1]) - len(lines[i + 1].lstrip())
-    body = []
-    for line in lines[i + 1:]:
-        if line.strip() and len(line) - len(line.lstrip()) < indent:
-            break
-        body.append(line[indent:])
-    return "\n".join(body)
-
-
 class CommitStep(unittest.TestCase):
-    def run_step(self, report: dict | None) -> subprocess.CompletedProcess:
+    """The step «Commit and push the copy» of backup.yml, through its real entry."""
+
+    def run_step(self, report: dict | None) -> tuple[int, str]:
         with tempfile.TemporaryDirectory() as tmp:
             if report is not None:
                 (Path(tmp) / "report.json").write_text(json.dumps(report), encoding="utf-8")
-            env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "RUNNER_TEMP": tmp, "GH_TOKEN": "x"}
-            return subprocess.run(["bash", "-c", commit_step()], env=env, capture_output=True, text=True)
+            env = {"GITHUB_REPOSITORY": REPO, "GITHUB_SERVER_URL": "https://github.com", "GITHUB_RUN_ID": "1",
+                   "GITHUB_SHA": "0" * 40, "GITHUB_OUTPUT": str(Path(tmp) / "output"), "RUNNER_TEMP": tmp,
+                   "GH_TOKEN": "x"}
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                code = night.main(["push"], env=env, repo=Path(tmp))
+            return code, out.getvalue()
 
     def test_an_off_copy_commits_nothing(self):
-        done = self.run_step({"N3": [], "N6": [], "error": [], "skipped": ["N3", "N6"], "off": True})
-        self.assertEqual(done.returncode, 0, done.stderr)
-        self.assertIn("The nightly copy is off: nothing to commit", done.stdout)
+        code, out = self.run_step({"N3": [], "N6": [], "error": [], "skipped": ["N3", "N6"], "off": True})
+        self.assertEqual(code, 0, out)
+        self.assertIn("The nightly copy is off: nothing to commit", out)
 
     def test_a_copy_that_ran_goes_on_to_its_commit(self):
         """Not off: the step goes on — here to the worktree, which this test does not make, so it
         fails there; that it got there is the point."""
         for report in ({"N3": [], "N6": [], "error": [], "skipped": []}, {"off": "true"}):
             with self.subTest(report=report):
-                done = self.run_step(report)
-                self.assertNotEqual(done.returncode, 0)
-                self.assertNotIn("nothing to commit", done.stdout)
+                code, out = self.run_step(report)
+                self.assertNotEqual(code, 0)
+                self.assertNotIn("nothing to commit", out)
+                self.assertIn("could not run: GitError: git add", out)
 
 
 class C3(unittest.TestCase):

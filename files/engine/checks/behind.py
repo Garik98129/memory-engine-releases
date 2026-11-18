@@ -2,7 +2,7 @@
 
 Not an alarm. A release can change a routine's task, the hard part of a field, or add a
 task. The bot keeps up by itself: the machine lists what is behind, the bot's daily routine
-tells her there is an update to go through, and in a live chat, on her yes, the bot follows
+tells the user there is an update to go through, and in a live chat, on the user's yes, the bot follows
 «Updating after a release» in `engine/rules/routines.md`. The lines:
 
 - a routine written from another version of its task, or a task with no routine yet:
@@ -12,21 +12,23 @@ tells her there is an update to go through, and in a live chat, on her yes, the 
   words in any letter case); a master that names none counts as version 1, and its line
   then says what the first line must say — a rewrite whose first line the watch cannot
   read is told so, not sent round again;
-- a version she said no to (`engine.declined` in her config, «walk@1», by a PR with her
+- a version the user said no to (`engine.declined` in the user's config, «walk@1», by a PR with the user's
   yes) is not listed again until the task's next version — unless its task says «never
-  declined» (task 3: it is how she hears of every update); C3 lets a PR add only a task's
+  declined» (task 3: it is how the user hears of every update); C3 lets a PR add only a task's
   current version;
 - a field whose master — the assembled text, as C6 joins it — is not what the record says
   was installed (`user/fields/installed.toml`, REPO-3);
 - a routine whose master is not what the record says was installed, once the master is
   GRACE old or a record was written after it: the bot installs a merged master in the same
-  chat and then records, so a run in between does not open the list for her own small
+  chat and then records, so a run in between does not open the list for the user's own small
   change, and a record that left it out is listed at once. A field has no grace: a release
-  that changes one has N5's 36 h behind it, and the bot needs that time with her.
+  that changes one has N5's 36 h behind it, and the bot needs that time with the user.
 
 N5 raises an alarm on the last two when they stay so for 36 h; this list is the bot's work
-list, not a warning. A record that does not parse is N5's alarm, and this run gives no list:
-the Issue stays as it was until the record reads again. The lines are machine English; the bot tells her in plain words.
+list, not a warning. An installation without a bot has no such list: its AI holds the one text
+for everybody, and N7 there is `min_engine` — the engine against the rules that text sends the
+AI to. A record that does not parse is N5's alarm, and this run gives no list:
+the Issue stays as it was until the record reads again. The lines are machine English; the bot tells the user in plain words.
 """
 from __future__ import annotations
 
@@ -87,7 +89,7 @@ def master_version(raw: bytes) -> tuple[int | None, int]:
 
 
 def declined(config: dict) -> set[str]:
-    """The «routine@version» entries she said no to (`engine.declined`); C3 checks their form."""
+    """The «routine@version» entries the user said no to (`engine.declined`); C3 checks their form."""
     section = config.get("engine")
     value = section.get("declined") if isinstance(section, dict) else None
     return {v for v in value if isinstance(v, str)} if isinstance(value, list) else set()
@@ -120,8 +122,8 @@ def check(repo: Path, main: str, now: datetime) -> list[str] | None:
         if _recorded(record, "fields", name) != digest(text):
             if engine_path in (SOLO, SOLO_BLOB):
                 # The chat writes itself: its field is joined from solo.md (or solo-blob.md), and the trusted contact
-                # gives it to her and records it — not the bot, whose ROUT-9 joins chat.md.
-                lines.append(f"field {name}: the installed text is not its master ({engine_path} and her part) — "
+                # gives it to the user and records it — not the bot, whose ROUT-9 joins chat.md.
+                lines.append(f"field {name}: the installed text is not its master ({engine_path} and the user's part) — "
                              f"the trusted contact installs it and records it")
             else:
                 lines.append(f"field {name}: the installed text is not its master — install it and record it")
@@ -170,6 +172,6 @@ def body(lines: list[str], run_url: str) -> str:
     alarm to people; the bot reads the body as it stands."""
     shown = "\n".join(line.replace("`", "'").replace("<!--", "<!- -") for line in lines)
     return (f"What the bot still has to bring up to the engine after a release. The bot goes through it "
-            f"with her in a live chat, on her yes («Updating after a release», {RULES}); the machine keeps this "
+            f"with the user in a live chat, on the user's yes («Updating after a release», {RULES}); the machine keeps this "
             f"list and closes the Issue when nothing is left. Nobody edits or closes it by hand.\n\n"
             f"```text\n{shown}\n```\n\nRun: {run_url}\n")

@@ -24,7 +24,10 @@ main's, so the same main and the same release give the same commit. Then:
   holds any branch that changes `.github/`. An Issue «has to be applied by hand» names the
   trusted contact and the owner, once per release — closed by hand, it is not opened
   again («known», as with the alarms); this run closes it once main holds that release
-  or a newer one.
+  or a newer one. Such a release is rare, and a decision: the workflow files are frozen
+  (`engine/frozen.toml`), what their steps do is code under `engine/`, and `release cut`
+  refuses to change them unless told. A later release with the same workflow files waits
+  for hands with it.
 
 Nothing newer is due → «NONE», exit 0. Anything that could not be done → «ERROR», exit 1:
 the run is red, and GitHub mails whoever started it or, for a scheduled run, whoever last
@@ -276,10 +279,12 @@ def ask_for_hands(api, tag: str, channel: str, owner: str, contact: str, run_url
     who = ("The trusted contact applies it by hand, as docs/DESIGN.md §5 says" if contact else
            "There is no trusted contact: it waits for somebody who can push workflow files to this repository "
            "and apply it by hand — not yet a step anyone can take from a phone (DESIGN_PHASE3 §6)")
-    body = (f"{alarm._names(owner, contact)} — release {tag} is due on the {channel} channel and changes "
-            f".github/. GITHUB_TOKEN cannot write workflow files, so the update workflow opened no PR. "
-            f"{who}; N1 then raises its expected alarm. This Issue closes itself once main holds {tag}."
-            f"\n\nRun: {run_url}\n")
+    body = (f"{alarm._names(owner, contact)} — release {tag} is due on the {channel} channel, and it changes the "
+            f"workflow files themselves, under .github/. That is rare: those files are frozen, an ordinary release "
+            f"changes only the code they call, and the weekly update brings it by itself. This one it cannot bring: "
+            f"GITHUB_TOKEN cannot write workflow files, so the update workflow opened no PR — and a later release "
+            f"with the same workflow files will wait as this one does. {who}; N1 then raises its expected alarm. "
+            f"This Issue closes itself once main holds {tag}.\n\nRun: {run_url}\n")
     return api.post(f"repos/{api.repository}/issues", {"title": title, "body": body})["number"], "opened"
 
 

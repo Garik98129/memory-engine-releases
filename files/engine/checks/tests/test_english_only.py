@@ -4,7 +4,7 @@ for a reason — C5 catches Latin/Cyrillic look-alike swaps, so its comments and
 show Cyrillic words; C4's tests hold an Israeli ID written the Israeli way and Russian
 lines that must not trip the number patterns. docs/ is the design record and is not
 checked here. The person's language lives
-in her part, under user/, never in the engine."""
+in the user's part, under user/, never in the engine."""
 import re
 import subprocess
 import unittest

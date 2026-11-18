@@ -45,9 +45,14 @@ it — is written again, an empty list closes the Issue, and a run that left the
 its report — the copy's run, a record PR, a stale run, a record that does not parse — or
 that had an error in the checks leaves it alone. It never turns the run red, not even when GitHub refuses to keep it.
 
+The page of an installation without a bot whose engine is older than the rules its AI reads
+(N7 there, `min_engine.py`) is kept here too, and is no alarm: «Your engine is older than the
+rules your AI reads», naming the owner and the trusted contact; opened, rewritten and closed by
+the run's state, from the main the watch read, whatever else the run found; never red.
+
 The field's Issue of an installation without a bot (`field_issue.py`) is kept here as well, and
-is no alarm either: a run whose report carries the field hands it to her when it is not the one
-she was given; a run that left it out, or that had an error in the checks, leaves it alone. While
+is no alarm either: a run whose report carries the field hands it to the user when it is not the one
+the user was given; a run that left it out, or that had an error in the checks, leaves it alone. While
 N1 lists a line of the gate's own checks on main (C1 to C6), nothing is handed over — the text
 is one no check would let in — and an open N1 alarm gets one comment saying what is wrong; nobody
 has to close an alarm to get a field. An installation with a bot is never touched, whatever the
@@ -69,7 +74,7 @@ import re
 import sys
 from pathlib import Path
 
-from . import behind, config_check, field_issue, limits_check
+from . import behind, config_check, field_issue, limits_check, min_engine
 from .github import ApiError, GitHub
 from .integrity import BOT
 
@@ -304,8 +309,18 @@ def open_alarm(api, title: str) -> int | None:
     return None
 
 
+def rules_from_report(path: Path) -> dict | None:
+    """N7's state for an installation without a bot (`min_engine`), or None when the run did not
+    judge it."""
+    try:
+        report = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return min_engine.from_report(report.get("rules")) if isinstance(report, dict) else None
+
+
 def field_from_report(path: Path) -> dict | None:
-    """The run's field for her Issue, or None when the run did not judge it."""
+    """The run's field for the user's Issue, or None when the run did not judge it."""
     try:
         return field_issue.from_report(json.loads(path.read_text(encoding="utf-8")))
     except (OSError, ValueError):
@@ -397,6 +412,19 @@ def main(argv: list[str] | None = None, api=None) -> int:
                 reason = getattr(exc, "reason", "")
                 done.append(f"FIELD ERROR the field's Issue could not be kept: {type(exc).__name__}: {exc}"
                             + (f" — {reason}" if reason else ""))
+        rules = rules_from_report(args.report)
+        if rules is not None and limits_check.fixed(config):   # main's own config, not the report's word
+            # Not gated on an error elsewhere in the run: the state rests on main's lock and the
+            # branch `stable`, which the run read itself; a run that could not read them left it out.
+            # Gated on main: a lock read before an update merged must not open a page.
+            try:
+                live = api.get(f"repos/{api.repository}/git/ref/heads/main")["object"]["sha"]
+                if live != args.main:
+                    done.append(f"RULES left alone: main is at {live[:12]} now, this run read {args.main[:12]}")
+                else:
+                    done += min_engine.sync(api, rules, field_issue.names(owner, contact), args.run_url)
+            except Exception as exc:    # noqa: BLE001 — not an alarm: the next run does what this one could not
+                done.append(f"RULES ERROR the page of the rules could not be kept: {type(exc).__name__}: {exc}")
         for line in done:
             print(line)
     except ApiError as exc:

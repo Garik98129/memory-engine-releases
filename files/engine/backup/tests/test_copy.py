@@ -192,7 +192,7 @@ class HeldBases(unittest.TestCase):
     SAME = {"docs": {"rows": 10}, "big": {"rows": 990}}
     GONE = ("the base data/docs (10 rows) is gone from the copy since 2026-11-09 — deleted in Notion, unshared from "
             "the copy's integration, or excluded in the config; held until it is back or notion.removed_bases "
-            "records that she removed it")
+            "records that the user removed it")
 
     def held(self, previous, bases, excluded=frozenset(), removed=frozenset(), today="2026-11-09"):
         return copying.held_bases(previous, bases, set(excluded), set(removed), today)
@@ -216,7 +216,7 @@ class HeldBases(unittest.TestCase):
         self.assertEqual(self.held(stamp, {**self.SAME, "docs": {"rows": 5}}), ([], {}))    # half of a big base is back
         lines, held = self.held(stamp, {**self.SAME, "docs": {"rows": 4}})                    # less than half: still held
         self.assertEqual(lines, ["the base data/docs lost more than half of its 10 rows since 2026-11-09; held until it "
-                                 "has half of them back or notion.removed_bases records that she removed it"])
+                                 "has half of them back or notion.removed_bases records that the user removed it"])
         self.assertEqual(held, {"docs": {"rows": 10, "since": "2026-11-09"}})
         lines, _ = self.held(stamp, {**self.SAME, "docs": {"rows": 0}})
         self.assertIn("the base data/docs is empty since 2026-11-09: 10 rows → 0", lines[0])

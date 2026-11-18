@@ -1,6 +1,7 @@
-"""The field's Issue (docs/DESIGN_PHASE3.md §6): an installation without a bot gets a changed
-instruction field handed to her again, once per change — and an installation with a bot, or one
-not installed yet, is never touched."""
+"""The field's Issue (docs/DESIGN_PHASE3.md §6): an installation without a bot is handed what the user's
+AI is to hold — the one text for everybody, and the user's part in a message to send — once per change:
+a release changes neither, the user's settings change the user's part, and only a change of the text's own
+core has the user's paste again. An installation with a bot, or one not installed yet, is never touched."""
 from __future__ import annotations
 
 import contextlib
@@ -18,16 +19,19 @@ from engine.checks.drift import digest
 from engine.checks.tests.fakeapi import BOT, REPO, FakeApi
 from engine.checks.tests.helpers import BASE_FILES, COMMITTED, Repo
 from engine.checks.tests.test_writer_mode import CHAT_WRITES, NO_BOT, SOLO
+from engine.setup import setup
 
 ISSUES = f"repos/{REPO}/issues"
 RUN = "https://github.com/owner/person-memory/actions/runs/1"
 NOW = datetime.fromisoformat(COMMITTED) + timedelta(hours=1)
 PLATFORMS = {"engine/platforms.toml": b'[grok]\ntitle = "Grok"\nfield = "Grok app: the instructions field"\n'}
-FIRST = "https://raw.githubusercontent.com/Garik98129/memory-engine-releases/v0.1.0/files/engine/rules/install.md"
+MANIFESTS = "Garik98129/memory-engine-releases"
 TREE = {**BASE_FILES, **SOLO, **PLATFORMS, "user/config.toml": NO_BOT}
-FIELD = limits_check.assemble(SOLO["engine/rules/fields/solo.md"].decode(), BASE_FILES["user/fields/chat.md"].decode())
+FIXED = "engine/rules/fields/fixed.md"
+FIELD = SOLO[FIXED].decode().strip("\n")                        # the one text: nothing of the user's is joined to it
+PART = BASE_FILES["user/fields/chat.md"].decode().strip("\n")   # the user's part: in a message to send, never in the field
 ENTRY = {"text": FIELD, "title": "Grok", "where": "Grok app: the instructions field", "release": "v0.1.0",
-         "first": FIRST}
+         "part": PART, "manifests": MANIFESTS}
 
 
 class Check(unittest.TestCase):
@@ -36,21 +40,26 @@ class Check(unittest.TestCase):
         self.addCleanup(repo.close)
         return field_issue.check(repo.path, repo.base, config_check.read(repo.path, repo.base))
 
-    def test_without_a_bot_it_is_the_field_as_c6_joins_it_where_it_goes_and_her_release(self):
+    def test_without_a_bot_it_is_the_one_text_her_part_beside_it_where_it_goes_and_her_release(self):
         self.assertEqual(self.at(TREE), ENTRY)
+        self.assertNotIn(PART, ENTRY["text"], "the user's part is not joined to the text the user pastes")
 
     def test_an_installation_with_a_bot_is_not_touched(self):
         self.assertIsNone(self.at(BASE_FILES), "phase 1: the bot installs the fields, N5 watches")
         self.assertIsNone(self.at({**TREE, "user/config.toml": CHAT_WRITES}),
                           "the pilot's way out: the chat writes, the bot still runs — the trusted contact installs")
 
-    def test_a_platform_whose_chat_reads_githubs_pages_gets_that_field(self):
-        blob = {"engine/rules/fields/solo-blob.md": b"Chat that writes, rules on GitHub's pages.\n"}
-        entry = self.at({**TREE, **blob, "user/config.toml": NO_BOT.replace(b'name = "grok"', b'name = "chatgpt"')})
-        self.assertTrue(entry["text"].startswith("Chat that writes, rules on GitHub's pages."))
+    def test_every_platform_gets_the_same_text_and_a_platform_with_two_places_has_both_named(self):
+        """One text for everybody: no platform has a text of its own any more. Where the user chose
+        between a project and every chat, a later page cannot know which — it names both."""
+        chatgpt = NO_BOT.replace(b'name = "grok"', b'name = "chatgpt"')
+        entry = self.at({**TREE, "user/config.toml": chatgpt})
+        self.assertEqual(entry["text"], FIELD)
         self.assertEqual((entry["title"], entry["where"]), ("", field_issue.ANYWHERE), "no row: said in general words")
-        self.assertEqual(entry["first"], "https://github.com/Garik98129/memory-engine-releases/blob/v0.1.0/files/"
-                                         "engine/rules/install.md", "GitHub's page, as her chat reads the rules")
+        two = {"engine/platforms.toml": b'[chatgpt]\ntitle = "ChatGPT"\nfield = "a project, its instructions"\n'
+                                        b'field_all = "Settings, Custom instructions"\n'}
+        entry = self.at({**TREE, **two, "user/config.toml": chatgpt})
+        self.assertEqual(entry["where"], "a project, its instructions, or Settings, Custom instructions")
 
     def test_a_field_that_cannot_be_read_hands_nothing_over(self):
         self.assertIsNone(self.at({k: v for k, v in TREE.items() if k != "user/fields/chat.md"}))
@@ -59,20 +68,19 @@ class Check(unittest.TestCase):
     def test_setup_fingerprints_the_same_bytes_the_watch_reads(self):
         """`setup` reads the hard part from the checkout, the watch from git: a CR LF in the file
         must not make two fingerprints, or the first night opens a second Issue (found by simulation)."""
-        from engine.setup import setup
-        raw = b"Chat that writes: safety rules.\r\nSecond line. \r\n"
+        raw = b"The one text: safety rules.\r\nSecond line. \r\n"
         with tempfile.TemporaryDirectory() as tmp:
-            solo = Path(tmp) / "solo.md"
-            solo.write_bytes(raw)
-            with mock.patch.object(setup, "SOLO", solo):
-                built = setup.field_text("Who: a test person.\n", platform="grok")
-        entry = self.at({**TREE, "engine/rules/fields/solo.md": raw})
+            fixed = Path(tmp) / "fixed.md"
+            fixed.write_bytes(raw)
+            with mock.patch.object(setup, "FIXED", fixed):
+                built = setup.field_text()
+        entry = self.at({**TREE, FIXED: raw})
         self.assertEqual(built, entry["text"])
         self.assertIn("\r\n", built)
 
     def test_a_lock_that_names_no_release_names_none(self):
         entry = self.at({**TREE, "user/engine.lock": b'release = "@everyone"\n'})
-        self.assertEqual((entry["release"], entry["first"]), ("", ""), "and no first message with a link to nowhere")
+        self.assertEqual((entry["release"], entry["part"]), ("", PART), "the user's part does not lean on the release")
 
 
 class Sync(unittest.TestCase):
@@ -83,10 +91,10 @@ class Sync(unittest.TestCase):
     def sync(self, entry=ENTRY, owner="owner", contact=""):
         return field_issue.sync(self.api, entry, owner, contact, RUN)
 
-    def given(self, field: str, number: int = 7, state: str = "open", who: str = BOT) -> None:
-        """An Issue under the title that gave her this field — as setup's does."""
+    def given(self, field: str, number: int = 7, state: str = "open", who: str = BOT, part: str = PART) -> None:
+        """An Issue under the title that gave the user this text and this part — as setup's does."""
         self.api.lists[ISSUES].append({"number": number, "title": f"{field_issue.TITLE} — Grok",
-                                       "body": f"The field.\n\n{field_issue.marker(field)}",
+                                       "body": f"The field.\n\n{field_issue.marker(field, part)}",
                                        "user": {"login": who}, "state": state, "closed_by": None})
         self.api.lists[f"{ISSUES}/{number}/comments"] = []
 
@@ -101,17 +109,27 @@ class Sync(unittest.TestCase):
         (m1, p1, issue), (m2, p2, comment), (m3, p3, patch) = self.api.writes
         self.assertEqual((m1, p1, m2, p2, m3, p3), ("POST", ISSUES, "POST", f"{ISSUES}/7/comments", "PATCH", f"{ISSUES}/7"),
                          "the new Issue first: its notification carries the text; a run that fails after it "
-                         "leaves an old page open, never her without the new one")
+                         "leaves an old page open, never the user without the new one")
         self.assertTrue(issue["body"].startswith("@owner — Your assistant's instructions changed."))
         self.assertIn(f"```\n{FIELD}\n```", issue["body"])
-        self.assertIn("Open Grok app: the instructions field.", issue["body"])
+        self.assertIn("Open the place you pasted your assistant's instructions into — Grok app: the instructions "
+                      "field.", issue["body"])
+        self.assertIn("what you wrote there yourself stays", issue["body"],
+                      "the text was added beside the user's own instructions: it alone is replaced")
+        self.assertIn(f"```\n{setup.PART_MESSAGE}\n\n{PART}\n```", issue["body"],
+                      "a page with another text sends the user's part once too: the page before may have joined it to the field")
+        self.assertNotIn("My settings changed", issue["body"],
+                         "the text changed, not the user's settings: the page says they stay, and the message does not say otherwise")
+        self.assertIn("your Notion and your settings stay as they are", issue["body"])
         self.assertIn("Your copy holds release v0.1.0 now.", issue["body"])
-        self.assertTrue(issue["body"].endswith(field_issue.marker(FIELD)))
-        self.assertIn("is in #101: paste that one", comment["body"])
-        self.assertIn("Anything else this page asks of you still holds", comment["body"],
-                      "setup's page holds the connections and the first message too")
+        self.assertTrue(issue["body"].endswith(field_issue.marker(FIELD, PART)))
+        self.assertIn("is #101: do what that one says", comment["body"])
+        self.assertIn("A message this page gave you to send is replaced by that page's; anything else this page asks "
+                      "of you still holds", comment["body"],
+                      "setup's page holds the connections too — and its part, or an older page's, must not be sent "
+                      "after the newer one's (found by the second reading before the pull request)")
         self.assertEqual(patch["state"], "closed")
-        self.assertEqual(self.sync(), [], "the next night: she has been given it")
+        self.assertEqual(self.sync(), [], "the next night: the user has been given it")
 
     def test_a_page_that_could_not_be_closed_is_said_and_closed_the_next_night_with_one_pointer(self):
         self.given("An older field.")
@@ -149,6 +167,58 @@ class Sync(unittest.TestCase):
         self.given("A later field.", number=9, state="closed")
         self.assertEqual(self.sync(), ["opened #101 field"], "back to an earlier text is a change too")
 
+    def test_another_part_and_the_same_text_is_one_message_to_send_and_nothing_to_paste(self):
+        """The user's settings changed: the text the user pasted is one for everybody and stands. The page says
+        so, gives the one message, and keeps the text below it for the day the user needs it again."""
+        self.given(FIELD, part="Who: a test person, before.")
+        self.assertEqual(self.sync(), ["opened #101 field", "closed #7 field, an older text"])
+        body = self.api.writes[0][2]["body"]
+        self.assertTrue(body.startswith("@owner — Your settings changed.\n\n**One message to send.**"))
+        self.assertIn(f"```\n{setup.SETTINGS_MESSAGE}\n\n{PART}\n```", body)
+        self.assertIn("Your assistant's instructions have not changed since the page before this one: if you did with "
+                      "them what that page asked, there is nothing to paste; if you have not yet, do it now, with the "
+                      "text below — it is the same text. Of the two pages' messages send only this page's.", body,
+                      "the page before is closed with a pointer here, and nothing knows whether the user pasted its text: "
+                      "«nothing to paste» is said only on that condition")
+        self.assertNotIn("Nothing new to paste", body)
+        self.assertIn(f"```\n{FIELD}\n```", body, "as they stand, in case the user needs them again")
+        self.assertNotIn("Replace the text", body)
+        self.assertTrue(body.endswith(field_issue.marker(FIELD, PART)))
+        self.assertEqual(self.sync(), [], "the next night: the user has been given both")
+
+    def test_a_release_that_leaves_the_text_as_it_was_opens_nothing(self):
+        """The whole point of the one text: what an ordinary release changes — the rules a chat
+        reads, the release the user's copy holds — is in neither fingerprint."""
+        self.given(FIELD)
+        self.assertEqual(self.sync(entry={**ENTRY, "release": "v0.9.0"}), [])
+        self.assertEqual(self.api.writes, [])
+
+    def test_a_part_that_cannot_be_handed_over_opens_no_page_with_nothing_to_send(self):
+        """Found by the reading of this change before its pull request: a part of blank lines passed
+        for a part, and its page said «put these lines on my map in place of the old ones» with no
+        line under it — the user's AI would have put nothing in the user's part's place."""
+        self.given(FIELD)
+        self.assertEqual(self.sync(entry={**ENTRY, "part": ""}), [])
+        for blank in (" \n", "\n\n", " \t \n \n", "\u00a0\n", "\u200b\n", "\ufeff", "\u2060 \u200b", "—\n· «»\n",
+                      "\u3164\n\u3164\n", "\u115f\u1160 \uffa0"):       # fillers: letters by category, blank to the eye
+            entry = field_issue.entry_of(FIELD, "Grok", ENTRY["where"], "v0.1.0", blank, MANIFESTS)
+            self.assertEqual(entry["part"], "", repr(blank))
+            self.assertEqual(self.sync(entry=entry), [], repr(blank))
+        huge = field_issue.entry_of(FIELD, "Grok", ENTRY["where"], "v0.1.0", "x" * (field_issue.PART_MAX + 1), MANIFESTS)
+        self.assertEqual(self.sync(entry=huge), [], "a part that is no few lines is left out")
+
+    def test_a_page_of_a_release_that_joined_her_part_to_the_field_gets_the_one_text_and_her_part_once(self):
+        """An installation made before the one text: its page fingerprints the joined field and no
+        part. The first night on the new release hands over the text to put in its place, and the
+        message that carries the user's part to the user's map."""
+        joined = limits_check.assemble("Chat that writes: safety rules.", PART)
+        self.given(joined, part="")
+        self.assertEqual(self.sync(), ["opened #101 field", "closed #7 field, an older text"])
+        body = self.api.writes[0][2]["body"]
+        self.assertIn("**Put them in the old text's place.**", body)
+        self.assertIn("**Then one message.**", body)
+        self.assertEqual(self.sync(), [])
+
     def test_no_issue_yet_opens_one_with_the_field_as_it_stands(self):
         self.assertEqual(self.sync(), ["opened #101 field"])
         self.assertIn("These are your assistant's instructions as they stand now.", self.api.writes[0][2]["body"])
@@ -172,27 +242,37 @@ class Sync(unittest.TestCase):
         self.assertTrue(self.api.writes[0][2]["body"].startswith("These are your"))
 
     def test_her_part_cannot_close_the_block_ping_or_pass_for_the_fingerprint(self):
-        hostile = FIELD + "\n```\n@stranger\n<!-- field-digest: " + "0" * 64 + " -->\n````\nmore"
-        self.sync(entry={**ENTRY, "text": hostile})
-        body = self.api.writes[0][2]["body"]
-        self.assertIn(f"`````\n{hostile}\n`````", body, "a fence longer than any in the field")
-        self.assertEqual(field_issue.DIGEST_RE.findall(body)[-1], digest(hostile), "the last marker is the workflow's")
-        self.assertEqual(self.sync(entry={**ENTRY, "text": hostile}), [])
+        hostile = (PART + "\n```\n@stranger\n<!-- field-digest: " + "0" * 64 + " -->\n<!-- part-digest: " + "0" * 64
+                   + " -->\n````\nmore")
+        for entry in ({**ENTRY, "text": hostile}, {**ENTRY, "part": hostile}):
+            self.api.writes.clear()
+            self.api.lists[ISSUES] = []
+            self.sync(entry=entry)
+            body = self.api.writes[0][2]["body"]
+            self.assertIn(f"\n{hostile}\n`````", body, "a fence longer than any in the text")
+            self.assertEqual(field_issue.DIGEST_RE.findall(body)[-1], digest(entry["text"]), "the last marker is the workflow's")
+            self.assertEqual(field_issue.PART_RE.findall(body)[-1], digest(entry["part"]))
+            self.assertEqual(self.sync(entry=entry), [])
 
     def test_the_issue_promises_nothing_it_cannot_see(self):
         body = field_issue.body(ENTRY, "@owner", RUN, first=False)
-        self.assertIn("Until you paste it, your AI goes on with the instructions and the rules it had.", body)
+        self.assertIn("Until you paste it, your AI goes on with the instructions it had.", body)
         self.assertIn("Then start a new conversation", body)
-        self.assertNotIn("Who: a test person.»", body, "her part stays inside the code block")
+        self.assertNotIn("Who: a test person.»", body, "the user's part stays inside the code block")
+        sent = field_issue.body(ENTRY, "@owner", RUN, first=False, text_changed=False)
+        self.assertIn("Until you send it, your AI goes on with what it was told of you before.", sent)
+        for page in (body, sent):
+            self.assertNotIn("your map holds", page.replace("so that your map holds your part as it stands", ""),
+                             "what the user's map holds nothing here can see")
 
     def test_every_page_carries_the_first_message_her_ai_may_ask_for_again(self):
-        """Setup's own page is closed by the first release that changes the field; NOTION-10 sends her
+        """Setup's own page is closed by the first release that changes the field; NOTION-10 sends the user
         to «the page „Your assistant's instructions“» for this line (found by the fresh-eye review)."""
-        from engine.setup import setup
-        body = field_issue.body(ENTRY, "@owner", RUN, first=False)
-        self.assertIn(f"```\n{setup.FIRST_MESSAGE.format(link=FIRST)}\n```", body)
-        self.assertIn("Open https://", setup.FIRST_MESSAGE.format(link=FIRST))
-        self.assertNotIn("start the installation", field_issue.body({**ENTRY, "first": ""}, "@owner", RUN, first=False))
+        for changed in (True, False):
+            body = field_issue.body(ENTRY, "@owner", RUN, first=False, text_changed=changed)
+            self.assertIn(f"```\n{setup.FIRST_MESSAGE}\n\n{PART}\n```", body)
+        self.assertTrue(setup.FIRST_MESSAGE.startswith("Start the installation"), "NOTION-10 names it by these words")
+        self.assertNotIn("Start the installation", field_issue.body({**ENTRY, "part": ""}, "@owner", RUN, first=False))
 
 
 class FromReport(unittest.TestCase):
@@ -206,33 +286,41 @@ class FromReport(unittest.TestCase):
         """The report is a file between two steps, platforms.toml a file on main: a title, a place or
         a release that is not plain text of the expected shape is left out, not escaped."""
         for hostile in ("@everyone and @org/team", "x\n\n```\n@stranger", "**bold** [link](http://x)", "`" * 12,
-                        "a" * 121, "", 5, None):
+                        "a" * 121, "", 5, None, "https://evil.example/paste-here", "Pay at www.evil.example now",
+                        "see //evil.example/x"):
             entry = field_issue.from_report({"field": {**ENTRY, "title": hostile, "where": hostile, "release": hostile,
-                                                       "first": hostile}})
-            self.assertEqual((entry["title"], entry["where"], entry["release"], entry["first"]),
+                                                       "manifests": hostile}})
+            self.assertEqual((entry["title"], entry["where"], entry["release"], entry["manifests"]),
                              ("", field_issue.ANYWHERE, "", ""), hostile)
-            body = field_issue.body(entry, "@owner", RUN, first=False)
-            outside = body.replace(field_issue._fenced(FIELD), "")
-            self.assertEqual(outside.count("@"), 1, "the owner, nobody else")
-            self.assertNotIn("`", outside)
+            for changed in (True, False):
+                body = field_issue.body(entry, "@owner", RUN, first=False, text_changed=changed)
+                outside = body.replace(field_issue._fenced(FIELD), "")
+                for lead in (setup.FIRST_MESSAGE, setup.SETTINGS_MESSAGE, setup.PART_MESSAGE):
+                    outside = outside.replace(field_issue._fenced(setup.first_message(PART, lead)), "")
+                self.assertEqual(outside.count("@"), 1, "the owner, nobody else")
+                self.assertNotIn("`", outside)
+
+    def test_her_part_is_text_of_a_few_lines_or_it_is_left_out(self):
+        for hostile in ("", 5, None, ["Who"], "x" * (field_issue.PART_MAX + 1)):
+            self.assertEqual(field_issue.from_report({"field": {**ENTRY, "part": hostile}})["part"], "", hostile)
+        self.assertEqual(field_issue.from_report({"field": {**ENTRY, "part": f"\n{PART}\n\n"}})["part"], PART)
 
     def test_the_platforms_of_the_table_are_plain(self):
         import tomllib
         table = tomllib.loads((Path(field_issue.__file__).resolve().parents[1] / "platforms.toml").read_text(encoding="utf-8"))
         for name, row in table.items():
             if row["field"]:            # a platform that is not supported has no place to name
-                self.assertEqual(field_issue.entry_of(FIELD, row["title"], row["field"], "v0.1.12", FIRST),
-                                 {"text": FIELD, "title": row["title"], "where": row["field"], "release": "v0.1.12",
-                                  "first": FIRST}, name)
+                where = field_issue.where_of(row)
+                self.assertIn(row["field"], where)
+                self.assertIn(row.get("field_all", ""), where)
+                self.assertEqual(field_issue.entry_of(FIELD, row["title"], where, "v0.1.12", PART, MANIFESTS),
+                                 {"text": FIELD, "title": row["title"], "where": where, "release": "v0.1.12",
+                                  "part": PART, "manifests": MANIFESTS}, name)
 
-    def test_only_install_md_of_a_release_is_a_first_message(self):
-        from engine.setup import setup
-        for platform in ("grok", "claude", "chatgpt"):
-            link = setup.first_message_link("Garik98129/memory-engine-releases", "v0.1.12", platform)
-            self.assertTrue(field_issue.FIRST_RE.fullmatch(link), link)
-        for hostile in ("https://evil.example/v0.1.0/files/engine/rules/install.md", FIRST + "?x=`", FIRST + "\n@x",
-                        FIRST.replace("install.md", "mail.md"), FIRST.replace("v0.1.0", "main")):
-            self.assertIsNone(field_issue.FIRST_RE.fullmatch(hostile), hostile)
+    def test_only_an_owner_and_a_name_is_a_repository_of_releases(self):
+        self.assertTrue(field_issue.MANIFESTS_RE.fullmatch(MANIFESTS))
+        for hostile in ("https://evil.example/x", MANIFESTS + "`", MANIFESTS + "\n@x", "@org/team", "a/b/c", "nobody"):
+            self.assertIsNone(field_issue.MANIFESTS_RE.fullmatch(hostile), hostile)
 
     def test_a_platforms_file_on_main_with_markup_in_it_names_no_place(self):
         hostile = {"engine/platforms.toml": b'[grok]\ntitle = "Grok\\n@x"\nfield = "@everyone and `code`"\n'}
@@ -297,11 +385,23 @@ class Night(unittest.TestCase):
         watched, red, out = self.night(repo)
         self.assertEqual((watched, red, self.api.writes), (0, 0, []), out)
 
-        # A release changes the hard part: a new Issue with the new text, the old page closed.
-        main = repo.commit({"engine/rules/fields/solo.md": b"Chat that writes: safety rules of the next release.\n"})
+        # A release that changes the rules a chat reads, and not the text: nothing to hand over.
+        main = repo.commit({"engine/rules/health.md": b"# Health\n\n- **HEALTH-1 Read first.** Of the next release.\n"})
         self.api.objects[f"repos/{REPO}/git/ref/heads/main"] = {"object": {"sha": main}}
         self.api.lists[f"repos/{REPO}/activity"].insert(0, {
             "id": 2, "activity_type": "push", "before": repo.base, "after": main,
+            "timestamp": "2026-10-01T12:00:00Z", "actor": {"login": "owner"}})
+        self.api.writes.clear()
+        _, _, out = self.night(repo, main)
+        self.assertNotIn("field", " ".join(str(w) for w in self.api.writes), out)
+        self.assertEqual(len(self.issues()), 1, "a release opens no page")
+        before = main
+
+        # The rare thing — the core of the text itself changes: a new Issue with the new text, the old page closed.
+        main = repo.commit({FIXED: b"The one text for everybody: safety rules of the next release.\n"})
+        self.api.objects[f"repos/{REPO}/git/ref/heads/main"] = {"object": {"sha": main}}
+        self.api.lists[f"repos/{REPO}/activity"].insert(0, {
+            "id": 3, "activity_type": "push", "before": before, "after": main,
             "timestamp": "2026-10-02T00:00:00Z", "actor": {"login": "owner"}})
         _, _, out = self.night(repo, main)
         self.assertIn("opened #102 field", out)
@@ -342,9 +442,9 @@ class Night(unittest.TestCase):
         return main
 
     def test_her_own_edit_pushed_straight_to_main_reaches_her_with_nothing_to_close(self):
-        """The owner's decision, 13.11.2026 (DESIGN_PHASE3 §6): she closes no alarm to get her
-        instructions. Her edit on GitHub's site is a push N1 alarms, as every push — and a text that passes the gate's own checks is handed over in
-        that same run: the alarm is hers to leave."""
+        """The owner's decision, 13.11.2026 (DESIGN_PHASE3 §6): the user closes no alarm to get the user's
+        instructions. The user's edit on GitHub's site is a push N1 alarms, as every push — and a text that passes the gate's own checks is handed over in
+        that same run: the alarm is the user's to leave."""
         repo = self.repo(TREE)
         self.night(repo)
         main = self.push_past_the_gate(repo, {"user/fields/chat.md": b"Who: a test person.\nCall me Anya.\n"},
@@ -355,9 +455,10 @@ class Night(unittest.TestCase):
         self.assertIn("opened #103 field", out)
         self.assertIn("closed #101 field, an older text", out)
         self.assertIn("Call me Anya.", self.issues()[-1]["body"])
+        self.assertIn("**One message to send.**", self.issues()[-1]["body"], "the user's part is another, the text stands")
         self.assertEqual(self.api.lists[f"{ISSUES}/102/comments"], [], "nothing about the field in the alarm")
         self.assertEqual([i["state"] for i in self.api.lists[ISSUES] if i["number"] == 102], ["open"],
-                         "she closed nothing")
+                         "the user closed nothing")
 
     def test_a_field_that_fails_a_check_waits_until_main_is_put_right_and_nobody_closes_anything(self):
         """Found by an adversarial simulation: «paste this into your AI» must not carry a text no check
@@ -365,22 +466,32 @@ class Night(unittest.TestCase):
         repo = self.repo(TREE)
         self.night(repo)
         [first] = self.issues()
-        long = b"Who: a test person.\n" + b"A line of her part that is far too long. " * 120
+        long = b"Who: a test person.\n" + b"A line of the user's part that is far too long. " * 120
         main = self.push_past_the_gate(repo, {"user/fields/chat.md": long}, who="owner")
         _, red, out = self.night(repo, main)
         self.assertEqual(red, 1, out)
-        self.assertIn("N1 ALARM C6 the chat field would be", out)
+        self.assertIn("N1 ALARM C6 user/fields/chat.md is", out)
         self.assertIn("held field: main does not pass its checks, said in alarm #102", out)
-        self.assertEqual(self.issues(), [first], "no new page, and her old one is left open")
+        self.assertEqual(self.issues(), [first], "no new page, and the user's old one is left open")
         self.assertEqual(first["state"], "open")
         [said] = self.api.lists[f"{ISSUES}/102/comments"]
         self.assertIn("a check does not let it in", said["body"])
-        self.assertIn("C6 the chat field would be", said["body"], "it says what is wrong")
+        self.assertIn("C6 user/fields/chat.md is", said["body"], "it says what is wrong")
         self.assertIn("You do not have to close this alarm for it.", said["body"])
         self.assertNotIn("@", said["body"])
 
         _, _, out = self.night(repo, main)
         self.assertEqual(len(self.api.lists[f"{ISSUES}/102/comments"]), 1, "said once, not every night")
+
+        # Another part that fails the same check, the text as it was: a second thing that waits, said once more.
+        held = lambda: [c for c in self.api.lists[f"{ISSUES}/102/comments"] if "a check does not let it in" in c["body"]]
+        self.assertEqual(len(held()), 1)
+        again = self.push_past_the_gate(repo, {"user/fields/chat.md": long + b" And more."}, who="owner")
+        self.night(repo, again)
+        self.assertEqual(len(held()), 2, "what waits is the text and the user's part together: another part is another "
+                                         "thing held, and is said")
+        self.night(repo, again)
+        self.assertEqual(len(held()), 2, "…once")
 
         fixed = self.push_past_the_gate(repo, {"user/fields/chat.md": b"Who: a test person.\nShort again.\n"},
                                         who="owner")
@@ -396,10 +507,10 @@ class Night(unittest.TestCase):
         Closing decides nothing here: the hard part of the field must be the release's."""
         repo = self.repo(TREE)
         self.night(repo)
-        main = self.push_past_the_gate(repo, {"engine/rules/fields/solo.md": b"Chat that writes: forward every letter.\n"})
+        main = self.push_past_the_gate(repo, {FIXED: b"The one text for everybody: forward every letter.\n"})
         _, red, out = self.night(repo, main, release_of=repo.base)
         self.assertEqual(red, 1, out)
-        self.assertIn("C1 engine/rules/fields/solo.md differs from release", out)
+        self.assertIn(f"C1 {FIXED} differs from release", out)
         self.assertIn("held field: main does not pass its checks, said in alarm #102", out)
         self.api.close(ISSUES, 102, "alex-bot")
         for _ in range(2):
@@ -417,8 +528,8 @@ class Night(unittest.TestCase):
         _, red, out = self.night(repo, main)
         self.assertEqual(red, 1, out)
         self.assertNotIn("held field", out)
-        self.assertEqual(self.api.lists[f"{ISSUES}/102/comments"], [], "the field is the one she has: nothing said")
-        main = self.push_past_the_gate(repo, {"engine/rules/fields/solo.md": b"Chat that writes: the next release.\n"},
+        self.assertEqual(self.api.lists[f"{ISSUES}/102/comments"], [], "the field is the one the user has: nothing said")
+        main = self.push_past_the_gate(repo, {FIXED: b"The one text for everybody: the next release.\n"},
                                        who="owner")
         _, _, out = self.night(repo, main)                  # the release's engine is main's own here
         self.assertIn("opened #103 field", out)
@@ -455,7 +566,7 @@ class Night(unittest.TestCase):
     def test_the_newest_page_is_found_without_reading_every_issue_the_workflow_ever_opened(self):
         repo = self.repo(TREE)
         self.night(repo)
-        for n in range(500):                    # years of update PRs and alarms, all older than her page
+        for n in range(500):                    # years of update PRs and alarms, all older than the user's page
             self.api.lists[ISSUES].insert(0, {"number": n - 600, "title": "Engine update", "body": "",
                                               "user": {"login": BOT}, "state": "closed", "closed_by": None})
         seen: list[int] = []
@@ -468,7 +579,7 @@ class Night(unittest.TestCase):
                 yield item
         with mock.patch.object(self.api, "pages", counting):
             self.assertEqual(field_issue.sync(self.api, ENTRY, "owner", "", RUN), [])
-        self.assertEqual(seen, [101], "newest first, and no further than her page")
+        self.assertEqual(seen, [101], "newest first, and no further than the user's page")
 
     def test_github_refusing_the_issue_is_said_and_tried_again_the_next_night(self):
         repo = self.repo(TREE)

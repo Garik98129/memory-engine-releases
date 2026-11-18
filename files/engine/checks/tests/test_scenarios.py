@@ -21,12 +21,10 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest import mock
 
+from engine.backup import night as copy_night
 from engine.backup import run as backup_run
 from engine.backup.tests.fakenotion import FakeNotion, page, paragraph, rich, source
-from engine.backup.tests.test_workflow import copy_step
-from engine.checks.tests.test_watch_workflow import watch_step
-from engine.checks import alarm, behind, drift, watch
-from engine.checks import run as gate_checks
+from engine.checks import alarm, behind, drift, gate, night, watch
 from engine.checks.limits_check import assemble
 from engine.checks.tests.fakeapi import BOT, REPO, FakeApi
 from engine.checks.tests.helpers import BASE_FILES, VALID_CONFIG, Repo, _git, body
@@ -121,28 +119,65 @@ class World:
         a.texts[f"repos/{REPO}/actions/jobs/{run * 10}/logs"] = f"2026-10-23T08:00:01Z GATE pr={number} head={head} base={before} run={run}\n"
         self._live()
 
+    def runner(self) -> tuple[Path, dict[str, str]]:
+        """A new job on a runner: its own RUNNER_TEMP, main checked out, and the variables GitHub
+        sets for every step."""
+        temp = Path(tempfile.mkdtemp(dir=self._copy_parent))
+        self.repo.checkout(self.main)
+        self._runs = getattr(self, "_runs", 0) + 1
+        return temp, {"GITHUB_REPOSITORY": REPO, "GITHUB_SERVER_URL": "https://github.com",
+                      "GITHUB_RUN_ID": str(43462550000 + self._runs), "GITHUB_SHA": self.main,     # eleven digits, as GitHub's are
+                      "GITHUB_OUTPUT": str(temp / "output"), "RUNNER_TEMP": str(temp)}
+
+    def manifest(self, url: str) -> bytes:
+        """The public repository of releases: the manifest the factory published, or one read off main."""
+        assert url.startswith("https://raw.githubusercontent.com/"), url
+        return (self.published or self.repo.manifest_file(self.main, self.release)).read_bytes()
+
     def gate(self, files: dict[str, bytes], record: bool = False) -> tuple[int, str]:
-        """A PR with these files, as job `check` judges it: C1–C7 (engine.checks.run), then the
-        watch on the main it checked out (N5 skipped for a record PR) and its alarms — (exit,
-        output). Green — job `merge` lands it; red — main stays where it was. A record PR's
-        body is REPO-3's one line, and C7 does not apply to it (§5)."""
+        """A PR with these files, as check.yml judges and lands it — the steps of job `check` in
+        the file's own order, through their real entry (`engine.checks.gate`), each given what
+        the file gives it: the PR as data, C1–C7, then the watch on the main it checked out (N5
+        skipped for a PR that records an installation) and its alarms; and job `merge`. (exit,
+        output). Green — job `merge` lands it; red — main stays where it was. A record PR's body
+        is REPO-3's one line, and C7 does not apply to it (§5). GitHub's own client stands in
+        for the merge: `merge()` then records it as GitHub would."""
         base = self.main
         self.repo.checkout(base)
         head = self.repo.commit(files)
-        self.repo.checkout(base)
         text = "Record of the installation\n" if record else body(*sorted(files))
+        number = self._numbers + 1
+        self.api.objects[f"repos/{REPO}/pulls/{number}"] = {
+            "number": number, "state": "open", "base": {"ref": "main"}, "user": {"login": "alex-bot"},
+            "head": {"sha": head, "ref": "bot/x"}, "body": text.rstrip("\n")}
+        temp, runner = self.runner()
         out = io.StringIO()
-        with contextlib.redirect_stdout(out):
-            code = gate_checks.main(["--repo", str(self.repo.path), "--base", base, "--head", head, "--kind", "person",
-                                     "--body", str(self.repo.body_file(text)),
-                                     "--manifest", str(self.repo.manifest_file(base, self.release))], now=self.now)
+
+        def step(name: str, given: dict[str, str], **seams) -> int:
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out), \
+                    mock.patch.dict(os.environ, {"GITHUB_REPOSITORY_OWNER": "owner"}):
+                return gate.main([name], env={**runner, **given}, repo=self.repo.path, **seams)
+
+        code = step("pr", {"GH_TOKEN": "t", "PR": str(number), "EVENT": "pull_request_target", "ACTION": "opened",
+                           "EVENT_HEAD": head, "EVENT_BEFORE": "", "SENDER": "alex-bot"},
+                    api=self.api, fetch=lambda _number: head)
         if code != 0:
             return code, out.getvalue()
-        _, red, watched = self.run(record_pr=record)
+        told = dict(line.split("=", 1) for line in (temp / "output").read_text(encoding="utf-8").splitlines())
+        code = step("checks", {"PR": told["number"], "BASE": told["base"], "HEAD": told["head"], "KIND": told["kind"],
+                               "ACTOR": told["actor"], "BEFORE": told["before"]}, now=self.now, get=self.manifest)
+        if code != 0:
+            return code, out.getvalue()
+        red = step("watch", {"GH_TOKEN": "t", "BASE": told["base"], "HEAD": told["head"]},
+                   api=self.api, now=self.now, branches="refs/heads/")
         if red:
-            return red, out.getvalue() + watched
+            return red, out.getvalue()
+        merged: list[list[str]] = []
+        code = step("merge", {"GH_TOKEN": "t", "PR": told["number"], "HEAD": told["head"], "BASE": told["base"],
+                              "BODY_SHA": told["body_sha"]}, api=self.api, client=lambda args: merged.append(args) or 0)
+        assert (code, merged[0][:3], merged[0][8]) == (0, ["pr", "merge", str(number)], head), (code, merged)
         self.merge(files)
-        return 0, out.getvalue() + watched
+        return 0, out.getvalue()
 
     def push(self, files: dict[str, bytes], who: str) -> None:
         """A direct push to main — not through the gate."""
@@ -177,64 +212,63 @@ class World:
         return w, a, out.getvalue()
 
     def nightly(self) -> tuple[bool, str]:
-        """One run of watch.yml: (the job is red, output). The step «N1, N5» is decided by its
-        own line from the workflow (`watch_step`), the alarm step by its exit code, and the
-        job is red when either step fails — as on GitHub. A crash of the
-        watch ends `python3 -m` with exit 1, as here."""
-        runner_temp = Path(tempfile.mkdtemp(dir=self._copy_parent))   # new every job
-        report = runner_temp / "report.json"
-        manifest = self.repo.manifest_file(self.main, self.release)
+        """One run of watch.yml: (the job is red, output) — its two steps through their real
+        entry (`engine.checks.night`). The step «The watch of main» decides its own colour, the alarm step
+        runs whatever came before it (`if: always()`), and the job is red when either step
+        fails — as on GitHub. A crash of the watch ends its step as `python3 -m` would: exit 1."""
+        _temp, runner = self.runner()
         out = io.StringIO()
-        with contextlib.redirect_stdout(out):
-            try:
-                code = watch.main(["--repo", str(self.repo.path), "--main", self.main, "--manifest", str(manifest),
-                                   "--report", str(report), "--branches", "refs/heads/"], api=self.api, now=self.now)
-            except Exception as exc:                   # noqa: BLE001 — `python3 -m` ends such a run with exit 1
-                print(f"CRASH {type(exc).__name__}: {exc}")
-                code = 1
-            step_red = watch_step(runner_temp, code) != 0
-            with mock.patch.dict(os.environ, {"GITHUB_REPOSITORY_OWNER": "owner"}):
-                a = alarm.main(["--repo", str(self.repo.path), "--main", self.main, "--report", str(report),
-                                "--run-url", RUN_URL], api=self.api)
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out), \
+                mock.patch.dict(os.environ, {"GITHUB_REPOSITORY_OWNER": "owner"}):
+            step_red = night.main(["manifest"], env=runner, repo=self.repo.path, get=self.manifest) != 0
+            if not step_red:        # a failed step skips the next; the alarm step runs whatever came before
+                step_red = night.main(["watch"], env={**runner, "GH_TOKEN": "t"}, repo=self.repo.path, api=self.api,
+                                      now=self.now, fetch=lambda _repo, _token: None, branches="refs/heads/") != 0
+            a = night.main(["alarms"], env={**runner, "GH_TOKEN": "t"}, repo=self.repo.path, api=self.api)
         print(f"STEP {'red' if step_red else 'green'} ALARM-EXIT {a}", file=out)
         return step_red or a != 0, out.getvalue()
 
     def night(self, push_fails: bool = False) -> tuple[int, int, str]:
-        """One run of the backup workflow: the copy, its commit and push, its alarms —
-        (backup exit, alarm exit, output). Whether the commit runs is decided by the step's own
-        line from backup.yml, run in bash (`copy_step`): after exit 0, or after exit 1 with a
-        non-empty report — a crash exits 1 too. A commit or push that
-        fails is handed to the alarms."""
+        """One run of backup.yml: the copy, its commit and push, its alarms — (the copy's own
+        exit, alarm exit, output). The steps «Copy Notion» and «Alarms» run through their real
+        entry (`engine.backup.night`): the copy's step decides whether the commit runs — after
+        exit 0, or after exit 1 with a non-empty report; a crash exits 1 too — and the alarms are
+        told when the commit or the push failed. The worktree lives across the nights here, and
+        the commit is made by hand: there is no GitHub to check the branch out from or push it
+        to (engine/backup/tests/test_night.py runs those two steps against a bare repository)."""
         if self.backup_head is None and not self.copy_dir.exists():
-            # The first night, as backup.yml does it: a worktree, then an orphan branch.
+            # The first night, as the step «The copy's branch, as a worktree» does it.
             _git(self.repo.path, "worktree", "add", "--detach", str(self.copy_dir), self.main)
             _git(self.copy_dir, "checkout", "-q", "--orphan", "notion-backup")
             _git(self.copy_dir, "rm", "-r", "-q", "-f", ".")
-        runner_temp = Path(tempfile.mkdtemp(dir=self._copy_parent))   # new every job: no report from last night
-        report = runner_temp / "report.json"
+        temp, runner = self.runner()                    # new every job: no report from last night
         out = io.StringIO()
-        extra: list[str] = []
-        with contextlib.redirect_stdout(out):
-            try:
-                code = backup_run.main(["--repo", str(self.repo.path), "--main", self.main, "--worktree",
-                                        str(self.copy_dir), "--report", str(report)], api=self.notion, now=self.now)
-            except Exception as exc:                   # noqa: BLE001 — `python3 -m` ends such a run with exit 1
-                print(f"CRASH {type(exc).__name__}: {exc}")
-                code = 1
-            committed = copy_step(runner_temp, code) == 0
+        made: dict[str, int] = {"code": 1}              # a crash ends `python3 -m` with exit 1
+        the_copy = backup_run.main
+
+        def copy(argv, api=None, now=None):
+            argv = [str(self.copy_dir) if arg == str(temp / "copy") else arg for arg in argv]   # the worktree that lives on
+            made["code"] = the_copy(argv, api=self.notion, now=self.now)
+            return made["code"]
+
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out), \
+                mock.patch.dict(os.environ, {"GITHUB_REPOSITORY_OWNER": "owner"}):
+            with mock.patch.object(copy_night.copying, "main", copy):
+                committed = copy_night.main(["copy"], env={**runner, "NOTION_TOKEN": "n"}, repo=self.repo.path) == 0
+            push = "skipped"
             if committed and push_fails:
-                extra = ["--error", "the copy was made but could not be committed or pushed to notion-backup"]
+                push = "failure"
             elif committed:
+                push = "success"
                 _git(self.copy_dir, "add", "-A")
                 _git(self.copy_dir, "commit", "-q", "--allow-empty", "-m", "Notion copy")
                 head = _git(self.copy_dir, "rev-parse", "HEAD")
                 self.record("branch_creation" if self.backup_head is None else "push",
                             self.backup_head or "0" * 40, head, BOT, ref="refs/heads/notion-backup")
                 self.backup_head = head
-            with mock.patch.dict(os.environ, {"GITHUB_REPOSITORY_OWNER": "owner"}):
-                a = alarm.main(["--repo", str(self.repo.path), "--main", self.main, "--report", str(report),
-                                "--run-url", RUN_URL, "--what", "backup", *extra], api=self.api)
-        return code, a, out.getvalue()
+            a = copy_night.main(["alarms"], env={**runner, "GH_TOKEN": "t", "WORKTREE": "success", "PUSH": push},
+                                repo=self.repo.path, api=self.api)
+        return made["code"], a, out.getvalue()
 
     # -- the bot's daily mark (N4) ---------------------------------------------------
 
@@ -656,7 +690,7 @@ class CopyScenarios(unittest.TestCase):
         w = self.w
         w.night()
         w.advance(24)
-        w.notion.sources.clear()                        # she deleted the Documents base
+        w.notion.sources.clear()                        # the user deleted the Documents base
         w.notion.row_lists.pop("docs")
         code, red, out = w.night()
         self.assertEqual((code, red), (1, 1), out)
@@ -664,7 +698,7 @@ class CopyScenarios(unittest.TestCase):
         self.assertIn("the base data/docs (3 rows) is gone from the copy", issue["body"])
         since = json.loads(w.copied()["copy.json"])["held"]["docs"]["since"]
         self.assertIn(f"since {since}", issue["body"])
-        # The bot asks her in plain words; she says she deleted it; its PR with her yes records
+        # The bot asks the user in plain words; the user says the user deleted it; its PR with the user's yes records
         # the base and the day as the line names them.
         w.merge({"user/config.toml": VALID_CONFIG + f'\n[notion]\nremoved_bases = ["docs@{since}"]\n'.encode()})
         w.advance(24)
@@ -682,7 +716,7 @@ class CopyScenarios(unittest.TestCase):
         w.night()
         w.advance(24)
         self.assertEqual(w.night()[:2], (1, 1))         # still held the next night
-        w.notion.sources.append(gone)                   # she shares it again (the bot helped her)
+        w.notion.sources.append(gone)                   # the user shares it again (the bot helped the user)
         w.notion.row_lists["docs"] = rows
         w.advance(24)
         code, red, out = w.night()

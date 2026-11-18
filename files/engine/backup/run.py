@@ -38,7 +38,7 @@ def _floors(repo: Path, main: str) -> dict:
 
 
 def settings(repo: Path, main: str) -> tuple[set[str], float, list[str], set[tuple[str, str]]]:
-    """(excluded ids, shrink threshold, payment patterns, her decisions on bases she removed
+    """(excluded ids, shrink threshold, payment patterns, the user's decisions on bases the user removed
     as (id, day)) from the config and the floors.
     The threshold never exceeds the floor: C3 keeps the config under it, and this run
     does not trust a config C3 has not seen. A config the copy cannot read whole stops the
@@ -106,7 +106,7 @@ def main(argv: list[str] | None = None, api=None, now: datetime | None = None) -
         if not paths_check.installed(args.repo, args.main):
             # A repository made from the template, before `setup` (DESIGN_PHASE3 §5): no config
             # and no Notion token yet. Off, and said so — not a failed night for a new owner.
-            off, reason = True, "not installed yet: the workflow «setup» writes her part"
+            off, reason = True, "not installed yet: the workflow «setup» writes the user's part"
         else:
             off = not config_check.copy_on(config_check.read_for_copy(args.repo, args.main))
     except FAILS:

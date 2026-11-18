@@ -2,8 +2,8 @@
 each run against what the runs before it wrote (docs/DESIGN.md §5, §6).
 
 Releases come faster than the bot keeps up; the bot gets the first line, the task or the
-record wrong; people close, edit or copy the Issue; GitHub refuses a write; a run errs; she
-changes her routines in the middle of an update, says no and changes her mind; the list is
+record wrong; people close, edit or copy the Issue; GitHub refuses a write; a run errs; the user
+changes the user's routines in the middle of an update, says no and changes the user's mind; the list is
 long and a name is hostile. What must hold through all of it: one list, always the whole
 current one, written only when it changed, never an alarm, closed by the machine when empty —
 and an alarm to people still comes from N5 when the bot does not keep up."""
@@ -126,7 +126,7 @@ class Stress(unittest.TestCase):
         s = self.story(template((3, "mark", 1)), {"mark": master("mark", 3, 1)})
         s.merge({"engine/rules/routines.md": template((3, "mark", 2))})
         s.night()
-        # 1. The marker in her language: the watch cannot read it, and says what to write.
+        # 1. The marker in the user's language: the watch cannot read it, and says what to write.
         s.merge({"user/routines/mark.md": "Mark (\u0437\u0430\u0434\u0430\u0447\u0430 3, \u0432\u0435\u0440\u0441\u0438\u044f 2).\nDo it.\n".encode()})
         s.night()
         body = s.todo()["body"]
@@ -176,7 +176,8 @@ class Stress(unittest.TestCase):
         listed = mine[0]["body"]
         mine[0]["body"] = "Nothing to do.\n"
         s.night()
-        self.assertEqual(mine[0]["body"], listed)
+        self.assertEqual(alarm._todo_text(mine[0]["body"]), alarm._todo_text(listed),
+                         "the list again; its Run line names the run that wrote it")
         # Two runs at once opened a second one: the older stays.
         api.post(ISSUES, {"title": behind.TITLE, "body": "a second run's"})
         s.night()
@@ -229,7 +230,7 @@ class Stress(unittest.TestCase):
                        {"morning": master("morning", 1, 1), "mark": master("mark", 3, 1)})
         s.merge({"engine/rules/routines.md": template((1, "morning", 1), (3, "mark", 2))})
         s.night()
-        # She moves her morning routine (a small change): merged, installed and recorded within
+        # The user moves the user's morning routine (a small change): merged, installed and recorded within
         # hours — a night in between does not put it on the list.
         s.merge({"user/routines/morning.md": master("morning", 1, 1, " At 08:00.")})
         s.night(6)
@@ -237,19 +238,19 @@ class Stress(unittest.TestCase):
         s.record()
         s.night()
         self.assertNotIn("routine morning", s.todo()["body"])
-        # A change of her part of the bot's field: listed at once, gone once recorded.
-        s.merge({"user/fields/bot.md": b"Her bot part, v2.\n"})
+        # A change of the user's part of the bot's field: listed at once, gone once recorded.
+        s.merge({"user/fields/bot.md": b"The user's bot part, v2.\n"})
         s.night(1)
         self.assertIn("field bot: the installed text is not its master", s.todo()["body"])
         s.record()
         s.night(1)
         self.assertNotIn("field bot", s.todo()["body"])
-        # She says no to the new mark: recorded, the list closes, quiet for a week.
+        # The user says no to the new mark: recorded, the list closes, quiet for a week.
         s.merge({"user/config.toml": VALID_CONFIG + b'declined = ["mark@2"]\n'})
         for _ in range(7):
             red, out = s.night()
             self.assertEqual((red, s.w.todos("open")), (False, []), out)
-        # She changes her mind: the no is taken out, the line is back.
+        # The user changes the user's mind: the no is taken out, the line is back.
         s.merge({"user/config.toml": VALID_CONFIG})
         s.night()
         self.assertIn("routine mark: written from task 3, version 1", s.todo()["body"])
@@ -260,7 +261,7 @@ class Stress(unittest.TestCase):
         s.merge({"engine/rules/routines.md": template((1, "morning", 1), (3, "mark", 2))})
         s.night(1)
         number = s.todo()["number"]
-        # The bot writes mark anew and changes morning for her too; both merge within the hour,
+        # The bot writes mark anew and changes morning for the user too; both merge within the hour,
         # and its one record (ROUT-10) leaves morning out.
         s.merge({"user/routines/mark.md": master("mark", 3, 2), "user/routines/morning.md": master("morning", 1, 1, " Twice.")})
         s.w.advance(1)

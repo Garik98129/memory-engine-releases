@@ -26,7 +26,7 @@ from engine.checks.github import ApiError
 from engine.checks.tests.fakeapi import BOT, REPO, FakeApi
 from engine.checks.tests.helpers import Repo, _git
 from engine.setup import release, update
-from engine.setup.tests.test_release import PERSON_PART, TEMPLATE
+from engine.setup.tests.test_release import PERSON_PART, TEMPLATE, frozen, topics_of
 
 NOW = datetime(2026, 11, 9, 7, 0, tzinfo=timezone.utc)
 WEEK = timedelta(days=7)
@@ -70,11 +70,15 @@ class World:
 
     def publish(self, tag: str, changes: dict[str, bytes | None] | None = None, published: datetime = NOW) -> None:
         """The factory commits `changes`, cuts `tag` and the workflow `tag` tags the commit."""
+        told = any(path.startswith(release.WORKFLOWS) for path in changes or {})
         if changes:
             self.factory.commit(changes)
+        if told:                # a release that changes the frozen workflow files: on record, and said to the cut
+            self.records = getattr(self, "records", 1) + 1
+            self.factory.commit({release.FROZEN: frozen(release.release_files(self.factory.path, "main"), self.records)})
         source = _git(self.factory.path, "rev-parse", "main")
         release.cut(release.release_files(self.factory.path, "main"), tag, source, published,
-                    self.releases.path, RELEASES)
+                    self.releases.path, RELEASES, told)
         self.releases.commit({})
         _git(self.releases.path, "tag", tag)
 
@@ -118,6 +122,7 @@ class Update(unittest.TestCase):
     def test_a_release_waits_a_week_on_stable_then_comes_as_a_pr_the_gate_lets_in(self):
         self.w.publish("v0.1.1", {"engine/rules/core.md": b"Core rules, v0.1.1.\n",
                                   "engine/rules/shopping.md": b"Shopping.\n",
+                                  **topics_of("core.md", "shopping.md"),             # a new rules file comes with its topic
                                   "engine/checks/run.py": None})
         code, out = self.w.run(NOW + WEEK - timedelta(seconds=1))
         self.assertEqual((code, self.w.api.writes), (0, []), out)
@@ -135,7 +140,7 @@ class Update(unittest.TestCase):
         self.assertEqual(gitio.file_at(repo, head, "user/engine.lock"), b'release = "v0.1.1"\n')
         changed = {c.path.decode() for c in gitio.changes(repo, self.w.main, head)}
         self.assertEqual(changed, {"engine/rules/core.md", "engine/rules/shopping.md", "engine/checks/run.py",
-                                   "user/engine.lock"})
+                                   "engine/rules/topics.toml", "engine/rules/README.md", "user/engine.lock"})
         self.assertEqual(gitio.git(repo, "log", "-1", "--format=%an <%ae>|%s", head).decode().strip(),
                          f"{BOT} <{update.BOT_EMAIL}>|Engine update to v0.1.1")
 
@@ -235,6 +240,10 @@ class Update(unittest.TestCase):
         [issue] = self.w.writes("POST", ISSUES)
         self.assertEqual(issue["title"], "Engine update v0.1.1 has to be applied by hand")
         self.assertTrue(issue["body"].startswith("@helper @owner — release v0.1.1 is due on the stable channel"))
+        self.assertIn("it changes the workflow files themselves, under .github/. That is rare: those files are frozen",
+                      issue["body"])
+        self.assertIn("a later release with the same workflow files will wait as this one does", issue["body"])
+        self.assertNotIn("no later release", issue["body"], "one that brings main's own workflow files back does come in")
         self.assertIn("HANDS v0.1.1 changes .github/: issue #", out)
         self.assertIsNone(self.w.pushed("engine-update/v0.1.1"))
         self.assertEqual(self.w.writes("POST", PULLS) + self.w.writes("POST", DISPATCH), [])

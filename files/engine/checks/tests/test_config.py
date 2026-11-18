@@ -88,7 +88,7 @@ class Config(unittest.TestCase):
                   "only in a push of the trusted contact's own"
         moved = on_main.replace(b'country = "IL"', b'country = "NZ"')
         self.assertEqual(check(moved), [dropped])                        # the first of two PRs: country, then the number
-        self.assertEqual(check(moved, "contact"), [])                   # she moved: the trusted contact writes it
+        self.assertEqual(check(moved, "contact"), [])                   # the user moved: the trusted contact writes it
         self.assertEqual(check(moved, "contact", ""), [dropped])         # a dispatch or an open trusts nobody
         kept = moved + b'\n[personal]\npatterns = ["il_id", "il_phone"]\n'
         self.assertEqual(check(kept), [])                               # the same patterns by another road
@@ -241,10 +241,10 @@ class Config(unittest.TestCase):
         for entry in ("walk-2@2", "nosuch@1"):                      # a future version, a routine that is no task
             self.assertEqual(self.run_with(VALID_CONFIG + f'declined = ["{entry}"]\n'.encode(), self.ROUTINES),
                              [f"engine.declined entry {entry!r} is not a task's current version in "
-                              f"engine/rules/routines.md: only a version on her list now can be declined"])
+                              f"engine/rules/routines.md: only a version on the user's list now can be declined"])
         self.assertEqual(self.run_with(VALID_CONFIG + b'declined = ["mark@2"]\n', self.ROUTINES),
                          ["engine.declined entry 'mark@2': task 3 says \u00abnever declined\u00bb"])
-        # One she has is not judged again: the task moved on, the entry stops counting, nothing is red.
+        # One the user has is not judged again: the task moved on, the entry stops counting, nothing is red.
         main = self.repo.commit({"user/config.toml": VALID_CONFIG + b'declined = ["walk-2@1"]\n', **self.ROUTINES})
         head = self.repo.commit({"engine/rules/routines.md": self.ROUTINES["engine/rules/routines.md"].replace(
             b"`walk-2`, task version 1", b"`walk-2`, task version 2")})

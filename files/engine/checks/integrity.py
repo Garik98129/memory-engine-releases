@@ -36,7 +36,7 @@ Before installation — a repository made from the template, holding only the lo
 user/ until `setup` lands (`paths_check.installed`) — the tree part has no config and no
 field to read, and the settings part no protection setting: both say so in a NOTE instead
 of finding them missing. The engine, the paths, the history and the branches are held as
-always. «Installed» is «ever installed», read from all of main's history: her part deleted
+always. «Installed» is «ever installed», read from all of main's history: the user's part deleted
 later — a change the gate refuses (C3), so only a push can do it — leaves a broken
 installation, reported every night. A force push that replaces that history is the limit:
 alarmed as a push for WINDOW, and after it the repository reads as it is.
@@ -61,7 +61,7 @@ WINDOW = timedelta(hours=36)
 ZERO = "0" * 40
 BIRTHS = ("branch_creation", "push")       # how GitHub may record main's creation
 NOT_INSTALLED = ("N1 NOTE not installed yet: under user/ only the lock — the workflow «setup» "
-                 "writes her config and her field (DESIGN_PHASE3 §5)")
+                 "writes the user's config and the user's field (DESIGN_PHASE3 §5)")
 BOT = "github-actions[bot]"
 CHECK_WORKFLOW = ".github/workflows/check.yml"
 OWN_BRANCHES = frozenset({"main", "notion-backup"})

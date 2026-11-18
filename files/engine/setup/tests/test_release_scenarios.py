@@ -3,19 +3,22 @@
 Each test is a story docs/DESIGN.md §5 tells. The factory cuts a release with the same
 command that starts (`engine.setup.release manifest`) and publishes it to a
 stand-in of the public repository of releases; installation runs `engine.setup.release
-install`; the gate runs the two calls of the workflow — `engine.checks.run --manifest-url`,
-a fetch of that URL that fails like `curl -f` on anything not published, then
-`engine.checks.run --manifest`. The assertions are what the gate would show on the PR.
+install`; the gate runs the step «The checks of the PR» of the workflow through its real entry
+(`engine.checks.gate checks`) — the manifest's address from the lock, a fetch of it that
+fails on anything not published, then C1–C7. The assertions are what the gate would show on
+the PR.
 """
 from __future__ import annotations
 
 import contextlib
 import io
 import re
+import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
-from engine.checks import gitio, run
+from engine.checks import gate, gitio
 from engine.checks.tests.helpers import Repo, body
 from engine.setup import release
 from engine.setup.tests.test_release import PERSON_PART, TEMPLATE
@@ -28,7 +31,7 @@ URL_RE = re.compile(r"https://raw\.githubusercontent\.com/([^/]+/[^/]+)/refs/tag
 
 class PublicReleases:
     """The public repository of releases: one manifest per tag, as raw.githubusercontent
-    serves it. Anything not published is an error, as `curl -f` makes it."""
+    serves it. Anything not published is an error, as the gate's fetch makes it."""
 
     def __init__(self):
         self.tags: dict[str, str] = {}
@@ -92,19 +95,19 @@ class World:
         return self.person.commit(changes)
 
     def gate(self, head: str, kind: str, text: str | None = None, actor: str = "", before: str = "") -> tuple[int, str]:
-        args = ["--repo", str(self.person.path), "--base", self.main, "--head", head, "--kind", kind,
-                "--actor", actor, "--before", before]
-        code, out, err = quiet(run.main, [*args, "--manifest-url"], now=self.now)
-        if code != 0:
-            return code, out + err
-        try:
-            manifest = self.releases.fetch(out.strip())
-        except LookupError as exc:
-            return 1, f"fetch failed: {exc}"     # the workflow step fails, then «Gate failed»
-        path = self.person.path.parent / f"{self.person.path.name}-manifest.json"
-        path.write_text(manifest, encoding="utf-8")
-        code, out, err = quiet(run.main, [*args, "--manifest", str(path),
-                                          "--body", str(self.person.body_file(text or ""))], now=self.now)
+        def public(url: str) -> bytes:
+            try:
+                return self.releases.fetch(url).encode("utf-8")
+            except LookupError:
+                raise gate.Stop(f"GET {url}: HTTP 404") from None    # as `gate.fetch_public` says it; then «Gate failed»
+
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / "body.md").write_text(text or "", encoding="utf-8")       # as the step «The PR as data» left it
+            env = {"GITHUB_REPOSITORY": "owner/person-memory", "GITHUB_SERVER_URL": "https://github.com",
+                   "GITHUB_RUN_ID": "1", "GITHUB_SHA": self.main, "GITHUB_OUTPUT": str(Path(tmp) / "output"),
+                   "RUNNER_TEMP": tmp, "PR": "1", "BASE": self.main, "HEAD": head, "KIND": kind,
+                   "ACTOR": actor, "BEFORE": before}
+            code, out, err = quiet(gate.main, ["checks"], env=env, repo=self.person.path, now=self.now, get=public)
         return code, out + err
 
     def land(self, head: str) -> None:
@@ -129,8 +132,8 @@ class ReleaseScenarios(unittest.TestCase):
         code, out = self.save()
         self.assertEqual(code, 0, out)
         self.assertIn("SUMMARY block=0 ran=C1,C2,C3,C4,C5,C6,C7", out)
-        self.assertEqual(self.w.releases.fetched,
-                         [f"https://raw.githubusercontent.com/{RELEASES}/refs/tags/v0.1.0/release-manifest.json"])
+        self.assertEqual(self.w.releases.fetched,       # for the PR, and again as main's own for the watch
+                         [f"https://raw.githubusercontent.com/{RELEASES}/refs/tags/v0.1.0/release-manifest.json"] * 2)
 
     def test_the_bot_weakening_its_own_safety_rules_is_red_against_the_public_manifest(self):
         head = self.w.pr({"engine/rules/fields/bot.md": b"No safety rules.\n"})
@@ -152,7 +155,9 @@ class ReleaseScenarios(unittest.TestCase):
         self.w.now = NOW + WEEK
         code, out = self.w.gate(head, "update", "Update to v0.1.1.\n")
         self.assertEqual(code, 0, out)
-        self.assertTrue(self.w.releases.fetched[-1].endswith("/refs/tags/v0.1.1/release-manifest.json"))
+        self.assertEqual([url.split("/refs/tags/")[1] for url in self.w.releases.fetched[-2:]],
+                         ["v0.1.1/release-manifest.json", "v0.1.0/release-manifest.json"],
+                         "the update is held to its own release's manifest; main's own is then fetched for the watch")
         self.w.land(head)
         code, out = self.save(b"Who: changed after the update.\n")
         self.assertEqual(code, 0, out)
@@ -200,7 +205,8 @@ class ReleaseScenarios(unittest.TestCase):
         changes = self.w.update_files("v0.1.2")
         code, out = self.w.gate(self.w.pr(changes), "update", "Update to v0.1.2.\n")
         self.assertEqual(code, 1, out)
-        self.assertIn("fetch failed: 404", out)
+        self.assertIn("/refs/tags/v0.1.2/release-manifest.json: HTTP 404", out)
+        self.assertNotIn("GATE pr=", out, "a check that could not start logs no record of a check")
 
     def test_a_rollback_to_an_old_manifest_that_is_still_public_is_red(self):
         rev = self.w.factory.commit({"engine/rules/core.md": b"Core rules, v0.1.1.\n"})
@@ -263,7 +269,7 @@ class GuardedSettings(unittest.TestCase):
 
     def test_tightening_needs_no_one(self):
         abroad = self.config.replace(b'country = "IL"', b'country = "NZ"')
-        self.w.land(self.w.pr({"user/config.toml": abroad}))               # she lived abroad when installed
+        self.w.land(self.w.pr({"user/config.toml": abroad}))               # the user lived abroad when installed
         code, out = self.bot_pr({"user/config.toml": self.config})           # back to IL: C4 looks for more
         self.assertEqual(code, 0, out)
 

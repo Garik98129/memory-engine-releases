@@ -16,8 +16,8 @@ The texts are not a real installation's. The real evening had three N1 lines; he
 two: the creation of main and the installation push.
 
 What the fixtures cannot see: GitHub itself (branch protection, the bot's token, job
-`merge`'s timing, the gate's `--manifest-url` step and its record-PR test on the merge
-result — both held in engine/setup/tests/test_release_scenarios.py and check.yml), the
+`merge`'s timing, the gate's fetch of the manifest from the public repository — held in
+engine/setup/tests/test_release_scenarios.py and engine/checks/tests/test_gate.py), the
 platform where the fields and routines are installed, the Notion copy and the daily mark
 (N2–N4) — this run notes N4 as «before
 installation» — and the nightly job's colour, which is the alarm step's (the
@@ -32,7 +32,7 @@ import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from engine.checks import gitio, run
+from engine.checks import gitio
 from engine.checks.tests.fakeapi import REPO
 from engine.checks.tests.helpers import VALID_CONFIG, Repo
 from engine.checks.tests.test_scenarios import ISSUES, World
@@ -112,25 +112,12 @@ class Evening:
         return "\n".join(lines).encode()
 
     def record_pr(self, record: bytes) -> tuple[int, str]:
-        """The bot's PR with the record, as the gate judges it: C1–C7 against the published
-        manifest, then the watch inside the gate, then the alarms; job `merge` lands it only
-        when all are green. The masters are inside N5's 36 h here, as on the evening."""
-        w = self.w
-        base = w.main
-        w.repo.checkout(base)
-        head = w.repo.commit({"user/fields/installed.toml": record})
-        w.repo.checkout(base)
-        code, out = quiet(run.main, ["--repo", str(w.repo.path), "--base", base, "--head", head, "--kind", "person",
-                                     "--body", str(w.repo.body_file("Record of the installation\n")),
-                                     "--manifest", str(self.manifest)],
-                          now=w.now)
-        if code != 0:
-            return code, out
-        _, red, watched = w.run(record_pr=True)
-        if red:
-            return red, out + watched
-        w.merge({"user/fields/installed.toml": record})
-        return 0, out + watched
+        """The bot's PR with the record, as the gate judges it — the steps of check.yml through
+        their real entry (`World.gate`): C1–C7 against the published manifest, then the watch
+        inside the gate — which tells a record PR by the merge result — then the alarms; job
+        `merge` lands it only when all are green. The masters are inside N5's 36 h here, as on
+        the evening."""
+        return self.w.gate({"user/fields/installed.toml": record}, record=True)
 
 
 class InstallationEvening(unittest.TestCase):
