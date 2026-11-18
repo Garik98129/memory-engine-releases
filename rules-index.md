@@ -1,0 +1,21 @@
+# Topic rules — release v0.1.13
+
+The rules of release v0.1.13: which files to read, and when. Read them in the repository `Garik98129/memory-engine-releases` at the tag `v0.1.13` — ref `v0.1.13`. Not at the branch this index came from: the branch moves on to the next release, the tag never moves.
+
+These rules are written for the engine of release `v0.1.12` or newer in the user's repository. That line is for that repository's checks: a chat cannot see that repository and does nothing about it.
+
+Before you answer or act on a topic, read every file of its line in full — all of them, once a conversation. The files name each other's rules; read the ones this index lists, not the ones a file mentions.
+
+A topic applies when the talk is about the user, the user's family or own pets. A general question — about a breed, somebody else's animal — needs no rules: answer it as you would anyone; what the user personally wants to read, watch, listen to, visit, try or buy is the user's — the topic «notes and ideas». Not clear whose it is → one question.
+
+| Topic | When | Files — all of them |
+|---|---|---|
+| health | any talk of medicines, procedures, doctors, symptoms, tests and results; a medical paper | `files/engine/rules/core.md` · `files/engine/rules/health.md` · `files/engine/rules/notion.md` |
+| shopping | finding, comparing, ordering, paying; advising a food or a cosmetic | `files/engine/rules/core.md` · `files/engine/rules/shopping.md` · `files/engine/rules/health.md` · `files/engine/rules/notion.md` |
+| mail | mail, letters, messages to others | `files/engine/rules/core.md` · `files/engine/rules/mail.md` · `files/engine/rules/notion.md` |
+| calendar | reading the user's calendar, creating events, invitations to the user | `files/engine/rules/core.md` · `files/engine/rules/calendar.md` |
+| documents | document numbers, forms, PDF, the user's signature | `files/engine/rules/core.md` · `files/engine/rules/documents.md` · `files/engine/rules/notion.md` |
+| notion | every write to Notion, «continue setup» (NOTION-12) | `files/engine/rules/core.md` · `files/engine/rules/notion.md` |
+| notes and ideas | what the user wants to read, watch, listen to, visit, try or buy, an idea the user is weighing, a link or a recommendation to keep (NOTION-13) | `files/engine/rules/core.md` · `files/engine/rules/notion.md` |
+| work and texts | a work file, app menus, a text for others | `files/engine/rules/core.md` |
+| installation | the first conversation after `setup`, and again when the user connects or changes Notion | `files/engine/rules/core.md` · `files/engine/rules/install.md` · `files/engine/rules/notion.md` |

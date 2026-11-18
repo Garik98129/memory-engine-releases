@@ -5,11 +5,19 @@
 # field_limit  the instruction field as C6 counts it (UTF-16 units), on the plan named;
 #              C6 never goes above the floor chat_field_limit_max in defaults.toml
 # field        where the field is, in the platform's own app
+# field_all    where its field for every chat is, when `field` is a project's: the user then chooses
+#              between the two at installation (docs/DESIGN_PHASE3.md §4); absent — one place
 # notion       whether its AI creates pages and bases in Notion itself: "yes", "unknown", "no"
 # schedule     whether it runs a task on its own at a time: "yes", "paid", "unconfirmed", "no"
 # plan         the plan the engine needs there
 # status       "supported", "beta" (installs, with what is unknown said), "not-supported"
 # unknown      for "beta" when notion is not "unknown": what is not known yet, said in the Issue
+#
+# The one text for everybody (engine/rules/fields/fixed.md) sends the chat to the rules by the
+# branch `stable` of the repository of releases. Reading a file there by a branch's name was seen
+# on ChatGPT alone, through its GitHub app (owner's probe, 16.11.2026); Grok and Claude were not
+# tried with it, so both are "beta" until a test installation shows it (the owner's decision,
+# 16.11.2026: the first installation from end to end goes one way, ChatGPT Plus).
 
 [grok]
 title = "Grok"
@@ -20,7 +28,8 @@ notion = "yes"                      # seen: the chat created a base and a row (1
 # web page (owner's test, 12.11.2026): it reads the rules by the raw link
 schedule = "unconfirmed"            # Automations «available to everyone» (x.ai), not yet seen on a free account
 plan = "any"
-status = "supported"
+status = "beta"
+unknown = "whether its chat finds and reads the rules by itself, as it must: not tried yet on Grok"
 
 [claude]
 title = "Claude"
@@ -29,16 +38,22 @@ field = "Claude app: a new project, its instructions; talk to the AI inside that
 notion = "yes"                      # the Notion connector creates and updates pages and bases
 schedule = "paid"                   # scheduled tasks need Pro; projects may need it too (one report)
 plan = "Pro"
-status = "supported"
+status = "beta"
+unknown = "whether its chat finds and reads the rules by itself, as it must: not tried yet on Claude"
 
 [chatgpt]
 title = "ChatGPT"
-field_limit = 5000                  # Plus and above; Free and Go: 1 500 (OpenAI help; the owner saw 1 500 on Free,
-                                    # and about 3 800 went in on Plus, 12.11.2026)
-field = "ChatGPT app: Personalization"            # where the owner put it, 12.11.2026
+field_limit = 5000                  # the field for every chat — Plus and above; Free and Go: 1 500 (OpenAI help;
+                                    # the owner saw 1 500 on Free, and about 3 800 went in on Plus, 12.11.2026).
+                                    # A project's instructions kept 4 000 whole and refused 8 000 (owner's
+                                    # check, 14.11.2026); C6 stays at the floor of 4 000 either way
+field = "ChatGPT app: a new project, its instructions"     # where the owner's probes of 14.11.2026 ran
+field_all = "ChatGPT app: Personalization"        # every chat: where the owner put a field, 12.11.2026
 notion = "yes"                      # seen 12.11.2026 in a test workspace: pages and the two bases (owner's check)
 # its chat did not open the rules' raw link, with its GitHub app on or off; with the app off it opened
-# GitHub's page of the same file (owner's tests, 12.11.2026): engine/checks/limits_check.py, BLOB_RULES
+# GitHub's page of the same file (owner's tests, 12.11.2026): engine/checks/limits_check.py, BLOB_RULES;
+# through its GitHub app it read a rules file at a tag and a file by a branch's name (owner's probes,
+# 14.11.2026 and 16.11.2026)
 schedule = "yes"
 plan = "Plus"
 status = "beta"

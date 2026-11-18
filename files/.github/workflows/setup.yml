@@ -1,14 +1,7 @@
-# The first installation of a person's repository made from the template
-# (docs/DESIGN_PHASE3.md §5, step 2). Installed as .github/workflows/setup.yml and locked by C1.
-#
-# The repository's owner presses «Run workflow» on main, with her choices. Main's code builds her
-# config and her part of the field (`engine.setup.setup_run`) and lands them like every change:
-# a commit on setup/installation, a PR, the gate started through workflow_dispatch (a PR opened
-# with GITHUB_TOKEN starts no pull_request_target run) and job `merge`. The gate knows the PR by
-# its branch and trusts neither that nor its author: C2 lets a setup PR only add her two files
-# to a repository never installed, held byte for byte to what `setup` builds from her choices.
-# The Issue «Your assistant's instructions» carries the field to paste and the first message.
-# The choices reach the code as environment variables, never inside the script's text.
+# The first installation of this repository: its owner presses «Run workflow» on main, with
+# her answers. This file is frozen: it holds what GitHub reads from a workflow file — the form,
+# the rights and the one step. What the step does is main's code under engine/. The answers
+# reach the code as environment variables, never inside the script's text.
 name: setup
 
 on:
@@ -59,12 +52,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
-      contents: write         # the branch setup/installation
-      pull-requests: write    # the setup PR
-      issues: write           # «Your assistant's instructions»
-      actions: write          # start the gate on the setup PR
+      contents: write         # the setup's branch
+      pull-requests: write    # its PR
+      issues: write           # the Issue with her instructions
+      actions: write          # start the gate on that PR
     steps:
-      - name: Code from main
+      - name: Code from main — the commit whose copy of this workflow runs
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
         with:
           ref: ${{ github.sha }}

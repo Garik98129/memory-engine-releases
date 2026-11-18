@@ -1,15 +1,17 @@
-"""Run the checks of main — N1, N2, N4, N5 and the bot's to-do N7 — and write the report the alarms read (docs/DESIGN.md §6).
+"""Run the checks of main — N1, N2, N4, N5 and N7 — and write the report the alarms read (docs/DESIGN.md §6).
 
     python -m engine.checks.watch --repo . --main MAIN_SHA --manifest release-manifest.json \\
         --report report.json
 
 Reads GitHub through GITHUB_REPOSITORY, GITHUB_REPOSITORY_OWNER and GH_TOKEN. Prints
-one line per finding; writes {"N1": [...], "N2": [...], "N4": [...], "N5": [...], "todo": [...], "field": {...}, "error": [...],
-"skipped": [...]} for `engine.checks.alarm`. «field» is the instruction field of an installation
-without a bot, for the Issue that hands a changed field to her (`field_issue.py`): not an alarm
+one line per finding; writes {"N1": [...], "N2": [...], "N4": [...], "N5": [...], "todo": [...], "field": {...},
+"rules": {...}, "error": [...], "skipped": [...]} for `engine.checks.alarm`. «field» is the instruction field of an installation
+without a bot, for the Issue that hands a changed field to the user (`field_issue.py`): not an alarm
 either, and left out by a run that does not judge it. «todo» is N7's work list for the bot, not an alarm: it
 never turns the run red, and a run that does not judge N5, or whose record does not parse,
-leaves it out, so its Issue is left alone. A part that could not run is an error line, and
+leaves it out, so its Issue is left alone. «rules» is N7 of an installation without a bot
+(`min_engine`): whether the engine is older than the rules its AI reads on the branch `stable` —
+not an alarm either, and left out when it was not judged. A part that could not run is an error line, and
 the other parts still report; a skipped check is one this run did not judge, and the alarms leave
 its Issue alone. A run whose main is no longer main — a re-run of an old run, or main
 moved since the checkout — judges nothing: the run for the new main does. Exit code 1 if
@@ -26,7 +28,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from . import (backup_check, behind, config_check, drift, field_issue, integrity, limits_check, lock_check,
-               paths_check, routine_check)
+               min_engine, paths_check, routine_check)
 from .github import GitHub
 from .report import render
 
@@ -81,11 +83,11 @@ def main(argv: list[str] | None = None, api=None, now: datetime | None = None) -
             # A repository made from the template, before `setup` (DESIGN_PHASE3 §5): no copy,
             # no bot, no field to watch yet. Said, never a silent green; skipped, so the alarms
             # leave those Issues alone. N1 still holds the engine and main's record.
-            reason = "not installed yet: the workflow «setup» writes her part"
+            reason = "not installed yet: the workflow «setup» writes the user's part"
             ran = [c for c in ran if c not in ("N2", "N4", "N5")]
             skipped.update({"N2": reason, "N4": reason, "N5": reason})
             notes.append("N2 NOTE N2, N4, N5 and N7 do not run: not installed yet — the workflow «setup» "
-                          "writes her part")
+                          "writes the user's part")
         elif not config_check.copy_on(config):
             # The copy is off (DESIGN_PHASE3 §7): no branch to watch. Said, never a silent green;
             # skipped, so the alarms leave N2's Issue alone.
@@ -106,9 +108,24 @@ def main(argv: list[str] | None = None, api=None, now: datetime | None = None) -
             reason = "this installation has no bot (platform.bot = false)"
             ran = [c for c in ran if c not in ("N4", "N5")]
             skipped.update({"N4": reason, "N5": reason})
-            notes.append("N4 NOTE N4, N5 and N7 do not run: this installation has no bot (platform.bot = false)")
-            # Nobody installs her field for her: a field that is not the one she was given goes
-            # to her in an Issue (DESIGN_PHASE3 §6). Not an alarm; the alarms step writes it.
+            if limits_check.fixed(config):
+                # The one text for everybody: nothing of the user's is in it, and a changed text or a
+                # changed part of the user's reaches the user by the field's Issue, not by N5. N7 is
+                # the engine against the rules the text sends its AI to (DESIGN.md §5).
+                notes.append("N4 NOTE N4 and N5 do not run: this installation has no bot (platform.bot = false); "
+                             "its AI holds the one text for everybody, and a change of it or of the user's part "
+                             "reaches the user by the Issue of the instructions")
+                try:
+                    state, rules_notes = min_engine.check(args.repo, args.main, config, now)
+                    notes += rules_notes
+                    if state is not None:
+                        report["rules"] = state
+                except Exception as exc:    # noqa: BLE001
+                    report["error"].append(f"N7 could not run: {type(exc).__name__}: {exc}")
+            else:
+                notes.append("N4 NOTE N4, N5 and N7 do not run: this installation has no bot (platform.bot = false)")
+            # Nobody installs the user's field for the user: a field that is not the one the user was given goes
+            # to the user in an Issue (DESIGN_PHASE3 §6). Not an alarm; the alarms step writes it.
             try:
                 handed = field_issue.check(args.repo, args.main, config)
                 if handed is not None:      # None: a part of the field cannot be read — N1 says so
@@ -147,11 +164,13 @@ def main(argv: list[str] | None = None, api=None, now: datetime | None = None) -
     print(render(n1 + n2 + n4 + n5, ran, skipped, notes=notes + [f"ERROR {e}" for e in report["error"]], word="alarm"))
     for line in report.get("todo", []):
         print(f"TODO {line}")
+    if report.get("rules", {}).get("late"):
+        print(f"RULES {min_engine.line(report['rules'])}")
     if "field" in report:
-        print(f"FIELD {drift.digest(report['field']['text'])[:12]}: handed to her in the Issue "
-              f"«{field_issue.TITLE}» when it is not the one she was given")
-    # The report goes last, in one step: watch.yml takes exit 1 as «found something» only with
-    # a non-empty report, and a crash exits 1 too — as engine/backup/run.py.
+        print(f"FIELD {drift.digest(report['field']['text'])[:12]}: handed to the user in the Issue "
+              f"«{field_issue.TITLE}» when it is not the one the user was given")
+    # The report goes last, in one step: the watch's step (`night.passed`) takes exit 1 as «found
+    # something» only with a non-empty report, and a crash exits 1 too — as engine/backup/run.py.
     part = args.report.with_name(args.report.name + ".part")
     try:
         part.write_text(json.dumps(report, ensure_ascii=False), encoding="utf-8")

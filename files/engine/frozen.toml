@@ -1,0 +1,19 @@
+# The workflow files a release ships (engine/workflows/) are frozen: they hold only what GitHub
+# reads from a workflow file, and what their steps do is code under engine/. A release that
+# changes one of them is not carried by the weekly update — GITHUB_TOKEN cannot write workflow
+# files — and waits, in every installed repository, for somebody to apply it by hand.
+#
+# So a change there is a decision, never a side effect. A test holds every file to the sha256
+# below; `release cut` refuses a release whose workflow files differ from the release before
+# unless it is told so (--changes-workflows), and then asks for a higher `version` here.
+
+[workflows]
+version = 1
+
+[workflows.sha256]
+"backup.yml" = "7a39237a4243efc1bd712d788f4e80a41124be67b8ddb42dcb815f4fc474eb8b"
+"check.yml" = "c4634dfa0146f3b50f3206feba3c4e9c09288637a8086595c94705d4d9195e08"
+"settings.yml" = "fb6b61c99b336eef3ce9607ba564dd3d8e7d24c5704aed35294b782b8b92c114"
+"setup.yml" = "b0f1bfee82bd2328f1d277edc310a954020e01fc215a8dbece42fa91e9517fde"
+"update.yml" = "287fa867c74b36fec903a59efa162b27723ca0617dd62414ba9694c6cb99f290"
+"watch.yml" = "c5edf51a3a3b3a803983baae50e1d1846bca023654c235936497974ae64bf484"

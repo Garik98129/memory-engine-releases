@@ -50,7 +50,7 @@ SCHEMA: dict[str, dict[str, tuple[type, bool]]] = {
         "country": (str, True),
         "timezone": (str, True),
         "github_login": (str, False),    # the account the bot acts under — N4 reads its marks
-        "name": (str, False),            # as her AI calls her, and the grammar for her: written by `setup`,
+        "name": (str, False),            # as the user's AI calls the user, and the grammar for the user: written by `setup`,
         "gender": (str, False),          # so that the form «settings» can keep them (DESIGN_PHASE3 §6)
     },
     "platform": {
@@ -58,14 +58,14 @@ SCHEMA: dict[str, dict[str, tuple[type, bool]]] = {
         "chat_field_limit": (int, True),
         "bot_field_limit": (int, False),   # required while the bot writes (below)
         "writer": (str, False),            # «bot» (absent: phase 1) or «chat» — docs/DESIGN_PHASE3.md §6a
-        "bot": (bool, False),              # absent: true — a bot runs her routines (N4, N5, N7)
+        "bot": (bool, False),              # absent: true — a bot runs the user's routines (N4, N5, N7)
         "routine_limit": (int, False),
         "read_budget_bytes": (int, True),
     },
     "engine": {"channel": (str, True),
-               "declined": (Strings, False)},    # task versions she said no to: N7 stops listing them (her yes, C7)
+               "declined": (Strings, False)},    # task versions the user said no to: N7 stops listing them (the user's yes, C7)
     "notion": {"backup_exclude": (Strings, False), "shrink_alarm": (float, False),
-               "removed_bases": (Strings, False),      # bases she removed: N3 stops holding them (her yes, C7)
+               "removed_bases": (Strings, False),      # bases the user removed: N3 stops holding them (the user's yes, C7)
                "backup": (bool, False)},               # absent: true — the nightly copy runs (DESIGN_PHASE3 §7)
     "alarm": {"trusted_contact": (str, False), "marks_issue": (int, False)},
     "github": {"protection": (str, False)},
@@ -76,7 +76,7 @@ SCHEMA: dict[str, dict[str, tuple[type, bool]]] = {
 # Keys whose change can silence the person's protection: alarms, where the bot's daily
 # marks go and whose marks count (N4), the update channel, the optional second reader,
 # whether N1 expects branch protection, and who writes and whether there is a bot — the
-# last two choose her instruction fields and switch N4, N5 and N7 off (DESIGN_PHASE3 §2). They change only in
+# last two choose the user's instruction fields and switch N4, N5 and N7 off (DESIGN_PHASE3 §2). They change only in
 # a push of the trusted contact's own that itself brings the change: the gate passes the
 # push's sender as `actor` and the head before the push as `before` (both empty when the
 # run cannot know them), and the keys at `before` must still equal main's — a change the
@@ -225,10 +225,10 @@ def _strings(value: object) -> set[str]:
 
 
 def _declined_findings(repo: Path, head: str, config: dict, on_main: dict | None) -> list[Finding]:
-    """A «no» a PR adds to `engine.declined` is to a version on her list now: the current version
+    """A «no» a PR adds to `engine.declined` is to a version on the user's list now: the current version
     of a task in the engine's routines.md that does not say «never declined» — never a future
-    one, a routine that is no task, or task 3, by which she hears of every update (N7). One she
-    has stays until she changes her mind; it stops counting at the task's next version."""
+    one, a routine that is no task, or task 3, by which the user hears of every update (N7). One the user
+    has stays until the user changes the user's mind; it stops counting at the task's next version."""
     added = sorted(_strings(_value(config, "engine", "declined")) - _strings(_value(on_main, "engine", "declined")))
     if not added:
         return []
@@ -246,35 +246,35 @@ def _declined_findings(repo: Path, head: str, config: dict, on_main: dict | None
         task = listed.get(m.group(1))
         if task is None or task.version != int(m.group(2)):
             findings.append(Finding("C3", f"engine.declined entry {entry!r} is not a task's current version in "
-                                          f"{RULES}: only a version on her list now can be declined"))
+                                          f"{RULES}: only a version on the user's list now can be declined"))
         elif task.fixed:
             findings.append(Finding("C3", f"engine.declined entry {entry!r}: task {task.number} says «never declined»"))
     return findings
 
 
-# Her answers to the form that `setup` writes only when she gives one: leaving it out again is
-# her answer too, not a key dropped.
+# The user's answers to the form that `setup` writes only when the user gives one: leaving it out again is
+# the user's answer too, not a key dropped.
 FORM_OPTIONAL = frozenset({("person", "work_languages")})
 
 
 def settings_findings(on_main: dict, config: dict) -> list[Finding]:
-    """What a change of her settings by the form may not do to main's config (DESIGN_PHASE3 §6).
+    """What a change of the user's settings by the form may not do to main's config (DESIGN_PHASE3 §6).
     The new config is what `setup` builds — the gate holds that byte for byte beside this — so
     here only main is asked, and by meaning, not by its bytes: the config on main was written
-    by the release she installed with, and a later release may word its own differently.
-    - An installation with a bot is no place for it: there the bot keeps the record of her yes.
+    by the release the user installed with, and a later release may word its own differently.
+    - An installation with a bot is no place for it: there the bot keeps the record of the user's yes.
     - No protected key changes: `setup` writes each with one fixed value, and main must hold
       that value already — so a trusted contact, another channel, a login set since are never
       overwritten.
     - Nothing main holds is dropped: a key `setup` does not write — a trusted contact, declined
       tasks, patterns, pages left out of the copy — would vanish with the rebuilt file.
-    - The copy she turned on is not turned off.
-    What it lets change besides her seven answers: values `setup` itself writes and no rule
-    guards, and her country — with it the document numbers C4 looks for, which a person's PR
-    may not loosen: the form is her own answer about where she lives."""
+    - The copy the user turned on is not turned off.
+    What it lets change besides the user's seven answers: values `setup` itself writes and no rule
+    guards, and the user's country — with it the document numbers C4 looks for, which a person's PR
+    may not loosen: the form is the user's own answer about where the user lives."""
     if protected_value(on_main, "platform", "writer") != "chat" or protected_value(on_main, "platform", "bot") is not False:
-        return [Finding("C3", "a setup PR changes her settings only in an installation without a bot: with a bot, "
-                              "the bot's record of her yes is the way (C7)")]
+        return [Finding("C3", "a setup PR changes the user's settings only in an installation without a bot: with a bot, "
+                              "the bot's record of the user's yes is the way (C7)")]
     found = []
     for section, key in PROTECTED:
         if protected_value(on_main, section, key) != protected_value(config, section, key):
@@ -288,7 +288,7 @@ def settings_findings(on_main: dict, config: dict) -> list[Finding]:
             if not isinstance(table, dict) or not isinstance(mine, dict) or key not in mine:
                 name = f"{section}.{key}" if isinstance(table, dict) else section
                 if not any(f.message.startswith(f"{name} is not setup's") for f in found):
-                    found.append(Finding("C3", f"main holds {name}, which setup does not write: building her "
+                    found.append(Finding("C3", f"main holds {name}, which setup does not write: building the user's "
                                                f"config again would drop it"))
     if copy_on(on_main) and not copy_on(config):
         found.append(Finding("C3", "notion.backup: setup would turn the nightly copy off, and N2, N3 and N6 with it"))
@@ -301,7 +301,7 @@ def check(repo: Path, base: str, head: str, kind: str, actor: str = "", before: 
     # where main has none to compare with — so they are held by content instead: the gate
     # holds the whole config to what `setup` builds (`engine.setup.setup.held`), which writes
     # no trusted contact, no login, no second reader, the stable channel and the copy off.
-    # On an installed repository a setup PR is a change of her settings by the form, and main
+    # On an installed repository a setup PR is a change of the user's settings by the form, and main
     # has a config to compare with: `settings_findings`, below.
     floors_rev = base if kind in (PERSON, SETUP) else head
     defaults, findings = _parse(gitio.file_at(repo, floors_rev, DEFAULTS), DEFAULTS, "C3")
@@ -384,7 +384,7 @@ def check(repo: Path, base: str, head: str, kind: str, actor: str = "", before: 
     if kind == SETUP and gitio.file_at(repo, base, CONFIG) is not None:
         on_main, broken = _parse(gitio.file_at(repo, base, CONFIG), CONFIG, "C3")
         if on_main is None:
-            findings.append(Finding("C3", f"a setup PR changes her settings only where main's config reads: "
+            findings.append(Finding("C3", f"a setup PR changes the user's settings only where main's config reads: "
                                           f"{broken[0].message}"))
         else:
             findings += settings_findings(on_main, config)

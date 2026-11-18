@@ -1,4 +1,4 @@
-"""The public template a person makes her repository from (DESIGN_PHASE3 §5, step 1), on
+"""The public template a person makes the user's repository from (DESIGN_PHASE3 §5, step 1), on
 fixtures (F1): `release template` writes a published release's files, its lock and nothing else
 under user/, the README of the steps on a phone and the licence; a repository born from it is
 «not installed yet» and N1 holds its engine to the release. Refused: files that are not the
@@ -21,17 +21,19 @@ from pathlib import Path
 from engine.checks import field_issue, integrity, paths_check
 from engine.checks.tests.helpers import Repo, _git
 from engine.setup import release, setup, setup_run
-from engine.setup.tests.test_release import TEMPLATE
+from engine.setup.tests.test_release import TEMPLATE, frozen, topics_of
 
 ROOT = Path(__file__).resolve().parents[3]
 README = (ROOT / "docs" / "template" / "README.md").read_text(encoding="utf-8")
-FLAT = " ".join(README.split())           # as she reads it: the lines' breaks are the file's, not the text's
+FLAT = " ".join(README.split())           # as the user reads it: the lines' breaks are the file's, not the text's
 RELEASES = "Garik98129/memory-engine-releases"
 PUBLISHED = datetime(2026, 11, 13, 9, 0, tzinfo=timezone.utc)
 FACTORY = {**TEMPLATE, "LICENSE": b"MIT License\n", "docs/template/README.md": b"# Your AI memory\n"}
 
 
-class Template(unittest.TestCase):
+class Fixture(unittest.TestCase):
+    """A factory, a repository of releases and a checkout of the template, for the classes below."""
+
     def setUp(self):
         self.factory = Repo(FACTORY)
         self.releases = Repo({"README.md": b"Release manifests.\n"})
@@ -43,14 +45,20 @@ class Template(unittest.TestCase):
         self.addCleanup(self.releases.close)
         self.addCleanup(self._out.cleanup)
 
-    def publish(self, tag: str, changes: dict[str, bytes | None] | None = None) -> str:
+    def publish(self, tag: str, changes: dict[str, bytes | None] | None = None, stable: bool = True) -> str:
+        told = any(path.startswith(release.WORKFLOWS) for path in changes or {})
         if changes:
             self.factory.commit(changes)
+        if told:                # a release that changes the frozen workflow files: on record, and said to the cut
+            self.records = getattr(self, "records", 1) + 1
+            self.factory.commit({release.FROZEN: frozen(release.release_files(self.factory.path, "main"), self.records)})
         source = _git(self.factory.path, "rev-parse", "main")
         release.cut(release.release_files(self.factory.path, source), tag, source, PUBLISHED,
-                    self.releases.path, RELEASES)
+                    self.releases.path, RELEASES, told)
         self.releases.commit({})
         _git(self.releases.path, "tag", tag)
+        if stable:              # the schedule moved `stable` onto it: the template is written only after that
+            _git(self.releases.path, "branch", "-f", "stable", tag)
         return source
 
     def run_cli(self, tag: str, source: str) -> tuple[int, str]:
@@ -64,6 +72,8 @@ class Template(unittest.TestCase):
         return {str(p.relative_to(self.into)): p.read_bytes() for p in sorted(self.into.rglob("*"))
                 if p.is_file() and ".git" not in p.relative_to(self.into).parts}
 
+
+class Template(Fixture):
     def test_it_is_the_published_release_its_lock_the_readme_and_the_licence(self):
         source = self.publish("v0.1.0")
         code, out = self.run_cli("v0.1.0", source)
@@ -75,7 +85,7 @@ class Template(unittest.TestCase):
         self.assertEqual(tree["README.md"], FACTORY["docs/template/README.md"])
         self.assertEqual(tree["LICENSE"], FACTORY["LICENSE"])
         self.assertEqual([p for p in tree if p.startswith("user/")], ["user/engine.lock"])
-        self.assertNotIn("docs/DESIGN.md", tree, "the design record is the factory's, not hers")
+        self.assertNotIn("docs/DESIGN.md", tree, "the design record is the factory's, not the user's")
 
     def test_a_repository_born_from_it_is_not_installed_and_its_engine_is_the_release(self):
         source = self.publish("v0.1.0")
@@ -90,10 +100,11 @@ class Template(unittest.TestCase):
         self.assertIn(integrity.NOT_INSTALLED, notes)
 
     def test_the_next_release_replaces_it_whole(self):
-        self.publish("v0.1.0")
+        first = self.publish("v0.1.0")
         source = self.publish("v0.1.1", {"engine/checks/run.py": None, "engine/rules/shopping.md": b"Shopping.\n",
+                                         **topics_of("core.md", "shopping.md"),       # a new rules file comes with its topic
                                          "engine/workflows/watch.yml": None})
-        self.assertEqual(self.run_cli("v0.1.0", _git(self.factory.path, "rev-parse", "main~1"))[0], 0)
+        self.assertEqual(self.run_cli("v0.1.0", first)[0], 0)
         self.assertIn("engine/checks/run.py", self.tree())
         self.assertIn(".github/workflows/watch.yml", self.tree())
         (self.into / ".github" / "FUNDING.yml").write_bytes(b"added by hand\n")
@@ -180,6 +191,71 @@ class Template(unittest.TestCase):
             self.assertIn("is not a checkout of the template's repository", out.getvalue())
 
 
+class StableFirst(Fixture):
+    """The template is written only once `stable` holds rules its engine is old enough for: a repository
+    made from it holds the one text, which sends the user's AI to the rules on `stable`."""
+
+    def refused(self, tag: str, source: str, said: str) -> None:
+        code, out = self.run_cli(tag, source)
+        self.assertEqual(code, 2, out)
+        self.assertIn(said, out)
+        self.assertEqual(self.tree(), {}, "refused before anything is written")
+
+    def test_no_branch_stable_is_refused_before_anything_is_written(self):
+        source = self.publish("v0.1.0", stable=False)
+        self.refused("v0.1.0", source, "has no branch stable: a repository made from the template would read no rules")
+
+    def test_rules_for_a_newer_engine_than_the_template_s_are_refused(self):
+        source = self.publish("v0.1.0")
+        self.publish("v0.1.1", {"engine/rules/topics.toml": TEMPLATE["engine/rules/topics.toml"].replace(
+            b'min_engine = "v0.0.0"', b'min_engine = "v0.1.1"')})
+        self.refused("v0.1.0", source, "the rules on stable are written for the engine v0.1.1 or newer, and the "
+                                       "template would install v0.1.0")
+
+    def test_a_stable_behind_the_template_s_release_is_enough_when_its_minimum_is(self):
+        self.publish("v0.1.0")
+        source = self.publish("v0.1.1", {"engine/checks/run.py": b"# the gate, again\n"}, stable=False)
+        code, out = self.run_cli("v0.1.1", source)
+        self.assertEqual(code, 0, out)
+        self.assertEqual(self.tree()["user/engine.lock"], b'release = "v0.1.1"\n')
+
+    def test_the_branch_as_the_checkout_fetched_it_comes_before_a_local_one(self):
+        source = self.publish("v0.1.0", stable=False)
+        _git(self.releases.path, "update-ref", "refs/remotes/origin/stable", "v0.1.0")
+        self.assertEqual(self.run_cli("v0.1.0", source)[0], 0)
+        self.assertEqual(release.stable_floor(self.releases.path, "v0.1.0"), "v0.0.0")
+        _git(self.releases.path, "update-ref", "-d", "refs/remotes/origin/stable")
+        _git(self.releases.path, "branch", "-f", "stable", "v0.1.0")
+        self.assertEqual(release.stable_floor(self.releases.path, "v0.1.0"), "v0.0.0")
+
+    def test_with_both_the_fetched_branch_decides(self):
+        self.publish("v0.1.0")                       # a local `stable` on v0.1.0, minimum v0.0.0
+        source = self.publish("v0.1.1", {"engine/rules/topics.toml": TEMPLATE["engine/rules/topics.toml"].replace(
+            b'min_engine = "v0.0.0"', b'min_engine = "v0.1.1"')}, stable=False)
+        _git(self.releases.path, "update-ref", "refs/remotes/origin/stable", "v0.1.1")
+        self.assertEqual(release.stable_floor(self.releases.path, "v0.1.1"), "v0.1.1")
+        with self.assertRaises(ValueError):
+            release.stable_floor(self.releases.path, "v0.1.0")    # the local branch alone would let it through
+
+    def test_rules_for_exactly_the_template_s_engine_are_enough(self):
+        self.publish("v0.1.0")
+        source = self.publish("v0.1.1", {"engine/rules/topics.toml": TEMPLATE["engine/rules/topics.toml"].replace(
+            b'min_engine = "v0.0.0"', b'min_engine = "v0.1.1"')})
+        self.assertEqual(self.run_cli("v0.1.1", source)[0], 0)
+
+    def test_an_index_that_is_no_text_is_refused(self):
+        source = self.publish("v0.1.0", stable=False)
+        self.releases.commit({"rules-index.md": b"\xff\xfe"})
+        _git(self.releases.path, "branch", "-f", "stable", "HEAD")
+        self.refused("v0.1.0", source, "names no minimal engine this code reads")
+
+    def test_a_stable_with_no_index_is_refused(self):
+        source = self.publish("v0.1.0", stable=False)
+        _git(self.releases.path, "branch", "-f", "stable", _git(self.releases.path, "rev-list", "--max-parents=0",
+                                                                "HEAD").split()[0])
+        self.refused("v0.1.0", source, "has no rules-index.md: the template waits until a release with its index")
+
+
 class Readme(unittest.TestCase):
     """The steps a person follows say what the code does."""
 
@@ -197,21 +273,53 @@ class Readme(unittest.TestCase):
         self.assertIn("for now such an update needs someone who can apply it by hand", FLAT)
 
     def test_it_promises_of_an_update_of_her_ai_only_what_the_watch_delivers(self):
-        """A release changes her copy, not the field she pasted: the watch hands her the new text in
-        an Issue (DESIGN_PHASE3 §6, `engine.checks.field_issue`) and she pastes it — the README says
-        that much, and not that her AI is brought up to date for her (Kimi, on #54)."""
+        """What the user pasted is one text for everybody, which no release changes: the user's chat reads the
+        rules where the releases go, a week behind them (DESIGN_PHASE3 §4). The README says that
+        much — «about a week after each release», not «at once» — and that only a change of the
+        text's own core reaches the user as an Issue (`engine.checks.field_issue`). What it still does
+        not say: that anything checks what the user's AI in fact read (Kimi, on #54)."""
         self.assertNotIn("keeps your assistant's rules up to date", FLAT)
-        self.assertIn("Your AI keeps the instructions you pasted until you paste new ones", FLAT)
+        self.assertIn("The instructions you pasted are one text, the same for everybody. New rules do not change them, "
+                      "and neither do your settings: the rules your AI reads come up to date by themselves, usually "
+                      "about a week after a release.", FLAT)
+        self.assertIn("Only if the core of that text itself ever changes — a rare thing — your copy tells you", FLAT)
         self.assertIn(f"an Issue **«{field_issue.TITLE}»** with the new text", FLAT)
-        self.assertIn("until you do, your AI goes on with the rules of the release it has", FLAT)
+        self.assertIn("you paste its instructions once, not after every release", FLAT)
+        self.assertNotIn("until you paste new ones", FLAT)
         self.assertNotIn("nothing tells you yet", FLAT)
+
+    def test_it_says_what_her_ai_needs_of_github_and_that_her_copy_is_not_it(self):
+        """The rules are public: the user's AI reads them through GitHub's app in it, and the user's own repository —
+        the user's settings, later the user's nightly copy — is never given to it (DESIGN_PHASE3 §5)."""
+        self.assertIn("connect Notion and GitHub, send the first message", FLAT)
+        self.assertIn("GitHub is how your AI reads its rules, and those are public: do not give it this copy.", FLAT)
+        self.assertIn("do not choose this one; if it wants at least one, give it an empty repository of yours", FLAT,
+                      "told what to do, not promised that it works: reading under another login is not tried (§8)")
+
+    def test_it_says_where_her_assistant_lives_is_her_choice_and_what_is_not_tried(self):
+        """Owner, 16.11.2026: the choice of all the user's chats or one project is given at once; and only
+        ChatGPT was seen reading the rules this way."""
+        self.assertIn("Where your assistant lives is your choice at step 4. On ChatGPT: only in a project", FLAT)
+        self.assertIn("or in all your chats: it then looks at your Notion before its first answer in every chat", FLAT)
+        self.assertIn("On Grok and Claude this way of reading the rules has not been tried yet; the Issue says so.", FLAT)
+        # Owner, 17.11.2026 (the first post in X): ChatGPT Plus is the first path, Claude and Grok in beta.
+        # ChatGPT keeps its «beta» too (Tolik on PR #63): the first path is still a test.
+        self.assertIn("ChatGPT (the Plus plan) — the first path, in beta; Claude (the Pro plan) or Grok (a paid plan) — in beta too.", FLAT)
+        self.assertIn("does not fit the free ChatGPT plan: its Custom Instructions box holds 1 500 characters", FLAT)
+        self.assertIn("and check its facts when it helps you with those", FLAT,
+                      "the fact check is read with a topic's rules now, not held in every answer (DESIGN_PHASE3 §4)")
+        self.assertEqual([name for name, row in setup.platforms().items() if row.get("field_all")], ["chatgpt"])
+        for name in ("grok", "claude"):
+            self.assertEqual(setup.platforms()[name]["status"], "beta", name)
 
     def test_it_says_how_she_hears_of_new_instructions_and_that_the_choice_is_hers(self):
         """Said at installation, not asked in the form (DESIGN_PHASE3 §5): GitHub's e-mail or its app."""
         self.assertIn("How GitHub tells you is yours to choose: by e-mail — in GitHub's notification settings — or on "
                       "your phone — in the GitHub app: Profile, the gear, Notifications, «Direct mentions».", FLAT)
         self.assertIn("With neither, the page still waits in your copy.", FLAT)
-        self.assertIn("How GitHub tells you is yours to choose", setup.LATER, "setup's Issue says the same")
+        self.assertIn("by e-mail — in GitHub's notification settings — or on your phone — in the GitHub app: Profile, "
+                      "the gear, Notifications, «Direct mentions». With neither, the page still waits in your copy.",
+                      setup.LATER, "setup's Issue names the same two ways")
 
     def test_every_language_of_it_names_what_the_screen_shows(self):
         """English, Russian and Hebrew (owner, 13.11.2026). GitHub's pages and the form are English, so
@@ -239,7 +347,7 @@ class Readme(unittest.TestCase):
             for title in titles:
                 self.assertIn(title, flat, name)
             self.assertEqual(flat.count("**Run workflow**"), 5,
-                             f"{name}: the step, the button, the way to start again, and twice for her settings")
+                             f"{name}: the step, the button, the way to start again, and twice for the user's settings")
             self.assertIn("**settings**", flat, name)
             self.assertIn("«keep as it is»", flat, name)
         self.assertIn('<div dir="rtl">', sections["Hebrew"], "Hebrew reads from the right")
@@ -254,8 +362,10 @@ class Readme(unittest.TestCase):
                       "all of it in one run, and press **Run workflow**.", FLAT)
         self.assertEqual(setup_run.KEEP, "keep as it is")
         self.assertIn(f"Usually within a few minutes — at the latest after the night's check — a new Issue "
-                      f"**«{setup_run.ISSUE_TITLE}»** brings the text to paste; answers that are your settings already "
-                      "bring no new Issue, only a note on the one you have. You edit no file.", FLAT,
+                      f"**«{setup_run.ISSUE_TITLE}»** brings one message to send to your AI — you paste nothing again, "
+                      "unless it is your AI itself you changed: then the Issue has the steps for the new one. Answers "
+                      "that are your settings already bring no new Issue, only a note on the one you have. You edit no "
+                      "file.", FLAT,
                       "no more is promised than the run does: «waiting» and «nothing to change» are green runs too")
         self.assertIn("The run's own page under **Actions** says what it did; if no Issue has come by the next day, "
                       "look there, then run it again.", FLAT, "the job summary: setup_run.tell")

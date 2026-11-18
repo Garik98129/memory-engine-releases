@@ -4,8 +4,9 @@
         --manifest release-manifest.json --body pr-body.md
 
 The checks read the merge result — the tree main would hold after the PR merges —
-and take thresholds and floors from main. `--manifest-url` prints where the gate
-fetches the release manifest from, and exits.
+and take thresholds and floors from main. `--manifest-url` prints where the release
+manifest of that PR is published, and exits — the gate builds the same address itself
+(`manifest_url`, through `engine.checks.gate`), so this is for a hand that wants to look.
 
 Exit code 1 if anything blocks, 2 if a check could not run (P5: loud, never «skipped»).
 """
@@ -79,7 +80,7 @@ def main(argv: list[str] | None = None, now: datetime | None = None) -> int:
         findings, notes = [], []
         findings += lock_check.check(repo, base, result, kind, manifest, now)
         findings += paths_check.check(repo, base, result, kind)
-        if kind == paths_check.SETUP:                             # C2: her part, as setup builds it and nothing else
+        if kind == paths_check.SETUP:                             # C2: the user's part, as setup builds it and nothing else
             findings += installer.held(repo, result)
         findings += drift.record_check(repo, base, result)        # C2: a record's routine entries, against their masters
         findings += config_check.check(repo, base, result, kind, args.actor, args.before)

@@ -1,10 +1,10 @@
 """C7 approval-record: the PR body records what the person agreed to (docs/DESIGN.md §6).
 
 The bot writes the body in this form; the headings are the machine's, the text
-under «Change» is what the person was shown, in her language:
+under «Change» is what the person was shown, in the user's language:
 
     ## Change
-    <the «was → is» text exactly as shown to the person, in her language>
+    <the «was → is» text exactly as shown to the person, in the user's language>
 
     ## Files
     - user/fields/chat.md
@@ -15,7 +15,7 @@ under «Change» is what the person was shown, in her language:
 
 Every changed file is named, and nothing else. A master of 40 or
 more lines with more than 40 % of its lines changed carries «(full rewrite)»; the
-bot tells the person so in her words. The approval time has a UTC offset, is
+bot tells the person so in the user's words. The approval time has a UTC offset, is
 not in the future and not more than a day older than the PR's head commit. The
 check reads presence and form, not truth: it is the bot's self-report, never a
 review.

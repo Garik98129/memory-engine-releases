@@ -11,7 +11,7 @@ from pathlib import Path
 from engine.checks import lock_check, numbers_check, paths_check
 from engine.checks.paths_check import PERSON
 from engine.checks.tests.helpers import DEFAULTS, VALID_CONFIG, Repo, _git
-from engine.setup import release
+from engine.setup import release, topics
 
 PUBLISHED = datetime(2026, 10, 24, 20, 0, tzinfo=timezone.utc)
 ROOT = Path(__file__).resolve().parents[3]
@@ -24,10 +24,41 @@ TEMPLATE = {
     "engine/rules/core.md": b"Core rules.\n",
     "engine/rules/fields/chat.md": b"Chat safety rules.\n",
     "engine/rules/fields/bot.md": b"Bot safety rules.\n",
+    # the one text for everybody: the cut holds its address, and refuses a release without it
+    "engine/rules/fields/fixed.md": (
+        b"Rules: the repository `Garik98129/memory-engine-releases`; without an app, at "
+        b"https://raw.githubusercontent.com/Garik98129/memory-engine-releases/ + branch or tag + / + path. "
+        b"First read `rules-index.md` at the branch `stable`.\n"),
     "engine/checks/run.py": b"# the gate\n",
     "engine/workflows/check.yml": b"name: check\n",
     "engine/workflows/watch.yml": b"name: watch\n",
 }
+
+
+
+def frozen(tree: dict, version: int = 1) -> bytes:
+    """The record of a tree's shipped workflow files, as engine/frozen.toml keeps it."""
+    rows = "".join(f'"{path[len(release.WORKFLOWS):]}" = "{hashlib.sha256(content).hexdigest()}"\n'
+                   for path, content in sorted(tree.items()) if path.startswith(release.WORKFLOWS) and content is not None)
+    return f"[workflows]\nversion = {version}\n\n[workflows.sha256]\n{rows}".encode()
+
+
+TEMPLATE[release.FROZEN] = frozen(TEMPLATE)
+
+
+def topics_of(*names: str) -> dict[str, bytes]:
+    """The topics of a tree whose rules files are `names`, and the table people read beside them,
+    as `release cut` asks for both: one topic a file, read «when <its name>»."""
+    source = 'about = "A topic applies when the talk is about the user."\nmin_engine = "v0.0.0"\nbot_only = []\n\n[cites]\n'
+    table = "# Rules\n\n| File | Read by | When |\n|---|---|---|\n"
+    for name in names:
+        source += f'\n[[topic]]\nname = "{name[:-3]}"\nwhen = "when {name[:-3]}"\nfiles = ["{name}"]\n'
+        table += f"| `{name}` | chat | when {name[:-3]} |\n"
+    return {topics.TOPICS: source.encode(), topics.README: table.encode()}
+
+
+TEMPLATE.update(topics_of("core.md"))
+TEMPLATE[release.STABLE] = b"# moves the branch stable\n"
 
 PERSON_PART = {
     "README.md": b"A person's memory.\n",
@@ -277,7 +308,8 @@ class Cut(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, f"engine/rules/extra.md line 1: {kind}"):
                     self.cut(files=files)
         self.assert_nothing_written(kept)
-        self.cut(files={**self.files, "engine/rules/extra.md": b"card 4111 1111 1111 1111, t@example.invalid\n"})
+        self.cut(files={**self.files, "engine/rules/extra.md": b"card 4111 1111 1111 1111, t@example.invalid\n",
+                        **topics_of("core.md", "extra.md")})
 
     def test_a_national_number_that_is_not_a_test_value_stops_the_publication(self):
         kept = self.keep()
@@ -319,6 +351,305 @@ class Cut(unittest.TestCase):
         self.assertEqual(release.publication_findings(release.release_files(ROOT, head)), [])
 
 
+class FrozenWorkflows(unittest.TestCase):
+    """The workflow files are frozen (engine/frozen.toml): the cut refuses a release whose
+    workflow files differ from those of the release before, unless it is told so and the
+    record's version rose — every installed repository applies such a release by hand."""
+
+    REPOSITORY = "Garik98129/memory-engine-releases"
+
+    def setUp(self):
+        self.template = Repo(TEMPLATE)
+        self.releases = Repo({"README.md": b"Release manifests.\n"})
+        _git(self.releases.path, "remote", "add", "origin", f"https://github.com/{self.REPOSITORY}")
+        self.addCleanup(self.template.close)
+        self.addCleanup(self.releases.close)
+
+    def cut(self, tag: str, changes: dict | None = None, told: bool = False, version: int | None = None,
+            tagged: bool = True) -> list[str]:
+        """The factory commits `changes` — with the record brought up to date when `version` is
+        given —, cuts `tag`, and the releases repository commits and tags it."""
+        if changes:
+            self.template.commit(changes)
+        if version is not None:
+            self.template.commit({release.FROZEN: frozen(release.release_files(self.template.path, "main"), version)})
+        written = release.cut(release.release_files(self.template.path, "main"), tag, self.template.base, PUBLISHED,
+                              self.releases.path, self.REPOSITORY, told)
+        self.releases.commit({})
+        if tagged:
+            _git(self.releases.path, "tag", tag)
+        return written
+
+    def refused(self, *args, **kw) -> str:
+        before = _git(self.releases.path, "status", "--porcelain")
+        with self.assertRaises(ValueError) as caught:
+            self.cut(*args, **kw)
+        self.assertEqual(_git(self.releases.path, "status", "--porcelain"), before, "a refused cut wrote something")
+        return str(caught.exception)
+
+    def test_a_release_that_leaves_the_workflow_files_alone_is_cut_as_ever(self):
+        self.cut("v0.1.0")
+        written = self.cut("v0.1.1", {"engine/rules/core.md": b"Core rules, v0.1.1.\n", "engine/checks/gate.py": b"# new\n"})
+        self.assertIn("files/engine/frozen.toml", written)
+        self.assertIn("files/engine/checks/gate.py", written)
+
+    def test_a_changed_workflow_file_is_refused_until_the_cut_is_told_and_the_version_rises(self):
+        self.cut("v0.1.0")
+        change = {"engine/workflows/check.yml": b"name: check\n# a comment put right\n"}
+        self.assertIn("engine/frozen.toml does not hold the workflow files of this release: check.yml",
+                      self.refused("v0.1.1", change))
+        message = self.refused("v0.1.1", version=1)
+        self.assertIn("v0.1.1 changes the workflow files against v0.1.0: check.yml", message)
+        self.assertIn("each waits for somebody to apply it by hand", message)
+        self.assertIn("--changes-workflows", message)
+        self.assertIn("`version` in engine/frozen.toml is 1, not above v0.1.0's 1: raise it",
+                      self.refused("v0.1.1", told=True))
+        self.assertEqual(self.cut("v0.1.1", told=True, version=2)[-1], "release-manifest.json")
+        self.assertEqual(self.cut("v0.1.2", {"engine/rules/core.md": b"v0.1.2\n"})[-1], "release-manifest.json",
+                         "the release after it is an ordinary one again")
+
+    def test_an_added_or_a_dropped_workflow_file_is_a_change_too(self):
+        self.cut("v0.1.0")
+        self.assertIn("against v0.1.0: more.yml", self.refused("v0.1.1", {"engine/workflows/more.yml": b"name: more\n"},
+                                                               version=2))
+        self.template.commit({"engine/workflows/more.yml": None})
+        self.assertIn("against v0.1.0: watch.yml", self.refused("v0.1.1", {"engine/workflows/watch.yml": None}, version=2))
+
+    def test_the_flag_is_refused_where_nothing_differs(self):
+        self.cut("v0.1.0")
+        self.assertIn("--changes-workflows was given, but the workflow files of v0.1.1 are those of v0.1.0",
+                      self.refused("v0.1.1", {"engine/rules/core.md": b"v0.1.1\n"}, told=True))
+        fresh = Repo({"README.md": b"Release manifests.\n"})
+        self.addCleanup(fresh.close)
+        _git(fresh.path, "remote", "add", "origin", f"https://github.com/{self.REPOSITORY}")
+        with self.assertRaises(ValueError) as caught:
+            release.cut(release.release_files(self.template.path, "main"), "v0.1.0", self.template.base, PUBLISHED,
+                        fresh.path, self.REPOSITORY, True)
+        self.assertIn("there is no release before this one", str(caught.exception))
+
+    def test_a_record_that_names_a_file_the_release_does_not_ship_is_refused(self):
+        record = frozen(TEMPLATE).decode() + '"ghost.yml" = "' + "0" * 64 + '"\n'
+        self.assertIn("does not hold the workflow files of this release: ghost.yml",
+                      self.refused("v0.1.0", {release.FROZEN: record.encode()}))
+
+    def test_the_record_of_the_release_before_is_read_or_the_cut_stops(self):
+        """The version must rise above the one on record there: a record that cannot be read, or a
+        version that is no whole number, is no «nothing to rise above»."""
+        change = {"engine/workflows/check.yml": b"name: check, changed\n"}
+        for text, said in ((b"[workflows\n", "files/engine/frozen.toml at the tag v0.1.0 cannot be read"),
+                           (b"version = 1\n", "files/engine/frozen.toml at the tag v0.1.0 cannot be read"),
+                           (b'[workflows]\nversion = "1"\n', "not above v0.1.0's 1: raise it"),
+                           (b"[workflows]\nversion = true\n", "not above v0.1.0's True: raise it")):
+            releases = Repo({"README.md": b"Release manifests.\n"})
+            self.addCleanup(releases.close)
+            _git(releases.path, "remote", "add", "origin", f"https://github.com/{self.REPOSITORY}")
+            releases.commit({"files/.github/workflows/check.yml": b"name: check\n", "files/engine/frozen.toml": text})
+            _git(releases.path, "tag", "v0.1.0")
+            self.releases = releases
+            self.template.commit(change)
+            self.assertIn(said, self.refused("v0.1.1", told=True, version=5), text)
+
+    def test_a_record_that_is_missing_or_wrong_is_refused(self):
+        self.assertIn("engine/frozen.toml is missing", self.refused("v0.1.0", {release.FROZEN: None}))
+        for text, said in ((b"[workflows]\nversion = 0\n[workflows.sha256]\n", "a whole `version` of 1 or more"),
+                           (b"[workflows]\nversion = true\n[workflows.sha256]\n", "a whole `version` of 1 or more"),
+                           (b"[workflows]\nversion = 1\n", "a `sha256` table"),
+                           (b"version = 1\n", "needs [workflows]"), (b"[workflows\n", "cannot be read")):
+            self.assertIn(said, self.refused("v0.1.0", {release.FROZEN: text}), text)
+
+    def test_the_release_before_is_the_newest_older_tag_and_no_tag_is_not_the_first_release(self):
+        self.cut("v0.1.0")
+        self.cut("v0.1.1", {"engine/workflows/check.yml": b"name: check, v0.1.1\n"}, told=True, version=2)
+        self.assertEqual(release.release_before(self.releases.path, "v0.1.2"), "v0.1.1")
+        self.assertEqual(release.release_before(self.releases.path, "v0.1.1"), "v0.1.0")
+        self.assertIsNone(release.release_before(self.releases.path, "v0.1.0"))
+        _git(self.releases.path, "tag", "v0.1.10")
+        for other in ("latest", "v0.1", "v0.1.99-rc1", "v01.5.0", "version-9"):       # tags, but no releases
+            _git(self.releases.path, "tag", other)
+        self.assertEqual(release.release_before(self.releases.path, "v0.2.0"), "v0.1.10", "by the release's number")
+        for tag in ("v0.1.0", "v0.1.1", "v0.1.10"):
+            _git(self.releases.path, "tag", "-d", tag)
+        self.assertIn("held v0.1.1 last, and its newest tag older than v0.1.2 is none: fetch its tags",
+                      self.refused("v0.1.2", {"engine/rules/core.md": b"v0.1.2\n"}))
+
+    def test_a_checkout_whose_newest_tag_was_never_fetched_is_refused_not_believed(self):
+        """The tag of a release is set on GitHub after the push that brings it: the checkout it was
+        cut in lacks that tag until somebody fetches. Compared with the tag before it, a release
+        that undoes the last change of the workflow files would pass as «nothing differs», and one
+        that changes nothing would be refused until the flag was given."""
+        self.cut("v0.1.0")
+        self.cut("v0.1.1", {"engine/workflows/check.yml": b"name: check, v0.1.1\n"}, told=True, version=2, tagged=False)
+        back = {"engine/workflows/check.yml": TEMPLATE["engine/workflows/check.yml"]}
+        said = "held v0.1.1 last, and its newest tag older than v0.1.2 is v0.1.0: fetch its tags"
+        self.assertIn(said, self.refused("v0.1.2", back, version=3))             # v0.1.0's files again: «nothing differs»
+        self.assertIn(said, self.refused("v0.1.2", told=True))
+        self.template.commit({"engine/workflows/check.yml": b"name: check, v0.1.1\n"})
+        self.assertIn(said, self.refused("v0.1.2", version=2))                   # v0.1.1's own files: nothing to tell
+        _git(self.releases.path, "tag", "v0.1.1")                                # fetched
+        self.assertEqual(self.cut("v0.1.2")[-1], "release-manifest.json")
+
+    def test_a_cut_made_again_before_its_tag_is_still_held_to_the_release_before(self):
+        self.cut("v0.1.0")
+        change = {"engine/workflows/check.yml": b"name: check, v0.1.1\n"}
+        self.cut("v0.1.1", change, told=True, version=2, tagged=False)           # committed, and cut once more
+        self.assertEqual(release.release_held(self.releases.path, "v0.1.1"), "v0.1.0")
+        self.assertIn("changes the workflow files against v0.1.0", self.refused("v0.1.1"))
+        self.assertEqual(self.cut("v0.1.1", told=True)[-1], "release-manifest.json")
+
+    def test_published_files_with_no_manifest_and_no_tag_are_not_the_first_release(self):
+        self.releases.commit({"files/engine/rules/core.md": b"Core rules.\n"})
+        self.assertIn("holds a release but no tag older than v0.1.0: fetch its tags", self.refused("v0.1.0"))
+
+    def test_a_manifest_in_the_history_that_cannot_be_read_stops_the_cut(self):
+        self.releases.commit({"release-manifest.json": b"not json"})
+        self.assertIn("release-manifest.json at", self.refused("v0.1.0"))
+
+    def test_a_release_cut_before_the_files_were_frozen_has_no_version_to_rise_above(self):
+        self.releases.commit({"files/.github/workflows/check.yml": b"name: check, as it was\n",
+                              "files/engine/rules/core.md": b"Core rules.\n"})
+        _git(self.releases.path, "tag", "v0.1.12")
+        self.assertIn("changes the workflow files against v0.1.12: check.yml, watch.yml", self.refused("v0.1.13"))
+        self.assertEqual(self.cut("v0.1.13", told=True)[-1], "release-manifest.json")
+
+    def test_the_command_says_it_aloud(self):
+        self.cut("v0.1.0")
+        self.template.commit({"engine/workflows/check.yml": b"name: check, v0.1.1\n"})
+        self.template.commit({release.FROZEN: frozen(release.release_files(self.template.path, "main"), 2)})
+        argv = ["cut", "--repo", str(self.template.path), "--rev", "main", "--tag", "v0.1.1",
+                "--into", str(self.releases.path)]
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            self.assertEqual(release.main(argv, now=PUBLISHED), 2)
+        self.assertIn("ERROR not published: v0.1.1 changes the workflow files against v0.1.0: check.yml", err.getvalue())
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            self.assertEqual(release.main([*argv, "--changes-workflows"], now=PUBLISHED), 0)
+        self.assertIn("HANDS v0.1.1 changes the workflow files against v0.1.0: check.yml", err.getvalue())
+        self.assertNotIn("HANDS", out.getvalue(), "the list of what was written stays a list")
+
+
+class TheOneTextsAddress(unittest.TestCase):
+    """`fixed.md` is pasted once and never again, so where it sends a chat must stay where the
+    releases go: the cut holds its address — this repository and no other, the branch `stable`,
+    the index's name, and no release (docs/DESIGN_PHASE3.md §4)."""
+
+    REPOSITORY = "Garik98129/memory-engine-releases"
+    GOOD = TEMPLATE[release.FIXED_FIELD].decode("utf-8")
+
+    def found(self, text: str, repository: str = REPOSITORY) -> str:
+        return "; ".join(release.fixed_findings({release.FIXED_FIELD: text.encode("utf-8")}, repository))
+
+    def test_the_address_as_it_must_be_passes_and_a_release_without_the_text_is_refused(self):
+        """`setup` gives the text to every new installation: where it is missing C6 is red every
+        night and nothing is ever handed over, so a release cannot go out without it."""
+        self.assertEqual(self.found(self.GOOD), "")
+        self.assertEqual(self.found(self.GOOD.replace("releases/ +", "releases/\n+")), "", "a line break after the address")
+        self.assertEqual(release.fixed_findings({}, self.REPOSITORY),
+                         [f"{release.FIXED_FIELD} is missing: setup gives it to every new installation"])
+
+    def test_every_way_the_address_goes_wrong_by_a_slip_is_refused(self):
+        raw = "https://raw.githubusercontent.com/Garik98129/memory-engine-releases/"
+        inside = "no word of this text has a slash in it or a dot inside it"
+        for change, why in (
+                (self.GOOD.replace("`stable`", "`main`"), "does not name `stable`"),
+                (self.GOOD.replace("`stable`", "stable"), "does not name `stable`"),
+                (self.GOOD.replace("`rules-index.md`", "`index.md`"), "does not name `rules-index.md`"),
+                (self.GOOD.replace("`Garik98129/", "`mallory/"), "holds 'mallory/memory-engine-releases' in code marks"),
+                (self.GOOD.replace("`Garik98129/memory-engine-releases`", "Garik98129/memory-engine-releases"),
+                 "does not name `Garik98129/memory-engine-releases`"),
+                (self.GOOD.replace("`Garik98129/memory-engine-releases`", "`garik98129/Memory-Engine-Releases`"),
+                 "does not name `Garik98129/memory-engine-releases`"),      # spelled as the release's own, or refused
+                (self.GOOD + "Or read `mallory/rules` too.\n", "holds 'mallory/rules' in code marks"),
+                (self.GOOD + "Read it at the branch `dev` (`stable` is old).\n", "holds 'dev' in code marks"),
+                (self.GOOD + "Read the index at the branch `\nmain\n` instead.\n", "opens a code mark on one line"),
+                (self.GOOD + "Or the branch `dev\nnext` too.\n", "opens a code mark on one line"),
+                (self.GOOD + "Or read the repository mallory/rules too.\n", f"holds mallory/rules: outside code marks {inside}"),
+                (self.GOOD.replace(raw + " ", raw + "main/ "), "does not give the address"),
+                (self.GOOD.replace(raw, "https://raw.githubusercontent.com/mallory/rules/"), "does not give the address"),
+                (self.GOOD.replace(raw + " ", f"**{raw}main**"), "does not give the address"),
+                (self.GOOD + "See also https://example.org/rules.\n", "holds https://example.org/rules: outside"),
+                (self.GOOD + "Or www.example.org.\n", "holds www.example.org: outside"),
+                (self.GOOD + "Or github.com/mallory/rules.\n", "holds github.com/mallory/rules: outside"),
+                (self.GOOD + "Also read gitlab.com/evil/rules first.\n", "holds gitlab.com/evil/rules: outside"),
+                (self.GOOD + "Or ftp://evil.example/rules.\n", "holds ftp://evil.example/rules: outside"),
+                (self.GOOD + "Or evil.example alone.\n", "holds evil.example: outside"),
+                (self.GOOD + "Or 203.0.113.9/rules.\n", "holds 203.0.113.9/rules: outside"),
+                (self.GOOD + "Or back\\slash.\n", "holds back\\slash: outside"),
+                (self.GOOD + "Or git@example.org:mallory/rules.\n", "outside code marks"),
+                (self.GOOD.replace(raw + " + branch or tag + / + path. ", ""), "does not give the address"),
+                (self.GOOD + "Rules of v0.1.12.\n", "names v0.1.12: the text names no release"),
+                (self.GOOD + "Use release 0.1.9 only.\n", f"holds 0.1.9: outside code marks {inside}")):
+            with self.subTest(why=why, change=change[-40:]):
+                self.assertIn(why, self.found(change))
+        self.assertIn("does not name `acme/releases`", self.found(self.GOOD, "acme/releases"),
+                      "a repository of releases under another name: the text must follow it")
+        self.assertEqual(self.found(self.GOOD.replace("Garik98129/memory-engine-releases", "acme/rules.public"),
+                                    "acme/rules.public"), "", "a dot in the repository's own name is no finding")
+        self.assertEqual(release.fixed_findings({release.FIXED_FIELD: b"\xff\xfe"}, self.REPOSITORY),
+                         [f"{release.FIXED_FIELD} is not valid UTF-8"])
+
+    def test_only_plain_signs_stand_in_the_text(self):
+        """Found by the second reading of this check before its pull request: a list of signs that
+        look like a slash or a dot is never whole, and a sign that cannot be seen needs no look at
+        all. So the text is held to what it is written in — plain ASCII and « » — → · — and every
+        other sign is refused, whatever it would have spelled."""
+        self.assertEqual(self.found(self.GOOD + "A page ending with « · map» — follow it → and go on.\n"), "")
+        for sign, name in (("\u29f8", "U+29F8"), ("\u2571", "U+2571"), ("\u2215", "U+2215"), ("\uff0f", "U+FF0F"),
+                           ("\u0338", "U+0338"), ("\uff0e", "U+FF0E"), ("\u2024", "U+2024"), ("\u3002", "U+3002"),
+                           ("\u200b", "U+200B"), ("\ufeff", "U+FEFF"), ("\u2060", "U+2060"), ("\u202e", "U+202E"),
+                           ("\uff40", "U+FF40"), ("\u00a0", "U+00A0"), ("\t", "U+0009"), ("\r", "U+000D"),
+                           ("\u201c", "U+201C"), ("\u2013", "U+2013")):
+            with self.subTest(sign=name):
+                found = self.found(self.GOOD + f"Or rules{sign}evil{sign}com here.\n")
+                self.assertIn(f"holds {name}: the text is plain ASCII and the signs", found)
+
+    def test_it_is_strict_on_purpose_says_what_to_do_and_is_never_slow(self):
+        """A slash in a word is how an owner and a name are written, a dot inside one how a host
+        is: «and/or», «e.g.» and «3.5» are refused too, and the refusal says to put it in other
+        words. And a text of any length is judged word by word — a pattern that looked back over
+        every dot took minutes on a long line (found by the readings of this change before its
+        pull request)."""
+        import time
+        for lawful in ("and/or", "24/7", "N/A", "e.g. so", "i.e. so", "3.5 times", "at 9.30"):
+            self.assertIn("say it in other words", self.found(self.GOOD + f"Open {lawful}.\n"), lawful)
+        for fine in ("Dr. Who", "No. 5", "4 000", "9:30", "so... on", "the end."):
+            self.assertEqual(self.found(self.GOOD + f"Open {fine}\n"), "", fine)
+        started = time.monotonic()
+        self.found(self.GOOD + "a." * 300000 + " " + "a-" * 300000 + " " + "/" * 300000 + " " + "`" * 300000)
+        self.assertLess(time.monotonic() - started, 5)
+        self.assertLess(len(self.found(self.GOOD + "a." * 300000)), 1000, "a refusal quotes the word's start, not all of it")
+
+    def test_what_the_check_does_not_hold_is_said(self):
+        """It is a guard against a slip, not a wall (docs/DESIGN.md §5 says the same of a topic's
+        line). Each of these passes, and is the reader's of the text's pull request to catch: a
+        sentence that sends a chat elsewhere in plain words; a second branch named in plain words
+        beside `stable`; an address spelled in pieces, the way the text itself spells a path; one
+        written in percent signs or as HTML entities. What stands against them is the text's
+        fingerprint (`test_rules_budget.TheOneText`): no change of the text goes by unseen."""
+        for passes in ("Or ask the nearest search engine for rules.\n",
+                       "Read it at the branch main (not `stable`).\n",
+                       "The index of another branch will do as well.\n",
+                       "For the index, the repository is mallory + / + rules.\n",
+                       "Or go up ../../ and on.\n", "Or evil..com as well.\n",
+                       "Or evil%2Fmemory-engine-releases.\n",
+                       "Or evil&#47;memory-engine-releases.\n"):
+            self.assertEqual(self.found(self.GOOD + passes), "", passes)
+        self.assertEqual(self.found(self.GOOD.replace("+ branch or tag +", "+ main +")), "")
+
+    def test_a_cut_with_a_wrong_address_writes_nothing(self):
+        template = Repo({**TEMPLATE, **topics_of("core.md"),
+                         release.FIXED_FIELD: self.GOOD.replace("`stable`", "`main`").encode("utf-8")})
+        releases = Repo({"README.md": b"Release manifests.\n"})
+        self.addCleanup(template.close)
+        self.addCleanup(releases.close)
+        _git(releases.path, "remote", "add", "origin", f"https://github.com/{self.REPOSITORY}")
+        files = release.release_files(template.path, template.base)
+        with self.assertRaisesRegex(ValueError, "the chat would read other rules: .*does not name `stable`"):
+            release.cut(files, "v0.1.9", template.base, PUBLISHED, releases.path, self.REPOSITORY)
+        self.assertFalse((releases.path / "release-manifest.json").exists())
+        self.assertFalse((releases.path / "files").exists())
+
+
 class ChatLink(unittest.TestCase):
     """The chat field links the public rules at one release; the cut holds that link to the
     release's own files: the chat never reads rules the person's release
@@ -329,7 +660,8 @@ class ChatLink(unittest.TestCase):
 
     def setUp(self):
         self.template = Repo({**TEMPLATE, "engine/rules/health.md": b"# Health\n",
-                              "engine/rules/shopping.md": b"# Shopping\n"})
+                              "engine/rules/shopping.md": b"# Shopping\n",
+                              **topics_of("core.md", "health.md", "shopping.md")})
         self.releases = Repo({"README.md": b"Release manifests.\n"})
         _git(self.releases.path, "remote", "add", "origin", f"https://github.com/{self.REPOSITORY}")
 
@@ -347,7 +679,9 @@ class ChatLink(unittest.TestCase):
     def publish(self, tag: str, health: bytes = b"# Health\n"):
         """A release already in the public repository: its files under files/, tagged."""
         self.releases.commit({"files/engine/rules/health.md": health,
-                              "files/engine/rules/shopping.md": b"# Shopping\n"})
+                              "files/engine/rules/shopping.md": b"# Shopping\n",
+                              **{f"files/{release.INSTALLED_WORKFLOWS}{path[len(release.WORKFLOWS):]}": content
+                                 for path, content in TEMPLATE.items() if path.startswith(release.WORKFLOWS)}})
         _git(self.releases.path, "tag", tag)
 
     def cut(self, files, tag="v0.1.9"):
@@ -480,7 +814,8 @@ class Cli(unittest.TestCase):
         since, and v0.1.9 is cut — refused, with nothing written into the releases checkout."""
         link = "Topic rules — health.md: https://raw.githubusercontent.com/Garik98129/memory-engine-releases/v0.1.8/files/engine/rules/ + name."
         self.template.commit({"engine/rules/health.md": b"# Health, new\n",
-                              "engine/rules/fields/chat.md": f"Rules.\n{link}\n".encode()})
+                              "engine/rules/fields/chat.md": f"Rules.\n{link}\n".encode(),
+                              **topics_of("core.md", "health.md")})
         releases = Repo({"README.md": b"x\n", "files/engine/rules/health.md": b"# Health, old\n"})
         _git(releases.path, "tag", "v0.1.8")
         _git(releases.path, "remote", "add", "origin", "https://github.com/Garik98129/memory-engine-releases.git")
@@ -514,6 +849,13 @@ class ThisTemplate(unittest.TestCase):
         for name in ("check.yml", "watch.yml", "backup.yml"):
             self.assertIn(f".github/workflows/{name}", files)
         self.assertIn(b'manifests = "Garik98129/memory-engine-releases"', files["engine/defaults.toml"])
+
+    def test_the_one_text_of_this_template_passes_the_cut(self):
+        files = release.release_files(ROOT, _git(ROOT, "rev-parse", "HEAD"))
+        if release.FIXED_FIELD in files:            # committed with this change; a run before the commit has none
+            self.assertEqual(release.fixed_findings(files, "Garik98129/memory-engine-releases"), [])
+        text = (ROOT / release.FIXED_FIELD).read_bytes()
+        self.assertEqual(release.fixed_findings({release.FIXED_FIELD: text}, "Garik98129/memory-engine-releases"), [])
 
     def test_the_chat_fields_link_names_the_releases_repository_and_files_it_ships(self):
         files = release.release_files(ROOT, _git(ROOT, "rev-parse", "HEAD"))

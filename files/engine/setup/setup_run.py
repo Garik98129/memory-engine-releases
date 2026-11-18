@@ -7,7 +7,7 @@ step 2; §6).
     python -m engine.setup.setup_run --keep --main MAIN_SHA --run-url URL --timezone Europe/Berlin
 
 Run by `.github/workflows/setup.yml`, on main's code, when the repository's owner presses
-«Run workflow»: her first installation. It builds her config and her part of the field with
+«Run workflow»: the user's first installation. It builds the user's config and the user's part with
 `engine.setup.setup` — every refusal of a bad choice included — and lands them the way every
 change lands: a commit on the branch `setup/installation`, a PR this workflow opens, the
 gate started through workflow_dispatch (a PR opened with GITHUB_TOKEN starts no
@@ -15,33 +15,34 @@ pull_request_target run), and job `merge`. The gate knows the PR by its branch (
 `setup`) and trusts neither that nor its author: C2 lets a setup PR only add these two files
 to a repository never installed, and holds them byte for byte to what `setup` builds from
 seven choices (`setup.held`). So a head somebody else pushed onto the branch can differ only
-in those choices. The Issue «Your assistant's instructions» — the field to paste, where, and
-the first message — is opened before the gate is started: a run that fails after it leaves
-her with her instructions.
+in those choices. The Issue «Your assistant's instructions» — the text to paste once, where, and
+the first message, which carries the user's part — is opened before the gate is started: a run that
+fails after it leaves the user with the instructions.
 
-On a repository already installed her settings change by the form `settings` (`--keep`,
+On a repository already installed the user's settings change by the form `settings` (`--keep`,
 `.github/workflows/settings.yml`; DESIGN_PHASE3 §6). Every answer there already stands on
-«keep as it is» — the first item of its lists, an empty text field — so she gives only the
-one that changes, and the rest is read from her config on main, where `setup` keeps all seven
-(her name and the grammar too); «none» takes her work languages away. The form `setup` installs
+«keep as it is» — the first item of its lists, an empty text field — so the user gives only the
+one that changes, and the rest is read from the user's config on main, where `setup` keeps all seven
+(the user's name and the grammar too); «none» takes the user's work languages away. The form `setup` installs
 once: on an installed repository it refuses and names `settings` — its lists stand on a real
-answer, and one left untouched would change her AI unasked. Answers that are her settings
-already are no error: she is pointed to the page that holds her instructions as they stand.
-Otherwise the run builds her two files anew, commits them on `setup/settings`, opens the PR and
+answer, and one left untouched would change the user's AI unasked. Answers that are the user's settings
+already are no error: the user is pointed to the page that holds the user's instructions as they stand.
+Otherwise the run builds the user's two files anew, commits them on `setup/settings`, opens the PR and
 starts the gate — which lets such a PR only change the two files where they stand, held byte
 for byte as at installation, and only where that takes nothing from main's config: no bot's
 installation, no protected key, no key of somebody's own hand
-(`config_check.settings_findings`; the run asks the same before it pushes). Her part of the
-field is `setup`'s text and is written anew. Then the run waits a few minutes and says what
-became of the PR: merged, and main is that merge alone — her new field goes to her at once, in
-a new Issue (`engine.checks.field_issue`), with the steps of her new AI when she changed it
-(`field_issue.another_ai`); the gate said no to this very head (its «gate» status on the
-commit), the PR was closed, or it merged with a head this run did not push — the run ends red,
-so GitHub tells her; still waiting, or main moved on meanwhile — no error, the night's run
-hands the field over. She edits no file and closes no alarm: the change comes through the gate,
-not past it.
+(`config_check.settings_findings`; the run asks the same before it pushes). The user's part is
+`setup`'s text and is written anew. The text the user pasted does not change with the user's settings: it
+is one text for everybody. Then the run waits a few minutes and says what became of the PR:
+merged, and main is that merge alone — the user's new part goes to the user at once, in a new Issue with
+the one message to send the user's AI (`engine.checks.field_issue`), or with the steps of the user's new AI
+when the user changed it (`field_issue.another_ai`); the gate said no to this very head (its «gate»
+status on the commit), the PR was closed, or it merged with a head this run did not push — the
+run ends red, so GitHub tells the user; still waiting, or main moved on meanwhile — no error, the
+night's run hands it over. The user edits no file and closes no alarm: the change comes through
+the gate, not past it.
 
-Her answers are taken as a phone types them: the letter case of a language, a country and a
+The user's answers are taken as a phone types them: the letter case of a language, a country and a
 time zone is put right before `setup` reads them («Ru», «il», «europe/berlin» — a phone's
 keyboard starts a field with a capital). What the run did is written on the run's own page too
 (GitHub's job summary), so that a refusal is read there and not four taps down in a step's log.
@@ -50,10 +51,10 @@ Refuses — «ERROR», exit 1, before anything is pushed or written — a run no
 repository's owner (a re-run somebody else pressed included: GitHub keeps the first actor on
 a re-run, so both names are held), a run whose main is no longer main (a re-run after the
 installation landed), `setup` on a repository already installed and `settings` on one not
-installed yet, an installed repository where building her settings again would take something
+installed yet, an installed repository where building the user's settings again would take something
 from main's config, an installation with a bot, a choice `setup` refuses, a PR somebody else
 opened from the branch. An organisation's repository has no owner who can press the button:
-the refusal says to make it under her own account. GitHub's own refusal to let the workflow
+the refusal says to make it under the user's own account. GitHub's own refusal to let the workflow
 open a pull request — off on a new repository — comes after the push, so the branch is already
 there; it is said with the setting that allows it, and the next run goes on from that branch.
 """
@@ -77,28 +78,28 @@ from engine.setup import setup, update
 from engine.setup.update import BOT, BOT_EMAIL, _git
 
 BRANCH = "setup/installation"
-PR_TITLE = "Installation: her config and her part of the field"
-PR_BODY = ("Installation by the workflow «setup»: her config and her part of the chat field, into a "
+PR_TITLE = "Installation: the user's config and the user's part"
+PR_BODY = ("Installation by the workflow «setup»: the user's config and the user's part, into a "
            "repository not installed yet.\n\nThe gate checks it like any PR: C2 lets a setup PR only add "
            "these two files where there were none, C1 to C6 hold them as they hold every change.\n")
-# A change of her settings on an installed repository (DESIGN_PHASE3 §6). No numbers in the texts:
+# A change of the user's settings on an installed repository (DESIGN_PHASE3 §6). No numbers in the texts:
 # a PR's body becomes the merge commit's message, and C4 reads it like any PR body.
 SETTINGS_BRANCH = "setup/settings"
-SETTINGS_TITLE = "Settings: her config and her part of the field, by the form again"
-SETTINGS_BODY = ("A change of her settings by a form: her config and her part of the chat field, built again "
-                 "from her answers.\n\nThe gate checks it like any PR: C2 lets a setup PR only change these "
+SETTINGS_TITLE = "Settings: the user's config and the user's part, by the form again"
+SETTINGS_BODY = ("A change of the user's settings by a form: the user's config and the user's part, built again "
+                 "from the user's answers.\n\nThe gate checks it like any PR: C2 lets a setup PR only change these "
                  "two files where they stand, C3 lets it take nothing from the config main holds, and C1 to C6 "
                  "hold them as they hold every change.\n")
 KEEP = "keep as it is"                  # the form «settings»: the first item of its lists, and what an empty field means
-NONE = "none"                           # …and how she takes her work languages away there
-ANSWERS = ("platform", "language", "country", "timezone", "name", "gender")     # every one but her work languages
+NONE = "none"                           # …and how the user takes the user's work languages away there
+ANSWERS = ("platform", "language", "country", "timezone", "name", "gender")     # every one but the user's work languages
 ISSUE_TITLE = field_issue.TITLE      # one title: the watch hands a changed field over under it (field_issue.py)
 SETTING = ("Settings → Actions → General → Workflow permissions: tick «Allow GitHub Actions to create "
            "and approve pull requests», Save, and run the form again")
 
 
 def setup_commit(repo: Path, main: str, files: dict[str, str], title: str = PR_TITLE) -> str:
-    """main with her two files added, or put in place of the ones it holds — a commit of its
+    """main with the user's two files added, or put in place of the ones it holds — a commit of its
     own, built in a scratch index; the checkout is not touched. Dated with main's commit time:
     the same main and the same choices give the same commit, so a second run pushes nothing new."""
     entries = []
@@ -131,13 +132,13 @@ def open_pr(api, prs: list[dict], branch: str = BRANCH, title: str = PR_TITLE, b
         raise
 
 
-def open_issue(api, title: str, text: str, number: int, field: str) -> tuple[int, str]:
-    """The Issue with her instructions — the open one this workflow opened before, brought up
-    to date, or a new one. It ends with the fingerprint of the field it gives her: the watch
-    opens no second Issue for the same text (`engine.checks.field_issue`)."""
+def open_issue(api, title: str, text: str, number: int, field: str, part: str = "") -> tuple[int, str]:
+    """The Issue with the user's instructions — the open one this workflow opened before, brought up
+    to date, or a new one. It ends with the fingerprints of what it gives the user — the text and the user's
+    part: the watch opens no second Issue for the same two (`engine.checks.field_issue`)."""
     body = text.split("\n", 2)[2] if text.startswith("# ") else text      # the title carries the heading
     body += (f"\nYour settings land with PR #{number}: it merges itself in a few minutes, once its "
-             f"checks pass.\n\n{field_issue.marker(field)}")
+             f"checks pass.\n\n{field_issue.marker(field, part.strip(chr(10)))}")
     for item in api.pages(f"repos/{api.repository}/issues", {"state": "open"}):
         if ((item.get("user") or {}).get("login") == BOT and "pull_request" not in item
                 and str(item.get("title", "")).startswith(ISSUE_TITLE)):
@@ -148,7 +149,7 @@ def open_issue(api, title: str, text: str, number: int, field: str) -> tuple[int
 
 def _push_and_open(repo: Path, main: str, api, origin: Callable[[str], str], token: str, files: dict[str, str],
                    branch: str, title: str, body: str, sleep: Callable[[float], None]) -> tuple[int, str, bool]:
-    """Her files as one commit on the workflow's branch and the PR that shows it: (number, commit,
+    """The user's files as one commit on the workflow's branch and the PR that shows it: (number, commit,
     whether the PR was open already with another head — an earlier change this one replaces)."""
     commit = setup_commit(repo, main, files, title)
     prs = update.open_prs(api)
@@ -167,8 +168,8 @@ def _push_and_open(repo: Path, main: str, api, origin: Callable[[str], str], tok
 
 
 class NotLanded(Exception):
-    """Her new settings did not land as asked, and waiting will not change that: the run ends
-    red, so GitHub tells her it failed. `lines` — what the run did before that."""
+    """The user's new settings did not land as asked, and waiting will not change that: the run ends
+    red, so GitHub tells the user it failed. `lines` — what the run did before that."""
 
     def __init__(self, lines: list[str], why: str):
         super().__init__(why)
@@ -239,7 +240,7 @@ def _close_own(api, branch: str) -> tuple[str, int | None]:
     """Close the PR this workflow left open from the branch, if any: an older change nobody wants
     now. What came of it, and its number: «none» — there was no such PR; «closed»; «open» —
     GitHub would not close it, so it is not withdrawn and may still come in; «unknown» — GitHub
-    would not say whether there is one. Neither of the last two is a reason to fail her run, and
+    would not say whether there is one. Neither of the last two is a reason to fail the user's run, and
     neither may pass for «nothing was on its way»."""
     try:
         mine = update.existing_pr(api, update.open_prs(api), branch)
@@ -254,26 +255,26 @@ def _close_own(api, branch: str) -> tuple[str, int | None]:
     return "closed", mine["number"]
 
 
-def _entry(repo: Path, platform: str, field: str) -> dict:
-    """The field as `field_issue` hands it over: the text, where her platform keeps it, her release."""
+def _entry(repo: Path, platform: str, field: str, part: str) -> dict:
+    """What `field_issue` hands over: the text, where the user's platform keeps it, the user's release, the user's part."""
     row = setup.platforms()[platform]
-    _manifests, tag = setup._release(repo)
-    return field_issue.entry_of(field, row.get("title"), row.get("field"), tag, setup.install_link(repo, platform))
+    manifests, tag = setup._release(repo)
+    return field_issue.entry_of(field, row.get("title"), field_issue.where_of(row), tag, part, manifests)
 
 
 def note(api, owner: str, text: str, run_url: str) -> str:
-    """A word to her on the page that holds her instructions as they stand — said when it happens,
+    """A word to the user on the page that holds the user's instructions as they stand — said when it happens,
     whatever page comes later and whoever opens it. The line for the run's log."""
     try:
         _open, last = field_issue._pages_of(api)
         if last is None:
-            return "FIELD no page of hers to say it on"
+            return "FIELD no page of the user's to say it on"
         to = field_issue.names(owner, "")
         api.post(f"repos/{api.repository}/issues/{last['number']}/comments",
                  {"body": f"{to + ' — ' if to else ''}{text}\n\nRun: {run_url}\n"})
         return f"FIELD said in #{last['number']}"
-    except Exception as exc:    # noqa: BLE001 — a word to her that could not be said is no reason to fail her run
-        return f"FIELD could not say it on her page ({type(exc).__name__}: {exc})"
+    except Exception as exc:    # noqa: BLE001 — a word to the user that could not be said is no reason to fail the user's run
+        return f"FIELD could not say it on the user's page ({type(exc).__name__}: {exc})"
 
 
 WITHDRAWN = ("The change you asked for before (PR #{number}) had not come in, and is withdrawn now: if you still want "
@@ -285,25 +286,25 @@ NOT_LOOKED = ("Whether an earlier change of yours is still on its way could not 
 REPLACED = ("An earlier change of yours that had not come in yet (PR #{number}) is replaced by the one you asked for "
             "now. An answer that only the earlier one changed is not changed: give it in the form again if you "
             "still want it.")
-ANEW = ("Your assistant's instructions are being built anew from your settings: when the new text comes, it may "
-        "differ in more places than your answers did.")
+ANEW = ("Your part — what your AI is told of you — is being built anew from your settings: when the new message "
+        "comes, it may differ in more places than your answers did.")
 
 
-def nothing_to_change(repo: Path, api, owner: str, platform: str, field: str, run_url: str) -> list[str]:
-    """Her answers are her settings already. Not an error — she may have run the form to find her
-    instructions again: a PR an earlier run left open is closed, and she is pointed to the page that
-    holds her field as it stands (opened now, if she never was given this text). A PR that could
+def nothing_to_change(repo: Path, api, owner: str, platform: str, field: str, part: str, run_url: str) -> list[str]:
+    """The user's answers are the user's settings already. Not an error — the user may have run the form to find the user's
+    instructions again: a PR an earlier run left open is closed, and the user is pointed to the page that
+    holds the user's field as it stands (opened now, if the user never was given this text). A PR that could
     not be closed, or not be looked for, is said as that — never as «nothing was changed» alone."""
     state, number = _close_own(api, SETTINGS_BRANCH)
-    first = "SETTINGS these are her settings already: nothing to change"
+    first = "SETTINGS these are the user's settings already: nothing to change"
     word = {"closed": WITHDRAWN, "open": STILL_OPEN, "unknown": NOT_LOOKED}.get(state, "").format(number=number)
     lines = [first + {"closed": f" (PR #{number}, left open by an earlier run, is closed)",
                       "open": f" — but PR #{number}, an earlier change still open, could not be closed: it is not "
                               f"withdrawn and may still come in",
-                      "unknown": " — whether an earlier change of hers is still open could not be seen: if one is, "
+                      "unknown": " — whether an earlier change of the user's is still open could not be seen: if one is, "
                                  "it is not withdrawn"}.get(state, "")]
     try:
-        done = field_issue.sync(api, _entry(repo, platform, field), owner, "", run_url)
+        done = field_issue.sync(api, _entry(repo, platform, field, part), owner, "", run_url)
         if done:
             return lines + [f"FIELD {line}" for line in done] + ([note(api, owner, word, run_url)] if word else [])
         _open, last = field_issue._pages_of(api)
@@ -312,20 +313,20 @@ def nothing_to_change(repo: Path, api, owner: str, platform: str, field: str, ru
             f"{to + ' — you' if to else 'You'} ran the form, and its answers are your settings already: nothing was "
             f"changed.{' ' + word if word else ''} Your assistant's instructions, as they stand, are the text on this "
             f"page.\n\nRun: {run_url}\n")})
-        return lines + [f"FIELD said in #{last['number']}: her instructions as they stand are there"]
-    except Exception as exc:    # noqa: BLE001 — nothing was to change; pointing her to the page is a kindness
-        return lines + [f"FIELD could not point her to her page ({type(exc).__name__}: {exc})"]
+        return lines + [f"FIELD said in #{last['number']}: the user's instructions as they stand are there"]
+    except Exception as exc:    # noqa: BLE001 — nothing was to change; pointing the user to the page is a kindness
+        return lines + [f"FIELD could not point the user to the user's page ({type(exc).__name__}: {exc})"]
 
 
 GOOD = {"platform": "chatgpt", "language": "en", "country": "US", "timezone": "Europe/Berlin", "name": "Anna",
         "gender": "female", "work_languages": ""}      # answers setup takes, to tell whose answer it refuses
-LEAD = "Your settings changed, and your assistant's instructions with them."
-LEAD_ANEW = ("Your assistant's instructions were built anew from your settings: the text may have changed in more "
-             "places than your answers did.")
+LEAD = "Your settings changed."
+LEAD_ANEW = ("Your part — what your AI is told of you — was built anew from your settings: it may have changed in "
+             "more places than your answers did.")
 
 
 def _built(repo: Path, answers: dict) -> dict[str, str] | None:
-    """Her two files as `setup` builds them from these answers; None when it does not — one is
+    """The user's two files as `setup` builds them from these answers; None when it does not — one is
     missing, or `setup` refuses one."""
     try:
         return setup.prepare(repo, **{"work_languages": "", **answers})[0]
@@ -335,7 +336,7 @@ def _built(repo: Path, answers: dict) -> dict[str, str] | None:
 
 def _beside(codes: list[str]) -> str:
     """A language code that is none of these — whatever a hand put on main, and however many: a
-    thousand to choose from, and one to fall back on, so that telling her what is wrong with her
+    thousand to choose from, and one to fall back on, so that telling the user what is wrong with the user's
     config never fails on that config itself (found by the second reader, 13.11.2026)."""
     taken = set(codes)
     return next((code for code in map("".join, itertools.product("qrstuvwxyz", repeat=3)) if code not in taken), "zxx")
@@ -350,7 +351,7 @@ def _refusal(repo: Path, answers: dict) -> Exception | None:
     return None
 
 
-WITH_A_BOT = ("this installation runs with a bot: her settings change through the bot and its record of her yes, "
+WITH_A_BOT = ("this installation runs with a bot: the user's settings change through the bot and its record of the user's yes, "
               "not through this form")
 
 
@@ -360,11 +361,11 @@ def _with_a_bot(config: dict) -> bool:
 
 def change(repo: Path, main: str, api, origin: Callable[[str], str], token: str, owner: str,
            choices: dict[str, str], run_url: str, sleep: Callable[[float], None]) -> list[str]:
-    """Her settings changed by the form «settings» on an installed repository (DESIGN_PHASE3 §6): an
-    answer left empty, or left on «keep as it is», is the one her config on main holds."""
+    """The user's settings changed by the form «settings» on an installed repository (DESIGN_PHASE3 §6): an
+    answer left empty, or left on «keep as it is», is the one the user's config on main holds."""
     on_main = limits_check.config_at(repo, main)
     if not on_main:
-        raise setup.SetupError("her config on main cannot be read, so the form cannot tell what building it again "
+        raise setup.SetupError("the user's config on main cannot be read, so the form cannot tell what building it again "
                                "would change. The file has to be put right first, by someone who can edit it")
     if _with_a_bot(on_main):
         raise setup.SetupError(WITH_A_BOT)
@@ -376,7 +377,7 @@ def change(repo: Path, main: str, api, origin: Callable[[str], str], token: str,
     if isinstance(person, dict) and "work_languages" in person and not {"work_languages"} & {*current, *asked}:
         missing.append("work_languages")            # held, but not as a list of codes: not dropped without a word
     if missing:
-        raise setup.SetupError(f"her config on main does not hold {', '.join(missing)}, so «keep as it is» has nothing "
+        raise setup.SetupError(f"the user's config on main does not hold {', '.join(missing)}, so «keep as it is» has nothing "
                                f"to keep there: give {'that answer' if len(missing) == 1 else 'those answers'} in "
                                f"this form too")
     choices = {"work_languages": "", **current, **asked}
@@ -386,27 +387,27 @@ def change(repo: Path, main: str, api, origin: Callable[[str], str], token: str,
         files, field, limit, _text = setup.prepare(repo, **choices)
     except setup.SetupError as exc:
         # Whose answer is refused is told by the answer, not by the words of the refusal: each one
-        # alone among answers setup takes — her own first, then those she left on «keep».
+        # alone among answers setup takes — the user's own first, then those the user left on «keep».
         for key in ANSWERS:
             mine = _refusal(repo, {**GOOD, key: asked[key]}) if key in asked else None
             if isinstance(mine, setup.SetupError):
                 raise mine from None
-        # Her work languages among them, beside a language that is none of them: «her own language is
-        # hers already» is then never the probe's own doing.
+        # The user's work languages among them, beside a language that is none of them: «the user's own language is
+        # counted already» is then never the probe's own doing.
         beside = _beside(current.get("work_languages", "").split(","))
         for key in (*ANSWERS, "work_languages"):
             kept = (_refusal(repo, {**GOOD, "language": beside, key: current[key]})
                     if key not in asked and key in current else None)
             if isinstance(kept, setup.SetupError):
-                raise setup.SetupError(f"{kept} — that is what her config on main holds, not an answer of this run: "
+                raise setup.SetupError(f"{kept} — that is what the user's config on main holds, not an answer of this run: "
                                        f"give that answer in this form to put it right") from None
         raise exc
     problems = config_check.settings_findings(on_main, tomllib.loads(files[setup.CONFIG]))
     if problems:
-        raise setup.SetupError(f"the form cannot build her settings again here — {problems[0].message}. Here they "
+        raise setup.SetupError(f"the form cannot build the user's settings again here — {problems[0].message}. Here they "
                                f"change only in the file itself, by someone who can edit it")
     if all(gitio.file_at(repo, main, path) == content.encode("utf-8") for path, content in files.items()):
-        return nothing_to_change(repo, api, owner, choices["platform"], field, run_url)
+        return nothing_to_change(repo, api, owner, choices["platform"], field, files[setup.PART], run_url)
     # Main's two files not what `setup` builds from the answers its config holds — another release's
     # wording, a line or a value of somebody's hand: this run builds them anew, and says so.
     as_built = _built(repo, current)
@@ -422,46 +423,48 @@ def change(repo: Path, main: str, api, origin: Callable[[str], str], token: str,
     changes = [f"{key} {plain(current.get(key, ''))} → {plain(choices[key])}" for key in (*ANSWERS, "work_languages")
                if choices[key] != current.get(key, "")]
     if changes:
-        lines.append("SETTINGS her answers, as they were → as they are now: " + "; ".join(changes))
+        lines.append("SETTINGS the user's answers, as they were → as they are now: " + "; ".join(changes))
     if anew:
-        lines.append("SETTINGS her two files on main were not what setup builds from her settings: this run builds "
-                     "them anew, so more of her instructions may change than her answers did")
+        lines.append("SETTINGS the user's two files on main were not what setup builds from the user's settings: this run builds "
+                     "them anew, so more of the user's part may change than the user's answers did")
     if replaced:
         lines.append(f"SETTINGS pr=#{number} held an earlier change that had not come in: this run's answers replace "
                      f"it — what only that one changed stays as main holds it; to have it, give that answer again")
     told = " ".join(([REPLACED.format(number=number)] if replaced else []) + ([ANEW] if anew else []))
-    if told:                # on the page she has now: the next one may be the night's, or another AI's
+    if told:                # on the page the user has now: the next one may be the night's, or another AI's
         lines.append(note(api, owner, told, run_url))
-    later = (f"when main holds her new settings and passes its checks, the night's run hands her the new "
-             f"instructions in an Issue «{ISSUE_TITLE}»")
+    later = (f"when main holds the user's new settings and passes its checks, the night's run hands the user the message to "
+             f"send the user's AI in an Issue «{ISSUE_TITLE}»")
     try:
         outcome, where = landed(api, number, commit, main, sleep, before=before)
     except Exception as exc:    # noqa: BLE001 — the gate is started: what became of the PR is the night's to see
         return lines + [f"SETTINGS could not see what became of pr=#{number} ({type(exc).__name__}: {exc}): {later}"]
     if outcome == "refused":
-        raise NotLanded(lines, f"her settings did not change: the checks did not let PR #{number} in"
+        raise NotLanded(lines, f"the user's settings did not change: the checks did not let PR #{number} in"
                                f"{' — ' + where if where else ''}. Their run says what is wrong; when it is put "
                                f"right, run the form again")
     if outcome == "closed":
-        raise NotLanded(lines, f"her settings did not change: PR #{number} was closed without being merged")
+        raise NotLanded(lines, f"the user's settings did not change: PR #{number} was closed without being merged")
     if outcome == "other":
         raise NotLanded(lines, f"PR #{number} was merged with another head than this run pushed: main may hold "
-                               f"other answers than hers in any of the seven — run the form again and give every "
+                               f"other answers than the user's in any of the seven — run the form again and give every "
                                f"answer, not only the one that changes")
     if outcome == "waiting":
         return lines + [f"SETTINGS pr=#{number} is not merged yet: {later}. If none comes by the next day, look "
                         f"under Actions — the run of the checks or of the watch says why — then run the form again"]
     if outcome == "moved":
         return lines + [f"SETTINGS pr=#{number} is merged; that main is this merge and nothing more could not be "
-                        f"shown, so her page is left to the night: {later}"]
-    # main is this PR's merge and nothing more, let in by the gate: her new field goes to her now.
+                        f"shown, so the user's page is left to the night: {later}"]
+    # main is this PR's merge and nothing more, let in by the gate: the user's new part goes to the user now.
     try:
         lead = LEAD_ANEW if anew else LEAD
-        done = field_issue.sync(api, _entry(repo, choices["platform"], field), owner, "", run_url, lead=lead)
-    except Exception as exc:    # noqa: BLE001 — her settings are on main: the page is the night's to open
-        return lines + [f"SETTINGS pr=#{number} is merged; her page could not be opened now "
+        done = field_issue.sync(api, _entry(repo, choices["platform"], field, files[setup.PART]), owner, "",
+                                run_url, lead=lead)
+    except Exception as exc:    # noqa: BLE001 — the user's settings are on main: the page is the night's to open
+        return lines + [f"SETTINGS pr=#{number} is merged; the user's page could not be opened now "
                         f"({type(exc).__name__}: {exc}): {later}"]
-    return lines + [f"SETTINGS pr=#{number} is merged: the field, {limits_check.length(field)} of {limit}",
+    return lines + [f"SETTINGS pr=#{number} is merged: the text the user pasted stands, {limits_check.length(field)} "
+                    f"of {limit}; the user's part is another",
                     *(f"FIELD {line}" for line in done)]
 
 
@@ -479,20 +482,20 @@ def run(repo: Path, main: str, api, origin: Callable[[str], str], token: str, ac
     live = api.get(f"repos/{api.repository}/git/ref/heads/main")["object"]["sha"]
     if live != main:
         # A re-run keeps the commit of its first attempt: after the installation landed it would
-        # read the old main as not installed, push again and tell her of a PR that changes nothing.
+        # read the old main as not installed, push again and tell the user of a PR that changes nothing.
         raise setup.SetupError("main changed after this run was started — an earlier run may have just landed — and "
                                "this run changed nothing: start the form again from Actions — «Run workflow», not "
                                "«Re-run»")
     if paths_check.installed(repo, main):
         if gitio.file_at(repo, main, setup.CONFIG) is None or gitio.file_at(repo, main, setup.PART) is None:
-            raise setup.SetupError("this repository was installed once, but it does not hold her settings now, so "
+            raise setup.SetupError("this repository was installed once, but it does not hold the user's settings now, so "
                                    "there is nothing to change. If that was a stray file and never an installation: "
                                    "make a new repository from the template")
         if not keep:
             on_main = limits_check.config_at(repo, main)
             if on_main and _with_a_bot(on_main):         # a config that cannot be read is `settings`' to say
                 raise setup.SetupError(WITH_A_BOT)
-            # The lists of the form `setup` stand on a real answer: one left untouched would change her AI unasked.
+            # The lists of the form `setup` stand on a real answer: one left untouched would change the user's AI unasked.
             raise setup.SetupError("this repository is installed already, and setup installs only once. To change "
                                    "your settings run the workflow «settings» instead: every answer there already "
                                    "stands on «keep as it is», so you give only the one that changes")
@@ -502,10 +505,10 @@ def run(repo: Path, main: str, api, origin: Callable[[str], str], token: str, ac
                                "changes what setup wrote")
     files, field, limit, text = setup.prepare(repo, **choices)
     number, commit, _again = _push_and_open(repo, main, api, origin, token, files, BRANCH, PR_TITLE, PR_BODY, sleep)
-    # Her instructions first: once the gate is started the PR lands within minutes, and a run
-    # after that is refused as installed — she must not be left without the field.
+    # The user's instructions first: once the gate is started the PR lands within minutes, and a run
+    # after that is refused as installed — the user must not be left without the field.
     title = f"{ISSUE_TITLE} — {setup.platforms()[choices['platform']]['title']}"
-    issue_number, what = open_issue(api, title, text, number, field)
+    issue_number, what = open_issue(api, title, text, number, field, files[setup.PART])
     update.start_gate(api, number)
     return [f"ISSUE #{issue_number} {what}: the field, {limits_check.length(field)} of {limit}",
             f"SETUP pr=#{number} commit={commit}; the gate is started"]
@@ -527,7 +530,7 @@ def _timezone(name: str) -> str:
 
 
 def as_typed(choices: dict[str, str]) -> dict[str, str]:
-    """Her answers with the letter case put right, as a phone's keyboard gets it wrong: «Ru» for ru —
+    """The user's answers with the letter case put right, as a phone's keyboard gets it wrong: «Ru» for ru —
     a field starts with a capital there —, «il», «europe/berlin». Only the case: what is then no
     code and no zone is refused as before, and «keep as it is» and «none» pass through."""
     work = ",".join(_language(part.strip()) for part in choices["work_languages"].split(","))

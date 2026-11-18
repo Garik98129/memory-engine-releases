@@ -2,10 +2,12 @@
 
 A person's PR (opened by the bot) may change only an exact list of files under
 user/. An update PR may change only the engine, the workflows and the lock. A setup PR
-(DESIGN_PHASE3 §5, §6, opened by the workflow `setup` or `settings`) reaches her config and
-her part of the chat field and nothing else: to a repository never installed it adds both; on
-an installed one it changes them where they stand — her settings, by a form. The gate holds those
-two files byte for byte to what `setup` builds from her seven choices
+(DESIGN_PHASE3 §5, §6, opened by the workflow `setup` or `settings`) reaches the user's config
+and the user's part and nothing else: to a repository never installed it adds both; on an
+installed one it changes them where they stand — the user's settings, by a form. Where no bot
+runs, the user's part is no part of the field: the user's AI holds the one text for everybody,
+and the part rides in the first message (DESIGN_PHASE3 §4). The gate holds those
+two files byte for byte to what `setup` builds from the user's seven choices
 (`engine.setup.setup.held`, run beside C2), because who opened a PR and from which branch
 proves nothing about who pushed its head; what such a change may not do to the config main
 already holds — a bot's installation, a protected key, a key of somebody's hand — is C3's
@@ -68,11 +70,11 @@ def installed(repo: Path, rev: str) -> bool:
     """Whether the commit rev is of a repository that was ever installed: anything under
     user/ but the lock, now or anywhere in its history. A repository made from the template
     holds only the lock there until `setup` lands (DESIGN_PHASE3 §5); the checks of a
-    person's part have nothing to read before that. «Ever»: her part deleted later is a
+    person's part have nothing to read before that. «Ever»: the user's part deleted later is a
     broken installation, which the checks keep reporting night after night — not a return
     to «not installed yet», where they would fall silent and a setup PR would pass again.
     Every commit rev descends from counts (`--full-history`: git's default would follow a
-    merge only into the parent it took its tree from, and one such merge would hide her part).
+    merge only into the parent it took its tree from, and one such merge would hide the user's part).
     What it cannot see is a history replaced by a force push — N1 alarms that push — and a
     shallow clone, which is refused: the workflows fetch main whole."""
     if any(p != LOCK for p in gitio.tree(repo, rev, "user")):
@@ -164,13 +166,13 @@ def check(repo: Path, base: str, head: str, kind: str) -> list[Finding]:
             others = sorted(by_fold[path.casefold()] - {path})
             findings.append(Finding("C2", f"{path} collides by letter case with {', '.join(others)}"))
     if kind == SETUP and installed(repo, base):
-        # A change of her settings (DESIGN_PHASE3 §6): the two files, changed where they stand —
+        # A change of the user's settings (DESIGN_PHASE3 §6): the two files, changed where they stand —
         # never brought back to an installation that lost them, never taken away. What the
         # change may not do to main's config — a bot's installation, a protected key, a key of
         # somebody's own hand — is C3's (`config_check.settings_findings`).
         for path in sorted(SETUP_FILES):
             if gitio.file_at(repo, base, path) is None:
-                findings.append(Finding("C2", f"a setup PR changes her settings only where main holds them: "
+                findings.append(Finding("C2", f"a setup PR changes the user's settings only where main holds them: "
                                               f"{path} is not on main, though this repository was installed once"))
         for ch in changes:
             path = ch.path.decode("utf-8", "replace")
@@ -179,7 +181,7 @@ def check(repo: Path, base: str, head: str, kind: str) -> list[Finding]:
                 findings.append(Finding("C2", f"a setup PR on an installed repository changes {path} where it "
                                               f"stands; this one {did}"))
     elif kind == SETUP:
-        # The first installation: her part comes to a repository that has none, in one PR, as
+        # The first installation: the user's part comes to a repository that has none, in one PR, as
         # new files.
         missing = sorted(SETUP_FILES - {ch.path.decode("utf-8", "replace") for ch in changes})
         if missing:

@@ -2,7 +2,7 @@
 
 - Payment data — card numbers — never goes into git: blocked in the lines a PR
   adds under user/ and in the PR body. The nightly copy cuts it out of Notion (N6).
-- Document numbers, bank accounts and phones — the person's and her family's —
+- Document numbers, bank accounts and phones — the person's and the user's family's —
   live in one home, the Documents base in Notion, and reach git through the
   nightly copy. In the lines a PR adds under user/ and in the
   PR body — which becomes the merge commit's message — they are blocked with a
@@ -18,7 +18,7 @@ it passes; one without counts only in its written form, separators included. The
 engine is not scanned here: C1 holds it to the release, the factory checks it (F7).
 
 Under user/routines/ an e-mail address is a finding too (a routine
-master once held the trusted contact's, and the gate did not see it). DOC-1 keeps hers, her
+master once held the trusted contact's, and the gate did not see it). DOC-1 keeps the user's, the
 family's and the trusted contact's out of the routines — his two live in the bot field's
 part; a machine cannot tell whose an address is, so any address under user/routines/ is
 held, and a routine names a sender by its name.
