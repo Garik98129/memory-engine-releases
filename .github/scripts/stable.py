@@ -11,7 +11,7 @@ its release and that release's files at its tag. This code decides which release
 
 **The schedule** moves `stable` to the newest release that is at least 7 days old — the delay
 of the channel `stable` in a person's repository (`engine/checks/lock_check.py`), so the rules
-a chat reads are never current before the engine may be: her repository takes the release at
+a chat reads are never current before the engine may be: the user's repository takes the release at
 its weekly update after the same 7 days, some days later. A release is
 as old as the latest of three clocks: `published` in its manifest, which the factory wrote;
 the commit its tag is on; and the commit of `main`'s own line that brought it in — the same
@@ -235,6 +235,57 @@ def _index_1(data: dict, repository: str, tag: str) -> str:
         *rows]) + "\n"
 
 
+def _index_2(data: dict, repository: str, tag: str) -> str:
+    """The index in its second words: the first text's, with the person who uses the engine called
+    «the user» (the owner's decision, 18.11.2026). From the first release cut in them on, kept as
+    it is (`INDEX_TEXTS`), like the first."""
+    if set(data) - TOP_KEYS:
+        raise Refused(f"{TOPICS} has keys this code does not know: {', '.join(sorted(set(data) - TOP_KEYS)[:5])}")
+    about, topics, least = data.get("about"), data.get("topic"), data.get("min_engine")
+    if not isinstance(about, str) or not one_line(about.strip()):
+        raise Refused(f"{TOPICS} needs `about`: one plain paragraph — no line break, no address, no path, no release")
+    if not isinstance(least, str) or not TAG_RE.fullmatch(least):
+        raise Refused(f"{TOPICS} needs `min_engine`: the oldest release of the engine these rules are written for")
+    if key(least) > key(tag):
+        raise Refused(f"{TOPICS} names the minimal engine {least}, newer than {tag}: rules cannot need an engine "
+                      f"that their own release does not bring")
+    if not isinstance(topics, list) or not topics:
+        raise Refused(f"{TOPICS} names no topic")
+    rows, seen = [], set()
+    for topic in topics:
+        if not isinstance(topic, dict) or set(topic) != TOPIC_KEYS:
+            raise Refused(f"a topic in {TOPICS} needs exactly `name`, `when` and `files`")
+        name, when, names = topic["name"], topic["when"], topic["files"]
+        if not isinstance(name, str) or not _TOPIC_NAME.fullmatch(name) or name in seen:
+            raise Refused(f"a topic's `name` in {TOPICS} is a few plain words, each topic its own: {name!r}")
+        seen.add(name)
+        if not one_line(when):
+            raise Refused(f"the topic {name!r} in {TOPICS} needs `when`: one plain line — no «|», no address, no path, no release")
+        if (not isinstance(names, list) or not names or len(set(map(str, names))) != len(names)
+                or not all(isinstance(n, str) and _RULE_NAME.fullmatch(n) for n in names)):
+            raise Refused(f"the topic {name!r} in {TOPICS} needs `files`: rules file names, each once")
+        rows.append(f"| {name} | {when} | " + " · ".join(f"`{FILES}/{RULES}{n}`" for n in names) + " |")
+    return "\n".join([
+        f"# Topic rules — release {tag}",
+        "",
+        f"The rules of release {tag}: which files to read, and when. Read them in the repository "
+        f"`{repository}` at the tag `{tag}` — ref `{tag}`. Not at the branch this index came "
+        f"from: the branch moves on to the next release, the tag never moves.",
+        "",
+        f"These rules are written for the engine of release `{least}` or newer in the user's repository. That "
+        f"line is for that repository's checks: a chat cannot see that repository and does nothing about it.",
+        "",
+        "Before you answer or act on a topic, read every file of its line in full — all of them, "
+        "once a conversation. The files name each other's rules; read the ones this index lists, "
+        "not the ones a file mentions.",
+        "",
+        about.strip(),
+        "",
+        "| Topic | When | Files — all of them |",
+        "|---|---|---|",
+        *rows]) + "\n"
+
+
 # Every text an index was ever published in, oldest first; the last is what `release cut`
 # publishes now. A release is whole only while the index it published is the text this code
 # builds from its topics, byte for byte — so a text that is edited here, by one word, refuses
@@ -249,7 +300,7 @@ def _index_1(data: dict, repository: str, tag: str) -> str:
 # `index_names` — is not kept per text: narrowing it refuses the releases that no longer pass,
 # and that same check there is what shows it before the copy is merged. Any kept text is taken
 # for any release, whenever it was cut: a text is not bound to the releases of its day.
-INDEX_TEXTS = (_index_1,)
+INDEX_TEXTS = (_index_1, _index_2)
 
 
 def _source(source: bytes, repository: str, tag: str) -> dict:
