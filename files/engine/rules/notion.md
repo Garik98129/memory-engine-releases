@@ -57,7 +57,8 @@
   words — a deleted map can come back from Notion's trash, so say that first — and ask the user to send
   again the first message of the installation — the message «Start the installation: …», in an older
   installation the line «Open … start the installation» — on the page «Your assistant's
-  instructions» used to install. Two maps → ask
+  instructions» used to install, or on the installation page, where the user gives the same answers
+  again. Two maps → ask
   the user which one holds (INSTALL-2). The user's part names bases and no map → NOTION-10 to NOTION-12 do
   not apply. Your instructions carry no part of the user's → that part is what the first message gave
   and the map keeps under «The user's part» (`her-part`, INSTALL-7). A message of the user's that gives the part

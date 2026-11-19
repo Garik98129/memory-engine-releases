@@ -40,13 +40,30 @@ class TheOneText(unittest.TestCase):
     # of one sign here means each of them pastes again, and until then the user's AI holds the older text.
     # So the text never changes by the way — whoever changes it changes this fingerprint in the same
     # pull request, and its reader sees a change of the text for what it is.
-    FINGERPRINT = "543e1edd0c2cee6e517f86b5668cfe92280cdba59335781e53dc78c7d3e0d247"
+    # Changed on purpose by the text's mark (CORE-16, docs/DESIGN_PHASE3.md §5a): «TEXT MARK 2.» as its last line.
+    FINGERPRINT = "edc44d04291266a0a14f12db496a767227076c4c97913627e71e8247503920f4"
 
     def test_the_text_is_the_one_that_was_read(self):
         import hashlib
         self.assertEqual(hashlib.sha256((FIELDS / "fixed.md").read_bytes()).hexdigest(), self.FINGERPRINT,
                          "fixed.md is not the text that was read: every installed person would paste again. If that "
                          "is meant, change FINGERPRINT in the same pull request and say so in its body")
+
+    def test_its_last_line_is_the_mark_core_names(self):
+        """The text's mark (CORE-16, docs/DESIGN_PHASE3.md §5a): the last line of the text is «TEXT MARK n.»,
+        and CORE-16 names that very line as the one text's, so a chat with a lower mark, or none, tells the user
+        where the current text is. A text changed without its mark, or a mark changed without CORE-16, is red here."""
+        import re
+        last = self.TEXT.strip("\n").rsplit("\n", 1)[-1]
+        mark = re.fullmatch(r"TEXT MARK ([1-9][0-9]*)\.", last)
+        self.assertIsNotNone(mark, f"the text's last line is {last!r}, not its mark")
+        core = (FIELDS.parent / "core.md").read_text(encoding="utf-8")
+        self.assertIn(f"line «{last}»", " ".join(core.split()), "CORE-16 names the mark the text ends with")
+        self.assertEqual(len(re.findall(r"TEXT MARK [0-9]+\.", core)), 1, "CORE-16 names one mark, the current one")
+        self.assertEqual(self.TEXT.count("TEXT MARK"), 1, "the text holds its mark once, as its last line")
+        # Tolik's reading of #70: a line «TEXT MARK 1.» of the user's own after the text is no mark, for no text
+        # ever ended with it; the first mark is 2.
+        self.assertGreaterEqual(int(mark.group(1)), 2)
 
     def test_it_fits_the_smallest_field_she_can_choose(self):
         import tomllib

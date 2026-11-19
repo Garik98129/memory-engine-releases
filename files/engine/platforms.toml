@@ -48,7 +48,11 @@ field_limit = 5000                  # the field for every chat — Plus and abov
                                     # A project's instructions kept 4 000 whole and refused 8 000 (owner's
                                     # check, 14.11.2026); C6 stays at the floor of 4 000 either way
 field = "ChatGPT app: a new project, its instructions"     # where the owner's probes of 14.11.2026 ran
-field_all = "ChatGPT app: Personalization"        # every chat: where the owner put a field, 12.11.2026
+field_all = "chatgpt.com in your browser: Settings, Personalization"
+                                    # every chat: where the owner put a field, 12.11.2026. OpenAI's help names the
+                                    # apps' menu «Customize ChatGPT», the web's «Personalization» (read 19.11.2026);
+                                    # the owner's iPhone app showed him no Personalization, Safari did (19.11.2026,
+                                    # docs/DESIGN_PHASE3.md §4): the Issue names the browser's way
 notion = "yes"                      # seen 12.11.2026 in a test workspace: pages and the two bases (owner's check)
 # its chat did not open the rules' raw link, with its GitHub app on or off; with the app off it opened
 # GitHub's page of the same file (owner's tests, 12.11.2026): engine/checks/limits_check.py, BLOB_RULES;
