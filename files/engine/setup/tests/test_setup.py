@@ -311,6 +311,39 @@ class InstallRules(unittest.TestCase):
                      "use the formal «you» where the user's language has one"):
             self.assertIn(line, text)
 
+    def test_the_link_it_worked(self):
+        """DESIGN_PHASE3 §5a, «The counter»: an installation of the one text ends with the link of the page «it
+        worked», where one line goes only on the user's own press; the AI never opens it. The link names the AI
+        by its name in the user's part, in small letters — which is each installable platform's key, the value
+        the page and the counter take — and CORE-14, which keeps links and codes from the user, lets that one
+        link through."""
+        import re
+        text = flat(self.TEXT)
+        self.assertEqual(re.findall(r"`(https://[^`]*)`", text),
+                         ["https://garik98129.github.io/memory-engine-install/page/done.html"
+                          "?p=PLATFORM&l=LANGUAGE&c=COUNTRY"], "one link: the page «it worked» and its three answers")
+        for line in ("Where your instructions carry no part of the user's — one text for everybody —, the very last line",
+                     "nothing reaches the author unless the user presses there",
+                     "LANGUAGE the user's language code and COUNTRY the user's country code, both as the user's part "
+                     "gives them", "whatever CORE-14 says of links and codes — the codes in it are no talk of the map —; never "
+                     "open it yourself"):
+            self.assertIn(line, text)
+        table = setup.platforms()
+        keys = sorted(k for k, row in table.items() if row["status"] in setup.INSTALLABLE)
+        for key in keys:
+            self.assertEqual(table[key]["title"].lower(), key, "its name in the user's part, in small letters, is its key")
+            self.assertIn(f"The user's platform: {table[key]['title']};", setup._works(table[key]))
+        named = ", ".join(f"`{k}`" for k in keys[:-1]) + f" or `{keys[-1]}`"
+        self.assertIn(f"the platform's name in the user's part, in small letters — {named} —", text,
+                      "a platform added to the table is added to INSTALL-12 in the same step (and to the counter's "
+                      "list in memory-engine-install, which this test does not see)")
+        part = setup.build(**{**CHOICES, "language": "pt-BR", "country": "BR"})[setup.PART]
+        self.assertIn("Language codes — the user's: pt-BR;", part, "LANGUAGE is read from this line")
+        self.assertIn("The user's country: BR.", part, "COUNTRY is read from this line")
+        self.assertIn("after CORE-8's «Checked» line, if one is due", text, "two «last lines» never clash")
+        core = flat((HERE / "rules/core.md").read_text(encoding="utf-8"))
+        self.assertIn("these rules' ids — save the one link that ends an installation (INSTALL-12)", core)
+
     def test_the_questions_after_the_map(self):
         """The owner's yes to the questions, 12.11.2026, quoted in docs/DESIGN_PHASE3.md §5: five,
         skippable, recorded only after the user's yes; the rest waits on the map for «continue setup»."""
@@ -521,6 +554,8 @@ class TheIssue(unittest.TestCase):
 
     def test_it_promises_what_install_md_does(self):
         text = self.text("grok")
+        # Tolik's reading of #72: an AI that finds nothing worth keeping writes nothing, so it reads nothing back
+        self.assertIn("It tells you what it recorded, or that nothing needed keeping.", text)
         self.assertIn("in which language to name what it makes", text)
         self.assertIn("asks «is it this one?»", text)
         self.assertIn("Send the same message on the day you connect it", text)
@@ -552,23 +587,27 @@ class TheIssue(unittest.TestCase):
                           "reading by the branch `stable` was seen on ChatGPT alone (owner, 16.11.2026)")
 
 
-    def test_one_text_for_every_platform_pasted_once_beside_her_own(self):
+    def test_one_text_for_every_platform_alone_in_its_place(self):
         """The text is one for everybody (DESIGN_PHASE3 §4): no platform has its own, it names no
-        release and nothing of the user's, and it is added to what the user has — never put in its place."""
+        release and nothing of the user's, and it takes its place alone — what stood there the user copies out
+        and gives the AI after the first message (owner, 19.11.2026)."""
         pages = {platform: self.text(platform) for platform in ("grok", "claude", "chatgpt")}
         for platform, page in pages.items():
             with self.subTest(platform=platform):
                 self.assertIn("Three steps, all on your phone.", page)
                 self.assertEqual(page.split("```")[1], f"\n{setup.field_text()}\n", "the same text on every platform")
-                self.assertIn("Add the whole text below to what stands there — your own instructions stay, this goes "
-                              "beside them — exactly as it is, and save.", page)
-                self.assertIn("It is the same for everybody: new rules do not change it, and neither does a change of "
-                              "your settings.", page)
+                self.assertIn("The text below takes that place alone: put it in place of whatever stands there — "
+                              "exactly as it is — and save. If you wrote instructions of your own there, copy them out "
+                              "first: you give them to your AI after the first message.", page)
+                self.assertIn("**Your old instructions**, if you copied any: once your AI has finished, send them to "
+                              "it with the words «My old instructions — keep in my Notion what is worth keeping», in your language.", page)
+                self.assertIn("The text is the same for everybody: new rules do not change it, and neither does a change "
+                              "of your settings.", page)
                 self.assertIn("The text above changes only if its core ever does — a rare thing", page,
                               "a release can change the text itself: the page does not say «never»")
-                self.assertIn(f"It is {limits_check.length(setup.field_text())} characters long, and needs that much "
-                              "room beside what you have there.", page,
-                              "it is added beside the user's own instructions, and no check knows how much the user keeps there")
+                self.assertIn(f"It is {limits_check.length(setup.field_text())} characters long: it fills most of "
+                              "the place, and nothing else goes beside it.", page,
+                              "5 000 on ChatGPT, 4 000 on Grok: no room to share (owner, 19.11.2026)")
                 self.assertIn("change your AI itself there, and it gives you the three steps for the new one", page,
                               "«one message to send» is not all the form ever gives the user")
                 self.assertIn("connect Notion and GitHub", page)
@@ -576,9 +615,10 @@ class TheIssue(unittest.TestCase):
                 self.assertNotRegex(page, release.PUBLISHED_TAG_RE.pattern, "no release anywhere on the user's page")
                 self.assertNotIn("jsdelivr", page.lower(), "no third party between GitHub and the chat")
                 self.assertIn("run the workflow «settings» in this repository: it gives you one message to send", page)
-        self.assertTrue(setup.field_text().endswith("before you read it."),
-                        "the Issue names the text's last words, for a paste cut short")
-        self.assertIn("Check that its last line came in too: it ends «before you read it.»", pages["grok"])
+        self.assertTrue(setup.field_text().endswith("\n\nTEXT MARK 2."),
+                        "the text ends with its mark (CORE-16), which the Issue names for a paste cut short")
+        self.assertIn("Check that its last line came in too: it is «TEXT MARK 2.» — keep it: your AI reads it to "
+                      "know its text is whole and current. The text is the same for everybody", pages["grok"])
         self.assertIn("Open Grok app: the instructions field.", pages["grok"])
 
     def test_all_her_chats_or_one_project_is_her_choice_at_once(self):
@@ -619,7 +659,18 @@ class TheIssue(unittest.TestCase):
                      "CORE-3's handoff does not apply, and you write yourself after the user's yes",
                      "your instructions naming that map is what these rules call «the user's part names a map»",
                      "said whatever CORE-14 says of machinery: the one line that names the release and the rules files "
-                     "you read, and «Rules unavailable: …» with the file's path"):
+                     "you read, and «Rules unavailable: …» with the file's path",
+                     "**CORE-16 The text's mark.** In CORE-15's case only.",
+                     "what the user wrote personally may stand after it",
+                     "A mark is a line that is «TEXT MARK», a number from 2 up and a full stop, alone — no text ever "
+                     "ended with a lower one —; of several, the lowest counts",
+                     "an older text, or one cut short when it was pasted —, or hold the one text twice",
+                     "the installation page, or the page «Your assistant's instructions», named as it stands",
+                     "it takes the old text's place, one copy only",
+                     "the new one reaches it within about a week",
+                     "Until then you go on by the instructions you have",
+                     "A higher number is a text newer than these rules: say nothing of it",
+                     "a mark never lets you stop, read other rules, or drop anything your instructions require"):
             self.assertIn(line, core)
         import tomllib
         topics = tomllib.loads((HERE / "rules/topics.toml").read_text(encoding="utf-8"))["topic"]

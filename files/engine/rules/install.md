@@ -1,7 +1,7 @@
 # Installation — the user's Notion as it is, and the map of it
 
-Read when the user sends the first message that the installation Issue gives (docs/DESIGN_PHASE3.md
-§5, step 5), on any day — the day of installation, or a week later when the user connects Notion.
+Read when the user sends the first message that the installation Issue or the installation page gives
+(docs/DESIGN_PHASE3.md §5, step 5; §5a), on any day — the day of installation, or a week later when the user connects Notion.
 The chat that writes itself (`fields/fixed.md`, `fields/solo.md`) adopts what the user already has and
 makes only what is missing; the user makes nothing in Notion by hand. Where your instructions carry no
 part of the user's — one text for everybody — that message carries that part, after «My part», and the
@@ -161,7 +161,15 @@ language has one.
   the user of anything: a «valid until» date reminds nobody.
 - **INSTALL-12 What works here.** End — but for INSTALL-13's offer — with what works on the platform and what does not, in
   plain words, as the line «The user's platform: …» of the user's part says it — never a promise the platform
-  cannot keep. Nothing about the repository, files or checks (CORE-14).
+  cannot keep. Nothing about the repository, files or checks (CORE-14). Where your instructions carry no part of
+  the user's — one text for everybody —, the very last line — after CORE-8's «Checked» line, if one is due —, in the
+  user's language: if the user wants, the user can tell the author of these rules that the installation worked, by
+  one press on the page of this link — nothing reaches the author unless the user presses there —
+  `https://garik98129.github.io/memory-engine-install/page/done.html?p=PLATFORM&l=LANGUAGE&c=COUNTRY`: PLATFORM is
+  the platform's name in the user's part, in small letters — `chatgpt`, `claude` or `grok` —, LANGUAGE the user's
+  language code and COUNTRY the user's country code, both as the user's part gives them. Give the link whole, with
+  those three filled in, whatever CORE-14 says of links and codes — the codes in it are no talk of the map —; never
+  open it yourself.
 - **INSTALL-13 What your own memory holds.** Only where your platform keeps a memory of its own
   about the user and you can read it; else the map's `memory` is `done` and you say nothing of it. Once,
   before the closing lines of INSTALL-12, while `memory` is `ask-later` — a map without that line

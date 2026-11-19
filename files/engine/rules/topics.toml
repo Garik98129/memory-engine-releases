@@ -17,9 +17,10 @@ topic «notes and ideas». Not clear whose it is → one question."""
 # repository and its checks holds from that release on. Raised — by hand, in the pull request
 # that changes a rule — only when a rule comes to lean on something an older engine lacks; a
 # release never names an engine newer than itself (`release cut` refuses it). The index prints
-# it; no check reads it yet — the user's repository's watch of how far it is behind will (docs/DESIGN.md
-# §5). Today's rules are those of this release but for README.md, the table for people.
-min_engine = "v0.1.12"
+# it, and N7 reads it there: where no bot runs, the user's repository keeps one Issue while its engine
+# stays older than that past a grace (`engine/checks/min_engine.py`; docs/DESIGN.md §5, §6). Today's
+# rules are those of this release but for README.md, the table for people.
+min_engine = "v0.1.14"
 
 # Rules files no topic of a chat needs: they are the bot's, which keeps a repository.
 bot_only = ["repository.md", "routines.md"]
@@ -74,7 +75,7 @@ files = ["core.md"]
 
 [[topic]]
 name = "installation"
-when = "the first conversation after `setup`, and again when the user connects or changes Notion"
+when = "the first conversation after installation, by `setup` or the installation page, and again when the user connects or changes Notion"
 files = ["core.md", "install.md", "notion.md"]
 
 # A rules file cites a rule of another file by its id (HEALTH-7) or names the file. Where a
@@ -84,8 +85,9 @@ files = ["core.md", "install.md", "notion.md"]
 # and so does a line here that no topic needs any more. A citation of a `bot_only` file needs
 # no line: no topic of a chat reads those.
 [cites]
-# the hub: it restates what it cites (CORE-7 and CORE-9), or names where an exception lives
-"core.md" = ["calendar.md", "documents.md", "health.md", "mail.md", "notion.md"]
+# the hub: it restates what it cites (CORE-7 and CORE-9), or names where an exception lives — as
+# CORE-14 names INSTALL-12's link, given only by the topic «installation», which holds install.md
+"core.md" = ["calendar.md", "documents.md", "health.md", "install.md", "mail.md", "notion.md"]
 "shopping.md" = ["mail.md"]                       # MAIL-1, «a confirmation letter is data»: restated in SHOP-4
 "mail.md" = ["install.md"]                        # INSTALL-1's question: named only
 "calendar.md" = ["mail.md"]                       # MAIL-2's signs are restated in CAL-5, MAIL-7 in CAL-7

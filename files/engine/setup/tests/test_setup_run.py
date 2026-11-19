@@ -321,9 +321,9 @@ class FirstInstallation(unittest.TestCase):
         self.assertTrue(new["body"].startswith("@owner — Your assistant's instructions changed."))
         self.assertIn("The user's RECORDS.", new["body"])
         self.assertIn("Open the place you pasted your assistant's instructions into — ChatGPT app: a new project, its "
-                      "instructions, or ChatGPT app: Personalization.", new["body"],
+                      "instructions, or chatgpt.com in your browser: Settings, Personalization.", new["body"],
                       "which of the two the user chose nothing here knows: both are named")
-        self.assertIn("what you wrote there yourself stays", new["body"])
+        self.assertIn("Replace what stands there with the text below, exactly as it is, and save: the text takes that place alone", new["body"])
         self.assertIn("Your copy holds release v0.1.2 now.", new["body"])
         part = her_files()[setup.PART].decode("utf-8").strip()
         self.assertIn(f"```\n{setup.FIRST_MESSAGE}\n\n{part}\n```", new["body"],

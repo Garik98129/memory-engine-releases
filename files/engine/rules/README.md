@@ -55,7 +55,7 @@ is in this index (F2).
 | `calendar.md` | chat by its link, bot | reading the user's calendar, creating events, invitations to the user |
 | `routines.md` | bot | writing or changing a routine; the daily mark; updating after a release |
 | `repository.md` | bot | every pull request; a read-back the trusted contact asks for |
-| `install.md` | the chat that writes, by the link its installation Issue gives | the first conversation after `setup`, and again when the user connects or changes Notion: the map of the user's anchors, then a few questions |
+| `install.md` | the chat that writes, on the first message its installation Issue or page gives | the first conversation after installation, by `setup` or the installation page, and again when the user connects or changes Notion: the map of the user's anchors, then a few questions |
 | `topics.toml` | `release cut`: the source of the topic index (below) | — |
 | `fields/chat.md` | the platform: the chat's instruction field | — |
 | `fields/bot.md` | the platform: the bot's instruction field | — |
@@ -86,5 +86,5 @@ the same 1 030 of 4 000, and at least the room `chat.md` leaves, so the user's p
 `engine/checks/tests/test_rules_budget.py` holds the promise. `fixed.md` is joined with no part of
 the user's, so what the test holds it to is the smallest field a platform the user can choose has — 4 000 —
 and C6 measures the user's part by itself against the same limit. No check knows what the user already keeps
-in that field: the text is added beside the user's own instructions, and setup's Issue says how
-long it is.
+in that field: the text takes the field alone — setup's Issue says so, with its length, and has the user
+copy out what stood there and give it to the AI after the first message (owner, 19.11.2026).

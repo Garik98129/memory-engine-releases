@@ -114,8 +114,9 @@ class Sync(unittest.TestCase):
         self.assertIn(f"```\n{FIELD}\n```", issue["body"])
         self.assertIn("Open the place you pasted your assistant's instructions into — Grok app: the instructions "
                       "field.", issue["body"])
-        self.assertIn("what you wrote there yourself stays", issue["body"],
-                      "the text was added beside the user's own instructions: it alone is replaced")
+        self.assertIn("Replace what stands there with the text below, exactly as it is, and save: the text takes that place alone", issue["body"],
+                      "the text takes the place alone (owner, 19.11.2026): her own instructions she copies out first")
+        self.assertIn("copy them out first and send them to your AI", issue["body"])
         self.assertIn(f"```\n{setup.PART_MESSAGE}\n\n{PART}\n```", issue["body"],
                       "a page with another text sends the user's part once too: the page before may have joined it to the field")
         self.assertNotIn("My settings changed", issue["body"],
