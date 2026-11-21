@@ -1,6 +1,6 @@
 # memory-engine-releases
 Releases of memory-engine: at each tag its manifest and, from v0.1.6, its files — the engine's
-code, public on the owner's word of 09.11.2026. No personal data.
+code, public on the owner's word of 09.11.2026. No personal data. License: MIT (`LICENSE`).
 
 One tag per release, `vMAJOR.MINOR.PATCH`. At each tag, `release-manifest.json` lists every
 file the release puts into a person's repository, with its sha256, and the template commit it
@@ -101,7 +101,8 @@ and writes to the owner; a workflow switched off stays off until it is enabled a
 
 `main` is meant to change by pull requests of two kinds, never mixed: a **release** —
 `files/`, `release-manifest.json`, `rules-index.md`, written by the template's `release cut`
-and nothing else — and a change to **what this repository runs** — `.github/`, this file.
+and nothing else — and a change to **what this repository runs** — `.github/`, this file
+(and `LICENSE`, which runs nothing but goes the same way).
 The code that tags a release and decides when one is trusted must not come in with the
 release it judges.
 
