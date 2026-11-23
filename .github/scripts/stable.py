@@ -38,7 +38,9 @@ the cut: its tag is on `main`; its manifest names it; `files/` is the manifest's
 for byte, every path valid text; its index is the one the manifest holds the sha256 of, and is
 the very text this code builds from the release's own topics (`engine/rules/topics.toml`
 among its files) for this repository and this tag — in the words of today or in any words an
-index was published in before (`INDEX_TEXTS`: a release keeps the words it was cut with) — so
+index was published in before (`INDEX_TEXTS`: a release keeps the words it was cut with), and
+under the repository's name of today or, for the releases listed as cut under it, a name the
+repository had before (`FORMER`: a release keeps the name it was cut under) — so
 the index says nothing its topics do not, and a line of the topics carries no slash, no «@» and
 nothing of a tag's shape (`one_line` says what that keeps out and what it does not) — and names
 only files the release has; what
@@ -302,6 +304,46 @@ def _index_2(data: dict, repository: str, tag: str) -> str:
 # for any release, whenever it was cut: a text is not bound to the releases of its day.
 INDEX_TEXTS = (_index_1, _index_2)
 
+# The names the repository of releases had before, by the name it has today, each with the
+# releases cut under it that have an index. An index names the repository it was cut for, and a
+# release keeps its tag: after the repository is renamed or handed to another owner, every
+# release that is out still names the old one. Without its old name here each of them would be
+# «not whole» from that day — the branch on a release it cannot stand on, every night red, and
+# no move back. So an old name is kept, as a text is: never taken out while a release cut under
+# it is out. At a next rename the whole list moves under the new name, with the name just left
+# added to it. The entry must be in the copy the repository of releases runs before the
+# repository takes the name it is listed under, and nothing checks that order: a repository
+# renamed first, renamed in two steps through a name that is not listed, or renamed back, is
+# red each night until the copy lists the name it has. A chat sent to an old name still finds
+# the files only while GitHub answers that name with the repository's new place — which it
+# stops doing once a repository or a fork is made at the old place again; nothing here can see
+# that. So, unlike a text, a name is bound to the releases of its day: an old name is taken
+# only for the releases listed with it, by their tags. That a listed tag goes on holding the
+# release it held is not this code's to see — it reads the tag's name, no commit: a tag `v*` is
+# not to be moved or deleted (a ruleset of that repository), and were a listed tag put on other
+# content all the same, that content would be taken under the old name too. Older words say
+# nothing a chat was not told before; an old name is another address, and one that may lead
+# elsewhere some day — a release under any other tag whose index names it, cut so or edited
+# to, is refused, as an index that names any other repository is. The price is the list: a
+# release cut under the old name after those is refused until the list names it, and nothing at
+# the cut says so. A name is taken only for the repository it is listed under: this code run
+# anywhere else — a fork, a copy under a third name — holds an index to that repository's own
+# name alone, as before. The entry is found whatever the case of the letters GitHub hands the
+# workflow — GitHub does not tell names apart by case — and then the name as the entry spells
+# it is taken too: a release is cut for the name the template's defaults give, and its index
+# is held to that spelling byte for byte.
+FORMER = {"grafyla/releases": (("Garik98129/memory-engine-releases", ("v0.1.13", "v0.1.14")),)}
+
+
+def names(repository: str, tag: str) -> tuple[str, ...]:
+    """The names the index of the release `tag` may give the repository of releases `repository`:
+    its own first, as it was handed over; where `FORMER` has an entry for it, that entry's own
+    spelling of the name, and each name it had before that lists this release as cut under it."""
+    for name, had in FORMER.items():
+        if name.lower() == repository.lower():
+            return tuple(dict.fromkeys((repository, name, *(old for old, cut in had if tag in cut))))
+    return (repository,)
+
 
 def _source(source: bytes, repository: str, tag: str) -> dict:
     """The topics as their file gives them, read and no more: what form they must have is each
@@ -351,8 +393,10 @@ def index_text(source: bytes, repository: str, tag: str) -> str:
     index is written out: `release cut` publishes exactly this text (`engine/setup/topics.py`),
     and a release is moved to only when the index it published is a text this code builds from
     its topics again — so an index says nothing its topics do not say, and names no repository
-    but its own and no release but its own and the minimal engine its topics name, which is
-    never newer than itself. Refused when the source is not of the form the words of today ask."""
+    but the one it is written for here, `repository`, and no release but its own and the minimal
+    engine its topics name, which is never newer than itself. Which names of the repository of
+    releases a published index may carry is not asked here: `names`, in `_inspect`. Refused
+    when the source is not of the form the words of today ask."""
     return _built(INDEX_TEXTS[-1], _source(source, repository, tag), repository, tag)
 
 
@@ -381,7 +425,7 @@ class State:
 
 @dataclass(frozen=True)
 class Origin:
-    repository: str                         # this repository's owner/name: what an index must name
+    repository: str                         # this repository's owner/name of today: what an index must name (`names`)
     tags: dict[str, str]                    # release tag → its commit
     tip: str | None                         # the commit of `stable`, or None
     line: tuple[str, ...]                   # the commits of main's own line (first parents), newest first
@@ -530,7 +574,7 @@ def _inspect(repo: Path, at: Origin, tag: str) -> Release:
     if TOPICS not in content:
         raise Refused(f"{tag} has an index and no {TOPICS} to hold it to")
     try:
-        texts = index_texts(content[TOPICS], at.repository, tag)
+        texts = [t for name in names(at.repository, tag) for t in index_texts(content[TOPICS], name, tag)]
     except Refused as exc:
         raise Refused(f"the topics of {tag} give no index: {exc}") from None
     text = next((t for t in texts if raw == t.encode("utf-8")), None)
@@ -727,7 +771,7 @@ def _error(text: str) -> None:
 def main(argv: list[str] | None = None, now: datetime | None = None) -> int:
     ap = _Arguments(description=__doc__.splitlines()[0])
     ap.add_argument("--repo", type=Path, default=Path("."), help="a checkout of the repository of releases")
-    ap.add_argument("--repository", required=True, help="that repository's owner/name: the one an index must name")
+    ap.add_argument("--repository", required=True, help="that repository's owner/name as it is today: the one an index must name")
     ap.add_argument("--to", help="by hand: the release to move `stable` to, vMAJOR.MINOR.PATCH")
     ap.add_argument("--reason", help="by hand: why, in one line — it is kept on the branch")
     ap.add_argument("--dry-run", action="store_true", help="say what would be done; commit and push nothing")
