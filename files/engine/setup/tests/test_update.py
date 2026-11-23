@@ -30,7 +30,7 @@ from engine.setup.tests.test_release import PERSON_PART, TEMPLATE, frozen, topic
 
 NOW = datetime(2026, 11, 9, 7, 0, tzinfo=timezone.utc)
 WEEK = timedelta(days=7)
-RELEASES = "Garik98129/memory-engine-releases"
+RELEASES = "grafyla/releases"
 PULLS = f"repos/{REPO}/pulls"
 ISSUES = f"repos/{REPO}/issues"
 DISPATCH = f"repos/{REPO}/actions/workflows/check.yml/dispatches"

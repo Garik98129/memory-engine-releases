@@ -3,6 +3,7 @@ and install.md, the rules of the user's first conversation."""
 import contextlib
 import io
 import tempfile
+import tomllib
 import unittest
 import zoneinfo
 from pathlib import Path
@@ -17,7 +18,7 @@ HERE = Path(__file__).resolve().parents[2]
 CHOICES = dict(platform="grok", language="ru", country="IL", timezone="Asia/Jerusalem", name="Anna",
                gender="female")
 LOCK = b'release = "v0.2.0"\n'
-MANIFESTS = "Garik98129/memory-engine-releases"
+MANIFESTS = "grafyla/releases"
 FIXED = (HERE / "rules/fields/fixed.md").read_text(encoding="utf-8")
 
 
@@ -59,7 +60,7 @@ class Build(unittest.TestCase):
         self.assertIn("The user's country: IL. Its emergency number — name it from what you know", part,
                       "no number asked (owner, 12.11.2026)")
         self.assertIn("The user is a woman", part)
-        self.assertIn("The user's platform: Grok; plan: any; writes Notion itself: yes;", part,
+        self.assertIn("The user's platform: Grok; plan: Plus; writes Notion itself: yes;", part,
                       "INSTALL-12 reads what works here, not the Issue")
         self.assertIn("Before your first answer in each chat — danger signs still first — find in the user's Notion the page "
                       f"whose title ends with « · {setup.MAP_KEY}» and read it", FIXED,
@@ -295,10 +296,10 @@ class InstallRules(unittest.TestCase):
                      "ask one «yes?»: the plan shown whole is the one action of «One yes, one action», so the user's yes "
                      "covers that plan and nothing else, and you do not ask again for each page",
                      "Never rename, move, delete, rewrite or reorder a page or a\n  base of the user's",
-                     "write nothing of your own into those pages at installation", "add them only with that yes",
+                     "write nothing of your own into those pages at setup", "add them only with that yes",
                      "under no page of the user's", "file (files)", "one row\n  «Signature» with an empty file",
                      "the other goes only on «Delete?» and a yes to it", "open each item and the map again",
-                     "Set up no scheduled task at installation", "never a promise the platform\n  cannot keep",
+                     "Set up no scheduled task at setup", "never a promise the platform\n  cannot keep",
                      "never describe what you made as reminding the user of anything: a «valid until» date reminds nobody"):
             self.assertIn(flat(line), flat(self.TEXT))
         self.assertNotIn("emergency", self.TEXT, "no number is checked with the user any more")
@@ -320,7 +321,7 @@ class InstallRules(unittest.TestCase):
         import re
         text = flat(self.TEXT)
         self.assertEqual(re.findall(r"`(https://[^`]*)`", text),
-                         ["https://garik98129.github.io/memory-engine-install/page/done.html"
+                         ["https://setup.grafyla.com/page/done.html"
                           "?p=PLATFORM&l=LANGUAGE&c=COUNTRY"], "one link: the page «it worked» and its three answers")
         for line in ("Where your instructions carry no part of the user's — one text for everybody —, the very last line",
                      "nothing reaches the author unless the user presses there",
@@ -342,7 +343,7 @@ class InstallRules(unittest.TestCase):
         self.assertIn("The user's country: BR.", part, "COUNTRY is read from this line")
         self.assertIn("after CORE-8's «Checked» line, if one is due", text, "two «last lines» never clash")
         core = flat((HERE / "rules/core.md").read_text(encoding="utf-8"))
-        self.assertIn("these rules' ids — save the one link that ends an installation (INSTALL-12)", core)
+        self.assertIn("these rules' ids — save the one link that ends a setup (INSTALL-12)", core)
 
     def test_the_questions_after_the_map(self):
         """The owner's yes to the questions, 12.11.2026, quoted in docs/DESIGN_PHASE3.md §5: five,
@@ -359,8 +360,8 @@ class InstallRules(unittest.TestCase):
                      "as INSTALL-5 allows; a skip writes nothing into «Health»",
                      "the map's «How we talk» notes «what to avoid: skipped»",
                      "«unknown» and «what to avoid: skipped» counting as answers",
-                     "write nothing of your own into those pages at installation. The user's own answers",
-                     "that «Buy?», «Delete?» and «Send?» — save that one exception — stay whatever is chosen",
+                     "write nothing of your own into those pages at setup. The user's own answers",
+                     "that «Buy?», «Delete?» and «Send?» — save that one exception — stay whatever the user chooses",
                      "Not asked when «Health» is `none`",
                      "never written as a setting (the one exception: MAIL-8's line, on the user's yes); if noted at all, "
                      "then as «asked not to be asked before sending — the question stays»",
@@ -388,7 +389,7 @@ class InstallRules(unittest.TestCase):
         notion = (HERE / "rules/notion.md").read_text(encoding="utf-8")
         for line in ("**NOTION-10 The map.**", "never by guessing", "An anchor marked `none` — left out, the user's choice — does not exist",
                      "never make the anchor on your own", "The map the user's part names cannot be found",
-                     "outside installation record nothing in Notion"):
+                     "outside setup record nothing in Notion"):
             self.assertIn(line, flat(notion))
         solo = (HERE / "rules/fields/solo.md").read_text(encoding="utf-8")
         self.assertIn("her Notion (below)", solo, "the user's part below names a map, or the pilot's bases")
@@ -409,8 +410,8 @@ class InstallRules(unittest.TestCase):
                      "Each «unknown — not asked yet» line of the page gives way to what the user says",
                      "read its anchor and ask only what it does not hold yet",
                      "offer to record what the user said so far, with its own «Record?»",
-                     "the message «Start the installation: …», in an older installation the line «Open … start the "
-                     "installation» — on the page «Your assistant's instructions» used to install",
+                     "the message «Start the setup: …», in an older one «Start the installation: …» or the line «Open … "
+                     "start the installation» — on the page «Your assistant's instructions» used to set up",
                      "«continue setup» in any language, in the user's words, on any day; not a «let's go on» inside another task",
                      "Health: first ask whether the user wants to talk about health now; no → it stays `ask-later`",
                      "A skipped question is «unknown», written so — never «none»",
@@ -555,10 +556,11 @@ class TheIssue(unittest.TestCase):
     def test_it_promises_what_install_md_does(self):
         text = self.text("grok")
         # Tolik's reading of #72: an AI that finds nothing worth keeping writes nothing, so it reads nothing back
-        self.assertIn("It tells you what it recorded, or that nothing needed keeping.", text)
+        self.assertIn("It moves what is worth keeping into your Notion and tells you what it recorded, or that nothing "
+                      "needed keeping.", text)
         self.assertIn("in which language to name what it makes", text)
         self.assertIn("asks «is it this one?»", text)
-        self.assertIn("Send the same message on the day you connect it", text)
+        self.assertIn("If it says it cannot see your Notion, check the connection and send the same message again", text)
         self.assertNotIn("checks your emergency number", text, "the field keeps its safety rule; the Issue asks nothing")
         self.assertIn("say «continue setup» in your language", text)
         self.assertIn("how you like answers, what you must avoid; skip any", text)
@@ -572,15 +574,17 @@ class TheIssue(unittest.TestCase):
         self.assertIn(f"```\n{setup.FIRST_MESSAGE}\n\n{part.strip()}\n```", claude,
                       "the first message carries the user's part: the text holds nothing of the user's")
         self.assertIn("You need the Pro plan.", claude)
-        self.assertIn("a new project, its instructions", claude)
+        self.assertIn("Open Claude: Settings, Your Claude, Instructions.", claude,
+                      "the field for every chat (the owner's decision, 20.11.2026), not a project's")
+        self.assertNotIn("project", claude)
         chatgpt = self.text("chatgpt")
         self.assertIn("You need the Plus plan.", chatgpt, "on Free its field holds 1 500 (owner, 12.11.2026)")
         self.assertIn("In beta — not known yet: how it keeps to its rules day to day", chatgpt)
         self.assertIn("Your AI writes your records into Notion itself.", chatgpt, "seen 12.11.2026 (owner's check)")
         grok = self.text("grok")
-        self.assertNotIn("You need the", grok)
+        self.assertIn("You need the Plus plan.", grok, "on the free plan it does not work (owner, 22.11.2026)")
         self.assertIn("not confirmed yet", grok, "Automations on a free account: a probe (§8)")
-        self.assertIn("No daily task is set up at installation", grok)
+        self.assertIn("No daily task is set up at setup", grok)
         for name, page in (("Grok", grok), ("Claude", claude)):
             self.assertIn(f"In beta — not known yet: whether its chat finds and reads the rules by itself, as it "
                           f"must: not tried yet on {name}.", page,
@@ -594,51 +598,64 @@ class TheIssue(unittest.TestCase):
         pages = {platform: self.text(platform) for platform in ("grok", "claude", "chatgpt")}
         for platform, page in pages.items():
             with self.subTest(platform=platform):
-                self.assertIn("Three steps, all on your phone.", page)
+                self.assertIn("Two texts, and they go to different places.", page)
+                self.assertLess(page.index("**First, check the connections.**"), page.index("**1. The instructions — not into a chat.**"),
+                                "the connections come before the setup, not as a step of it (owner, 23.11.2026)")
+                self.assertLess(page.index("**1. The instructions — not into a chat.**"),
+                                page.index("**2. The first message — into a chat.** Send your AI, in a new conversation:"))
+                self.assertIn("This text goes into your AI's settings, into the field for standing instructions.", page)
+                self.assertNotIn("project", page, "no platform's text goes into a project any more")
                 self.assertEqual(page.split("```")[1], f"\n{setup.field_text()}\n", "the same text on every platform")
                 self.assertIn("The text below takes that place alone: put it in place of whatever stands there — "
                               "exactly as it is — and save. If you wrote instructions of your own there, copy them out "
-                              "first: you give them to your AI after the first message.", page)
+                              "first — into a notes app on your phone, for one. Do not put them back into this field: after "
+                              "the setup you send them to your AI in a chat.", page)
                 self.assertIn("**Your old instructions**, if you copied any: once your AI has finished, send them to "
-                              "it with the words «My old instructions — keep in my Notion what is worth keeping», in your language.", page)
+                              "it as an ordinary message in a chat, with the words «My old instructions — keep in my Notion "
+                              "what is worth keeping», in your language.", page)
+                self.assertIn("It works in all your chats: in each new one your AI looks at your Notion before its first "
+                              "answer.", page, "the price of every chat, said where the text goes")
+                self.assertIn("If it says it cannot see your Notion, check the connection and send the same message again.", page)
+                self.assertNotIn("Not using Notion yet?", page, "Notion is connected before the setup now")
                 self.assertIn("The text is the same for everybody: new rules do not change it, and neither does a change "
                               "of your settings.", page)
                 self.assertIn("The text above changes only if its core ever does — a rare thing", page,
                               "a release can change the text itself: the page does not say «never»")
-                self.assertIn(f"It is {limits_check.length(setup.field_text())} characters long: it fills most of "
-                              "the place, and nothing else goes beside it.", page,
-                              "5 000 on ChatGPT, 4 000 on Grok: no room to share (owner, 19.11.2026)")
-                self.assertIn("change your AI itself there, and it gives you the three steps for the new one", page,
+                self.assertIn(f"It is {limits_check.length(setup.field_text())} characters long, and nothing else goes "
+                              "beside it.", page,
+                              "5 000 on ChatGPT, 4 000 on Grok: no room to share (owner, 19.11.2026); Claude's field "
+                              "holds more, so the page no longer says the text fills the place")
+                self.assertIn("change your AI itself there, and it gives you the two texts for the new one", page,
                               "«one message to send» is not all the form ever gives the user")
-                self.assertIn("connect Notion and GitHub", page)
+                self.assertIn("In your AI's settings, Notion and GitHub must be connected", page)
                 self.assertIn(f"they are public, in `{MANIFESTS}`. Do not give it this repository of yours.", page)
                 self.assertNotRegex(page, release.PUBLISHED_TAG_RE.pattern, "no release anywhere on the user's page")
                 self.assertNotIn("jsdelivr", page.lower(), "no third party between GitHub and the chat")
                 self.assertIn("run the workflow «settings» in this repository: it gives you one message to send", page)
-        self.assertTrue(setup.field_text().endswith("\n\nTEXT MARK 2."),
+        self.assertTrue(setup.field_text().endswith("\n\nTEXT MARK 4."),
                         "the text ends with its mark (CORE-16), which the Issue names for a paste cut short")
-        self.assertIn("Check that its last line came in too: it is «TEXT MARK 2.» — keep it: your AI reads it to "
+        self.assertIn("Check that its last line came in too: it is «TEXT MARK 4.» — keep it: your AI reads it to "
                       "know its text is whole and current. The text is the same for everybody", pages["grok"])
         self.assertIn("Open Grok app: the instructions field.", pages["grok"])
 
-    def test_all_her_chats_or_one_project_is_her_choice_at_once(self):
-        """The owner's decision of 16.11.2026, quoted in docs/DESIGN_PHASE3.md §4: the choice is given at
-        once. Where the table names both places, the Issue has the user's choose one, with the price
-        of «every chat» said; where it names one, there is nothing to choose."""
-        chatgpt = self.text("chatgpt")
-        row = self.table["chatgpt"]
-        self.assertIn(f"First choose where your assistant lives. **Only in a project** — {row['field']}: you talk to "
-                      f"it there, and your other chats stay as they are. Or **in all your chats** — "
-                      f"{row['field_all']}: it then looks at your Notion before its first answer in every chat",
-                      chatgpt)
-        self.assertIn("One place, not both.", chatgpt)
-        for platform in ("grok", "claude"):
+    def test_every_platform_has_one_place_the_field_for_all_her_chats(self):
+        """The owner's decisions: 20.11.2026 for Claude (every chat), 23.11.2026 for ChatGPT (no project).
+        No row of the table names two places today, so no page asks the user to choose; where a row named both
+        (`field_all`), the Issue would still give the choice at once, with the price of «every chat» said."""
+        for platform in ("grok", "claude", "chatgpt"):
             self.assertNotIn("field_all", self.table[platform])
             self.assertNotIn("choose where your assistant lives", self.text(platform))
+        self.assertIn("Open chatgpt.com in your browser: the menu under your name, Personalization.", self.text("chatgpt"))
+        row = {**self.table["chatgpt"], "field": "a project", "field_all": "every chat"}
+        self.assertEqual(setup._where(row),
+                         "First choose where your assistant lives. **Only in a project** — a project: you talk to it "
+                         "there, and your other chats stay as they are. Or **in all your chats** — every chat: it then "
+                         "looks at your Notion before its first answer in every chat, and may offer to record from any of "
+                         "them. One place, not both.")
 
     def test_the_first_message_carries_her_part_and_no_link(self):
         """Before the one text it linked install.md at the user's release. The rules of the topic
-        «installation» are found now as every topic's are — through the index the text names."""
+        «setup» are found now as every topic's are — through the index the text names."""
         part = setup.build(**CHOICES)[setup.PART]
         message = setup.first_message(part)
         self.assertEqual(message, f"{setup.FIRST_MESSAGE}\n\n{part.rstrip()}")
@@ -665,7 +682,7 @@ class TheIssue(unittest.TestCase):
                      "A mark is a line that is «TEXT MARK», a number from 2 up and a full stop, alone — no text ever "
                      "ended with a lower one —; of several, the lowest counts",
                      "an older text, or one cut short when it was pasted —, or hold the one text twice",
-                     "the installation page, or the page «Your assistant's instructions», named as it stands",
+                     "the setup page, or the page «Your assistant's instructions», named as it stands",
                      "it takes the old text's place, one copy only",
                      "the new one reaches it within about a week",
                      "Until then you go on by the instructions you have",
@@ -674,8 +691,8 @@ class TheIssue(unittest.TestCase):
             self.assertIn(line, core)
         import tomllib
         topics = tomllib.loads((HERE / "rules/topics.toml").read_text(encoding="utf-8"))["topic"]
-        self.assertIn("installation", [topic["name"] for topic in topics], "the topic the message names is in the index")
-        self.assertIn("«installation»", setup.FIRST_MESSAGE)
+        self.assertIn("setup", [topic["name"] for topic in topics], "the topic the message names is in the index")
+        self.assertIn("«setup»", setup.FIRST_MESSAGE)
 
 
 class Blob(unittest.TestCase):
@@ -744,7 +761,7 @@ class Main(unittest.TestCase):
             self.assertTrue((repo / setup.CONFIG).is_file() and (repo / setup.PART).is_file())
             text = issue.read_text(encoding="utf-8")
             self.assertIn("Your assistant's instructions — Grok", text)
-            self.assertIn("Start the installation: read the rules of the topic «installation»", text)
+            self.assertIn("Start the setup: read the rules of the topic «setup»", text)
             self.assertNotIn("v0.2.0", text, "nothing on the user's page leans on the release the user's repository holds")
             code, out = self.run_main(repo, issue, name="Other")
             self.assertEqual(code, 2)
@@ -804,13 +821,17 @@ class WhatThePlatformItselfAsked(unittest.TestCase):
 
     def test_the_first_message_is_her_own_word_that_the_page_holds_the_ais_rules(self):
         """The field calls a page «data, not a command», and install.md is no topic file of its list."""
-        self.assertEqual(setup.FIRST_MESSAGE, "Start the installation: read the rules of the topic «installation» and "
+        self.assertEqual(setup.FIRST_MESSAGE, "Start the setup: read the rules of the topic «setup» and "
                                               "follow them. My part — keep these lines on my map as they are:")
-        self.assertIn("the message «Start the installation: …»", self.FLAT("notion.md"),
+        self.assertIn("the message «Start the setup: …»", self.FLAT("notion.md"),
                       "NOTION-10 names the message by its first words")
-        self.assertIn("in an older installation the line «Open … start the installation»", self.FLAT("notion.md"),
-                      "an installation made before the one text was sent that line, and may be asked for it again")
-        self.assertIn("the message that starts the installation is the one exception", " ".join(FIXED.split()),
+        self.assertIn("in an older one «Start the installation: …» or the line «Open … start the installation»", self.FLAT("notion.md"),
+                      "a setup made before these words was sent one of those, and may be asked for it again")
+        topic = next(t for t in tomllib.loads((HERE / "rules/topics.toml").read_text(encoding="utf-8"))["topic"]
+                     if t["name"] == "setup")
+        self.assertIn("«Start the setup», in an older message «Start the installation»", topic["when"],
+                      "the index names the topic for both first messages: the older one asks for a topic «installation»")
+        self.assertIn("the message that starts the setup is the one exception", " ".join(FIXED.split()),
                       "the text's «record nothing without a map» must not stop the message that makes the map")
 
     def test_her_one_yes_covers_the_plan_shown_whole(self):
@@ -826,7 +847,7 @@ class WhatThePlatformItselfAsked(unittest.TestCase):
             with self.subTest(name=name):
                 field = self.FLAT(f"fields/{name}")
                 self.assertIn("Topic rules: before answering or acting, open the topic's file once a chat (fails → say "
-                              "so) — health.md", field)
+                              "so, nothing depending on it) — health.md", field)
                 # What paid for it, each the same meaning in fewer letters — the field is as long as the pilot's.
                 for kept in ("her Notion (below), mail, calendar.", "no «later»: offer an event.",
                              "two independent sources, reprints not counted;", "is her yes: do it;",

@@ -25,7 +25,7 @@ from engine.setup import stable, topics
 
 ROOT = Path(__file__).resolve().parents[3]
 TOPICS = (ROOT / "engine" / "rules" / "topics.toml").read_bytes()
-RELEASES = "Garik98129/memory-engine-releases"
+RELEASES = "grafyla/releases"
 NO_BOT = VALID_CONFIG.replace(b"read_budget_bytes = 16384\n",
                               b'read_budget_bytes = 16384\nwriter = "chat"\nbot = false\n').replace(
     b'name = "grok"', b'name = "chatgpt"')

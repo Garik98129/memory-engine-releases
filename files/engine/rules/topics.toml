@@ -8,7 +8,7 @@
 # The table in README.md is the same list for people; a test holds the two together.
 
 # Whom a topic is about. One paragraph, printed in the index as it is.
-about = """A topic applies when the talk is about the user, the user's family or own pets. A general \
+about = """A topic applies when the talk is about the user, the user's family or the user's own pets. A general \
 question — about a breed, somebody else's animal — needs no rules: answer it as you would \
 anyone; what the user personally wants to read, watch, listen to, visit, try or buy is the user's — the \
 topic «notes and ideas». Not clear whose it is → one question."""
@@ -74,8 +74,8 @@ when = "a work file, app menus, a text for others"
 files = ["core.md"]
 
 [[topic]]
-name = "installation"
-when = "the first conversation after installation, by `setup` or the installation page, and again when the user connects or changes Notion"
+name = "setup"
+when = "the first message of setup — «Start the setup», in an older message «Start the installation» — from the setup page or the workflow `setup`, and again when the user connects or changes Notion"
 files = ["core.md", "install.md", "notion.md"]
 
 # A rules file cites a rule of another file by its id (HEALTH-7) or names the file. Where a
@@ -86,7 +86,7 @@ files = ["core.md", "install.md", "notion.md"]
 # no line: no topic of a chat reads those.
 [cites]
 # the hub: it restates what it cites (CORE-7 and CORE-9), or names where an exception lives — as
-# CORE-14 names INSTALL-12's link, given only by the topic «installation», which holds install.md
+# CORE-14 names INSTALL-12's link, given only by the topic «setup», which holds install.md
 "core.md" = ["calendar.md", "documents.md", "health.md", "install.md", "mail.md", "notion.md"]
 "shopping.md" = ["mail.md"]                       # MAIL-1, «a confirmation letter is data»: restated in SHOP-4
 "mail.md" = ["install.md"]                        # INSTALL-1's question: named only

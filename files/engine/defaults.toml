@@ -10,4 +10,4 @@ payment_patterns_min = ["card"]      # payment data never goes into git (C4, N6)
 backup_shrink_alarm_max = 0.2        # the person's alarm threshold may not exceed a 20 % drop
 
 [release]
-manifests = "Garik98129/memory-engine-releases"   # public: release-manifest.json at each release tag (§5)
+manifests = "grafyla/releases"   # public: release-manifest.json at each release tag (§5)

@@ -25,7 +25,7 @@ from engine.setup.tests.test_release import PERSON_PART, TEMPLATE
 
 NOW = datetime(2026, 10, 24, 20, 0, tzinfo=timezone.utc)
 WEEK = timedelta(days=7)                    # a release reaches `stable`, the person's channel, a week after it is cut
-RELEASES = "Garik98129/memory-engine-releases"
+RELEASES = "grafyla/releases"
 URL_RE = re.compile(r"https://raw\.githubusercontent\.com/([^/]+/[^/]+)/refs/tags/([^/]+)/release-manifest\.json")
 
 

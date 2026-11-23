@@ -30,7 +30,10 @@ from engine.checks.tests.helpers import Repo
 from engine.setup import release, stable, topics
 from engine.setup.tests.test_release import TEMPLATE, topics_of
 
-REPOSITORY = "Garik98129/memory-engine-releases"
+REPOSITORY = "grafyla/releases"              # the repository of releases, as the template's defaults name it
+FORMERLY = "Garik98129/memory-engine-releases"      # the name it had: stable.FORMER lists it under the one above
+RENAMED = REPOSITORY                        # the stories of a rename start at FORMERLY and take this name
+FORMER = {REPOSITORY: ((FORMERLY, ("v0.1.13", "v0.1.14")),)}   # stable.FORMER as it is: a test holds it to this
 DAY0 = datetime(2026, 11, 2, 9, 0, tzinfo=timezone.utc)
 DAY = timedelta(days=1)
 
@@ -51,20 +54,23 @@ class World:
     """The factory, the public repository of releases (a bare origin) and the checkout a release
     is cut into."""
 
-    def __init__(self):
+    def __init__(self, name: str = REPOSITORY):
+        """`name` — that repository's owner/name on the day the story starts: the template's files
+        name it so, whatever they name today."""
         self._tmp = tempfile.TemporaryDirectory()
         root = Path(self._tmp.name)
         self.origin = root / "origin.git"
         subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(self.origin)], check=True)
         self.work = root / "work"
         subprocess.run(["git", "init", "-q", "-b", "main", str(self.work)], check=True)
-        git(self.work, "remote", "add", "origin", f"https://github.com/{REPOSITORY}")   # what `cut` asks of a checkout
+        git(self.work, "remote", "add", "origin", f"https://github.com/{name}")   # what `cut` asks of a checkout
         (self.work / "README.md").write_text("Release manifests.\n", encoding="utf-8")
         git(self.work, "add", "-A")
         git(self.work, "commit", "-q", "-m", "start")
         git(self.work, "push", "-q", str(self.origin), "HEAD:main")
-        self.factory = Repo(TEMPLATE)
+        self.factory = Repo({**TEMPLATE, **self.named(name)})
         self.runs = 0
+        self.name = name                    # that repository's owner/name: what GitHub hands the workflow, and `cut` is told
 
     def close(self):
         self.factory.close()
@@ -77,7 +83,23 @@ class World:
         if changes:
             self.factory.commit(changes)
         release.cut(release.release_files(self.factory.path, "main"), tag, self.factory.base, published or at,
-                    self.work, REPOSITORY)
+                    self.work, self.name)
+
+    def rename(self, name: str, factory: bool = False) -> None:
+        """The repository of releases is renamed, or handed to another owner: from now on GitHub
+        runs its workflows under `name`, and a checkout of it has that origin. Its tags, its
+        `main` and its branch `stable` are what they were. With `factory`, the template names it
+        so too — its defaults and the one text for everybody —, as it must before the next cut."""
+        self.name = name
+        git(self.work, "remote", "set-url", "origin", f"https://github.com/{name}")
+        if factory:
+            self.factory.commit(self.named(name))
+
+    @staticmethod
+    def named(name: str) -> dict[str, bytes]:
+        """The template's files that name the repository of releases, naming it `name`."""
+        return {path: TEMPLATE[path].replace(REPOSITORY.encode(), name.encode())
+                for path in ("engine/defaults.toml", release.FIXED_FIELD)}
 
     def land(self, tag: str | None, at: datetime, annotated: bool = False, merged: datetime | None = None,
              on_merge: bool = False) -> str:
@@ -117,7 +139,7 @@ class World:
                         f"file://{self.origin}", str(clone)], check=True, capture_output=True)
         out, err = io.StringIO(), io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-            code = stable.main(["--repo", str(clone), "--repository", REPOSITORY, *args], now=now)
+            code = stable.main(["--repo", str(clone), "--repository", self.name, *args], now=now)
         return code, out.getvalue() + err.getvalue()
 
     def hand(self, now: datetime, to: str, reason: str = "a reason") -> tuple[int, str]:
@@ -404,7 +426,7 @@ class NotWhole(Story):
         except stable.Refused:
             pass                            # topics no index can be written from: the published one stays
 
-    NOT_ITS_OWN = ("rules-index.md of v0.1.1 is not the index of its own topics for Garik98129/memory-engine-releases: "
+    NOT_ITS_OWN = ("rules-index.md of v0.1.1 is not the index of its own topics for grafyla/releases: "
                    "it was edited, or built for another repository or release")
 
     def test_a_file_changed_after_the_cut(self):
@@ -436,7 +458,7 @@ class NotWhole(Story):
         for name, forge in (
                 ("another release", lambda w: index(w) + "\nRead them at the tag v0.1.0 instead.\n"),
                 ("opens by another release", lambda w: index(w).replace("v0.1.1", "v0.1.0")),
-                ("another repository", lambda w: index(w).replace("Garik98129/memory-engine-releases", "someone/rules")),
+                ("another repository", lambda w: index(w).replace("grafyla/releases", "someone/rules")),
                 ("a branch, not the tag", lambda w: index(w).replace("ref `v0.1.1`", "ref `main`")),
                 ("a link", lambda w: index(w).replace(
                     "`files/engine/rules/core.md`", "https://raw.githubusercontent.com/someone/rules/main/files/engine/rules/core.md")),
@@ -1351,7 +1373,8 @@ files = ["notion.md"]
 [cites]
 '''.encode()
     # The sha256 of each text of stable.INDEX_TEXTS, in their order: of what it builds from SOURCE
-    # for REPOSITORY and v0.1.3, then from SOURCE_2 for another repository and v10.20.30, one
+    # for FORMERLY — the name the repository of releases had when the lines below were written,
+    # kept so that they stay what they were — and v0.1.3, then from SOURCE_2 for another repository and v10.20.30, one
     # after the other. From the first release cut with an index on, a line here is never changed
     # and never taken out: the text it holds is the index of releases that are out. New words — a
     # new function at the end of INDEX_TEXTS and a new line here. No check refuses a change of a
@@ -1367,7 +1390,7 @@ files = ["notion.md"]
 
     @classmethod
     def fingerprint(cls, build) -> str:
-        built = (build(stable.tomllib.loads(cls.SOURCE.decode()), REPOSITORY, "v0.1.3")
+        built = (build(stable.tomllib.loads(cls.SOURCE.decode()), FORMERLY, "v0.1.3")
                  + build(stable.tomllib.loads(cls.SOURCE_2.decode()), "some-one/rules.of_hers", "v10.20.30"))
         return release.hashlib.sha256(built.encode()).hexdigest()
 
@@ -1532,6 +1555,206 @@ files = ["notion.md"]
         code, out = self.w.run(DAY0 + 30 * DAY)
         self.assertEqual((code, self.w.on()), (1, "v0.1.0"), out)
         self.assertIn("STABLE finding: rules-index.md of v0.1.1 is not the index of its own topics", out)
+
+
+class Renamed(Story):
+    """The repository of releases takes another name — renamed, or handed to another owner. An
+    index names the repository it was cut for and a release keeps its tag, so the releases that are out
+    go on naming the old one: the code keeps that name (`stable.FORMER`), or every one of them
+    would be «not whole» from that day.
+
+    What these fixtures cannot see: that GitHub answers the old name with the repository's new
+    place — for a chat's connector, a raw link, a clone — and for how long."""
+
+    def setUp(self):
+        self.w = World(FORMERLY)
+        self.addCleanup(self.w.close)
+        self.w.publish("v0.1.0", DAY0)
+        self.moved(DAY0 + 7 * DAY, to="v0.1.0")
+        self.w.publish("v0.1.1", DAY0 + 8 * DAY)
+        self.now = DAY0 + 9 * DAY
+        # in these stories v0.1.0 and v0.1.1 are the releases cut under the old name
+        patch = mock.patch.dict(stable.FORMER, {RENAMED: ((FORMERLY, ("v0.1.0", "v0.1.1")),)})
+        patch.start()
+        self.addCleanup(patch.stop)
+
+    def test_the_releases_that_are_out_stay_whole_and_the_branch_goes_on_as_before(self):
+        self.w.rename(RENAMED)
+        out = self.stays(self.now, "v0.1.0")
+        self.assertIn("STABLE note: v0.1.1 is due at 2026-11-17T09:00:00Z, not yet", out)
+        self.assertNotIn("STABLE finding", out)
+        out = self.moved(DAY0 + 15 * DAY, to="v0.1.1")
+        self.assertIn("STABLE moved: v0.1.0 -> v0.1.1 (the schedule)", out)
+        self.assertIn(f"Read them in the repository `{FORMERLY}` at the tag `v0.1.1`", self.w.at_branch("rules-index.md"),
+                      "the release as its tag has it: its index names the repository it was cut for")
+        code, out = self.w.hand(DAY0 + 16 * DAY, "v0.1.0", "back, under the new name")
+        self.assertEqual((code, self.w.on(), self.w.record()["withdrawn"]), (0, "v0.1.0", ["v0.1.1"]), out)
+
+    def test_the_first_move_of_all_can_come_after_the_rename(self):
+        """The repository changed its name before its branch `stable` existed."""
+        w = World(FORMERLY)
+        self.addCleanup(w.close)
+        w.publish("v0.1.0", DAY0)
+        w.rename(RENAMED)
+        code, out = w.hand(DAY0 + DAY, "v0.1.0", "a test installation cannot wait a week")
+        self.assertEqual((code, w.on()), (0, "v0.1.0"), out)
+        self.assertIn("STABLE moved: none -> v0.1.0 (by hand)", out)
+
+    def test_a_release_cut_under_the_new_name_follows_those_cut_under_the_old(self):
+        self.w.rename(RENAMED, factory=True)
+        self.w.publish("v0.1.2", self.now)
+        self.assertIn(f"Read them in the repository `{RENAMED}` at the tag `v0.1.2`",
+                      git(self.w.origin, "show", "refs/tags/v0.1.2:rules-index.md"))
+        self.moved(DAY0 + 15 * DAY, to="v0.1.1")
+        self.moved(DAY0 + 16 * DAY, to="v0.1.2")
+        self.assertEqual(self.w.moves(), ["stable: none -> v0.1.0 (the schedule)", "stable: v0.1.0 -> v0.1.1 (the schedule)",
+                                          "stable: v0.1.1 -> v0.1.2 (the schedule)"])
+
+    def test_without_the_old_name_the_branch_is_on_a_release_it_cannot_stand_on(self):
+        """What the name is kept for: taken out, the release the branch is on is refused, the
+        schedule moves nothing, and no hand moves to a release cut under the old name — forward
+        or back."""
+        self.w.publish("v0.1.2", self.now)
+        self.w.rename(RENAMED)
+        code, out = self.w.hand(self.now, "v0.1.1", "onto the second of three")
+        self.assertEqual((code, self.w.on()), (0, "v0.1.1"), out)
+        tip = self.w.tip()
+        with mock.patch.dict(stable.FORMER, clear=True):
+            code, out = self.w.run(DAY0 + 15 * DAY)
+            self.assertEqual((code, self.w.tip()), (1, tip), out)
+            self.assertIn(f"STABLE finding: `stable` is on v0.1.1, which is not a whole release: rules-index.md of v0.1.1 "
+                          f"is not the index of its own topics for {RENAMED}", out)
+            for to in ("v0.1.0", "v0.1.2"):
+                code, out = self.w.hand(DAY0 + 30 * DAY, to, "back, or forward, then")
+                self.assertEqual((code, self.w.tip()), (1, tip), out)
+                self.assertIn(f"STABLE finding: not moved to {to}: rules-index.md of {to} is not the index of its own topics", out)
+
+    def test_the_old_name_is_taken_for_the_repository_it_is_listed_under_and_no_other(self):
+        """A fork or a copy under a third name holds an index to its own name alone, as before; and
+        the old name does not take the new one's releases: the list runs one way."""
+        self.w.rename("someone/rules")
+        out = self.stays(self.now, "v0.1.0", code=1)
+        self.assertIn("is not the index of its own topics for someone/rules", out)
+        self.w.rename(RENAMED, factory=True)
+        self.w.publish("v0.1.2", self.now)
+        self.w.rename(FORMERLY)
+        code, out = self.w.run(DAY0 + 30 * DAY)
+        self.assertEqual((code, self.w.on()), (1, "v0.1.1"), out)
+        self.assertIn(f"STABLE finding: rules-index.md of v0.1.2 is not the index of its own topics for {FORMERLY}", out)
+
+    def test_an_index_that_names_a_third_repository_is_refused_under_the_new_name_too(self):
+        self.w.rename(RENAMED, factory=True)
+        self.w.cut("v0.1.2", self.now, {"engine/rules/core.md": b"Core rules, v0.1.2.\n"})
+        path = self.w.work / "rules-index.md"
+        text = path.read_text(encoding="utf-8").replace(RENAMED, "someone/rules")
+        path.write_text(text, encoding="utf-8")
+        manifest = self.w.work / "release-manifest.json"
+        data = json.loads(manifest.read_text(encoding="utf-8"))
+        data["index"]["sha256"] = release.hashlib.sha256(text.encode()).hexdigest()
+        manifest.write_text(release.dumps(data), encoding="utf-8")
+        self.w.land("v0.1.2", self.now)
+        code, out = self.w.run(DAY0 + 30 * DAY)
+        self.assertEqual((code, self.w.on()), (1, "v0.1.1"), out)
+        self.assertIn(f"STABLE finding: rules-index.md of v0.1.2 is not the index of its own topics for {RENAMED}: it was "
+                      f"edited, or built for another repository or release", out)
+
+    def test_a_name_typed_in_another_case_at_the_rename_is_the_same_repository(self):
+        """GitHub hands the workflow the name as it was typed at the rename; the releases cut under
+        the old name are whole all the same, and so is the next one, cut for the name as the
+        template's defaults and the list spell it."""
+        self.w.rename(RENAMED, factory=True)
+        self.w.publish("v0.1.2", self.now)
+        self.w.name = "Grafyla/Releases"
+        self.stays(self.now, "v0.1.0")
+        self.moved(DAY0 + 15 * DAY, to="v0.1.1")
+        self.moved(DAY0 + 16 * DAY, to="v0.1.2")
+        self.assertIn(f"`{RENAMED}`", self.w.at_branch("rules-index.md"))
+
+    def test_a_name_in_between_is_red_until_the_repository_takes_a_listed_one(self):
+        """Said, not prevented: the entry comes before the rename, and for the name the repository
+        ends on. Renamed in two steps, it is red at the name in between and goes on at the last.
+        (A rename back is another story: the old releases are whole under their own name again,
+        and only a release cut under the name left is refused — the story of the list running one
+        way, above.)"""
+        self.w.rename("grafyla/memory-engine-releases")
+        out = self.stays(self.now, "v0.1.0", code=1)
+        self.assertIn("STABLE finding: `stable` is on v0.1.0, which is not a whole release", out)
+        self.w.rename(RENAMED)
+        self.moved(DAY0 + 15 * DAY, to="v0.1.1")
+
+    def test_an_old_name_is_taken_for_the_releases_listed_with_it_and_no_other(self):
+        """An old name is another address, and one that may lead elsewhere some day. A release
+        not listed with it that names it — its index edited after the cut, the manifest made to
+        agree, or the template's defaults not changed yet — is refused, as an index that names
+        any other repository is; and it is whole once the list names it: the price of the list."""
+        self.w.publish("v0.1.2", self.now)                # the factory still cuts for the old name…
+        self.w.rename(RENAMED)                          # …and GitHub runs the workflow under the new one
+        code, out = self.w.run(DAY0 + 30 * DAY)
+        self.assertEqual((code, self.w.on()), (1, "v0.1.1"), out)
+        self.assertIn(f"STABLE finding: rules-index.md of v0.1.2 is not the index of its own topics for {RENAMED}: it was "
+                      f"edited, or built for another repository or release", out)
+        with mock.patch.dict(stable.FORMER, {RENAMED: ((FORMERLY, ("v0.1.0", "v0.1.1", "v0.1.2")),)}):
+            self.moved(DAY0 + 31 * DAY, to="v0.1.2")
+        self.assertIn(f"`{FORMERLY}`", self.w.at_branch("rules-index.md"))
+
+    def test_a_release_cut_before_the_listed_ones_under_a_lower_number_is_not_taken(self):
+        """The list is of releases, not a bound: a release under a lower number than the listed
+        ones is not taken for one cut under the old name, though it names it. Here it was cut
+        first. A number left free and tagged later by hand is not tried here: `names` reads the
+        tag's name alone, and `release cut` refuses to cut below the newest release."""
+        w = World(FORMERLY)
+        self.addCleanup(w.close)
+        w.publish("v0.0.9", DAY0)
+        w.publish("v0.1.1", DAY0 + DAY)
+        w.rename(RENAMED)
+        with mock.patch.dict(stable.FORMER, {RENAMED: ((FORMERLY, ("v0.1.1",)),)}):
+            code, out = w.hand(DAY0 + 2 * DAY, "v0.0.9", "by hand, onto the lower number")
+            self.assertEqual((code, w.tip()), (1, None), out)
+            self.assertIn(f"STABLE finding: not moved to v0.0.9: rules-index.md of v0.0.9 is not the index of its own "
+                          f"topics for {RENAMED}", out)
+            code, out = w.hand(DAY0 + 2 * DAY, "v0.1.1", "the listed one")
+            self.assertEqual((code, w.on()), (0, "v0.1.1"), out)
+
+    def test_the_names_this_code_holds(self):
+        self.assertEqual(stable.names(RENAMED, "v0.1.1"), (RENAMED, FORMERLY), "its own name first, then the ones it had")
+        self.assertEqual(stable.names(RENAMED, "v0.1.2"), (RENAMED,), "not listed as cut under the old name")
+        self.assertEqual(stable.names(RENAMED, "v0.0.9"), (RENAMED,), "nor is a lower number")
+        self.assertEqual(stable.names(FORMERLY, "v0.1.0"), (FORMERLY,))
+        self.assertEqual(stable.names("someone/rules", "v0.1.0"), ("someone/rules",))
+        self.assertEqual(stable.names("Grafyla/Releases", "v0.1.0"), ("Grafyla/Releases", RENAMED, FORMERLY),
+                         "GitHub does not tell names apart by case and hands the workflow the name as it was typed at "
+                         "the rename: the name as the list spells it is taken too — a release is cut for that spelling")
+        self.assertEqual(stable.names("Grafyla/Releases", "v0.1.2"), ("Grafyla/Releases", RENAMED))
+
+
+class FormerNames(unittest.TestCase):
+    """`stable.FORMER` as the code holds it, outside the stories above, which put their own in its place."""
+
+    def test_the_list_is_what_it_was(self):
+        self.assertEqual(stable.FORMER, FORMER,
+                         "an old name taken out, or a release taken off its list, refuses that release for good: the "
+                         "branch `stable` red on it, and no move back to it. A name or a release is added, or the list "
+                         "moved under a new name, in the pull request that needs it — with this line")
+
+    def test_its_form(self):
+        self.assertEqual(len({name.lower() for name in stable.FORMER}), len(stable.FORMER),
+                         "two entries for one repository, apart only by the case of their letters: the first alone is read")
+        for name, had in stable.FORMER.items():
+            self.assertTrue(stable._REPOSITORY.fullmatch(name), name)
+            for old, cut in had:
+                self.assertTrue(stable._REPOSITORY.fullmatch(old), old)
+                self.assertNotIn(old.lower(), {key.lower() for key in stable.FORMER},
+                                 "an old name that is an entry of its own: a list is not followed from name to name")
+                self.assertIsInstance(cut, tuple)
+                self.assertTrue(cut and all(stable.TAG_RE.fullmatch(tag) for tag in cut), cut)
+
+    def test_the_releases_out_under_the_old_name_are_on_its_list(self):
+        """v0.1.13 and v0.1.14 are the releases cut with an index under the old name (the repository
+        of releases, 23.11.2026); the next is cut under the new one."""
+        for tag in ("v0.1.13", "v0.1.14"):
+            self.assertEqual(stable.names(RENAMED, tag), (RENAMED, FORMERLY))
+        for tag in ("v0.1.15", "v0.1.12", "v0.0.1"):
+            self.assertEqual(stable.names(RENAMED, tag), (RENAMED,), tag)
 
 
 class OnItsOwn(unittest.TestCase):

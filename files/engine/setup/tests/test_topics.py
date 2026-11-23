@@ -24,7 +24,7 @@ from engine.setup.tests.test_release import TEMPLATE, topics_of
 
 ROOT = Path(__file__).resolve().parents[3]
 PUBLISHED = datetime(2026, 10, 24, 20, 0, tzinfo=timezone.utc)
-REPOSITORY = "Garik98129/memory-engine-releases"
+REPOSITORY = "grafyla/releases"
 
 RULES = {
     "engine/defaults.toml": DEFAULTS,
@@ -196,7 +196,7 @@ class Index(unittest.TestCase):
     def test_the_index_names_its_release_its_repository_and_every_file_in_full(self):
         text = topics.index(tree(), "v0.1.13")
         self.assertEqual(text.splitlines()[0], "# Topic rules — release v0.1.13")
-        self.assertIn("`Garik98129/memory-engine-releases` at the tag `v0.1.13` — ref `v0.1.13`", text)
+        self.assertIn("`grafyla/releases` at the tag `v0.1.13` — ref `v0.1.13`", text)
         self.assertIn("A topic applies when the talk is about the user.", text)
         self.assertIn("written for the engine of release `v0.1.2` or newer in the user's repository", text)
         self.assertIn("| shopping | ordering, paying | `files/engine/rules/core.md` · `files/engine/rules/shopping.md` · "
@@ -348,7 +348,7 @@ class Cut(unittest.TestCase):
 
     def test_an_index_for_another_repository_than_the_release_goes_to_is_refused(self):
         _git(self.releases.path, "remote", "set-url", "origin", "https://github.com/someone/rules")
-        with self.assertRaisesRegex(ValueError, "the index would name Garik98129/memory-engine-releases, and the "
+        with self.assertRaisesRegex(ValueError, "the index would name grafyla/releases, and the "
                                                 "release goes to someone/rules"):
             release.cut(release.release_files(self.template.path, "main"), "v0.1.13", self.template.base, PUBLISHED,
                         self.releases.path, "someone/rules")
@@ -529,12 +529,12 @@ class ThisTemplate(unittest.TestCase):
             if set(files) & {"health.md", "documents.md", "mail.md", "install.md"}:
                 self.assertIn("notion.md", files, f"{name}: its rules read the user's Notion anchors, found only by NOTION-10")
         text = topics.index(self.files, "v9.9.9")
-        self.assertIn("the user, the user's family or own pets", text)
+        self.assertIn("the user, the user's family or the user's own pets", text)
         self.assertIn("needs no rules", text)
 
     def test_the_index_of_the_committed_rules_is_the_one_the_code_that_moves_stable_builds(self):
         text = topics.index(self.files, "v9.9.9")
-        self.assertEqual(text, stable.index_text(self.files[topics.TOPICS], "Garik98129/memory-engine-releases", "v9.9.9"))
+        self.assertEqual(text, stable.index_text(self.files[topics.TOPICS], "grafyla/releases", "v9.9.9"))
         self.assertTrue(set(stable.index_names(text)) <= set(self.files))
         self.assertLess(len(text.encode()), 4096, "the index is one short read")
         self.assertEqual(release.publication_findings({"rules-index.md": text.encode()}), [])

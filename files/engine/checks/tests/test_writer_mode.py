@@ -303,7 +303,7 @@ class BrokenConfig(unittest.TestCase):
 class ReleaseLinks(unittest.TestCase):
     """`cut` holds the link of every chat field, solo.md's too: it opens notion.md and documents.md."""
 
-    LINK = "https://raw.githubusercontent.com/Garik98129/memory-engine-releases/{tag}/files/engine/rules/"
+    LINK = "https://raw.githubusercontent.com/grafyla/releases/{tag}/files/engine/rules/"
 
     def files(self, chat_tag: str, solo_tag: str) -> dict[str, bytes]:
         return {"engine/rules/notion.md": b"Notion rules.\n", "engine/rules/health.md": b"Health rules.\n",
@@ -311,7 +311,7 @@ class ReleaseLinks(unittest.TestCase):
                 release.SOLO_FIELD: f"Topic rules: notion.md: {self.LINK.format(tag=solo_tag)} + name\n".encode()}
 
     def test_solo_is_held_like_the_chat_field(self):
-        repo = "Garik98129/memory-engine-releases"
+        repo = "grafyla/releases"
         self.assertEqual(release.chat_rules_findings(self.files("v0.2.0", "v0.2.0"), "v0.2.0", Path("."), repo), [])
         self.assertEqual(release.chat_rules_findings(self.files("v0.2.0", "v0.3.0"), "v0.2.0", Path("."), repo),
                          [f"{release.SOLO_FIELD} links v0.3.0, newer than v0.2.0"])

@@ -110,7 +110,7 @@ RULES = "engine/rules/"
 _CHAT_RULES_RE = re.compile(r"https://raw\.githubusercontent\.com/([^/\s]+/[^/\s]+)/(?:refs/tags/)?([^/\s]+)/"
                             + PUBLISHED_FILES + "/" + RULES)
 _RULE_FILE_RE = re.compile(r"(?<![\w./-])([A-Za-z][\w-]*\.md)(?![\w/-])")
-_LINK_HINT_RE = re.compile(r"raw\.githubusercontent\.com|memory-engine-releases", re.IGNORECASE)
+_LINK_HINT_RE = re.compile(r"raw\.githubusercontent\.com|memory-engine-releases|grafyla/releases", re.IGNORECASE)
 
 
 def release_files(repo: Path, rev: str) -> dict[str, bytes]:

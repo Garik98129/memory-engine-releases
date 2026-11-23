@@ -261,7 +261,7 @@ class FirstInstallation(unittest.TestCase):
         self.assertEqual(self.i.writes("POST", DISPATCH), [{"ref": "main", "inputs": {"pr": str(number)}}])
         [issue] = self.i.writes("POST", ISSUES)
         self.assertEqual(issue["title"], "Your assistant's instructions — ChatGPT")
-        self.assertIn("Three steps, all on your phone.", issue["body"])
+        self.assertIn("Two texts, and they go to different places.", issue["body"])
         part = files[setup.PART].decode("utf-8")
         self.assertIn(f"```\n{setup.FIRST_MESSAGE}\n\n{part.strip()}\n```", issue["body"],
                       "the first message carries the user's part, and no link to a release")
@@ -320,9 +320,12 @@ class FirstInstallation(unittest.TestCase):
         self.assertEqual(new["title"], "Your assistant's instructions — ChatGPT")
         self.assertTrue(new["body"].startswith("@owner — Your assistant's instructions changed."))
         self.assertIn("The user's RECORDS.", new["body"])
-        self.assertIn("Open the place you pasted your assistant's instructions into — ChatGPT app: a new project, its "
-                      "instructions, or chatgpt.com in your browser: Settings, Personalization.", new["body"],
-                      "which of the two the user chose nothing here knows: both are named")
+        self.assertIn("Open the place for your assistant's instructions — chatgpt.com in your browser: the "
+                      "menu under your name, Personalization. If you pasted the old text somewhere else — into a "
+                      "project's instructions — take it out of there: the text stands in one place only, this one.",
+                      new["body"], "the one place the table names for ChatGPT: the field for every chat — and a text "
+                      "left in a project from before would count as the older one (CORE-16)")
+        self.assertNotIn("inside the project", new["body"])
         self.assertIn("Replace what stands there with the text below, exactly as it is, and save: the text takes that place alone", new["body"])
         self.assertIn("Your copy holds release v0.1.2 now.", new["body"])
         part = her_files()[setup.PART].decode("utf-8").strip()
@@ -601,7 +604,7 @@ class Settings(Installed):
         self.assertNotIn("N1 ALARM", said)
         self.assertEqual(self.i.w.api.writes, [], "nothing for the user to close, nothing handed twice")
 
-    def test_another_ai_gets_a_page_with_its_own_three_steps_not_one_message(self):
+    def test_another_ai_gets_a_page_of_its_own_with_both_texts_not_one_message(self):
         """Found by the fresh-eye review: on a change of AI «paste them again … nothing else changes» is
         wrong — the new AI needs its plan, the text, its connections and the first message. With the
         one text the same holds against «one message to send»: the new AI has no text yet."""
@@ -611,11 +614,12 @@ class Settings(Installed):
         self.assertEqual(self.gate_said[0][0], 0, self.gate_said[0][1])
         old, page = self.titled()
         self.assertEqual(page["title"], "Your assistant's instructions — Claude")
-        self.assertTrue(page["body"].startswith("@owner — your AI is Claude now. Do the three steps below in it; your "
+        self.assertTrue(page["body"].startswith("@owner — your AI is Claude now. Do what the page below says in it; your "
                                                 "Notion and what it holds stay as they are.\n\n**You need the Pro plan.**"))
-        for said in ("Three steps, all on your phone.", "Open Claude app: a new project, its instructions",
-                     "**2. Connections.** In the same app, connect Notion and GitHub", "**3. The first message.**",
-                     "**What works on Claude.**", "Start the installation: read the rules of the topic «installation»"):
+        for said in ("Two texts, and they go to different places.", "Open Claude: Settings, Your Claude, Instructions.",
+                     "**First, check the connections.** In your AI's settings, Notion and GitHub must be connected",
+                     "**2. The first message — into a chat.**",
+                     "**What works on Claude.**", "Start the setup: read the rules of the topic «setup»"):
             self.assertIn(said, page["body"])
         field, part = setup.field_text(), new[setup.PART].decode("utf-8").strip()
         self.assertIn(f"```\n{field}\n```", page["body"])
@@ -815,9 +819,9 @@ class Settings(Installed):
         self.assertEqual(red, 0, said)
         page = self.titled()[-1]
         self.assertEqual(page["title"], "Your assistant's instructions — Claude")
-        self.assertTrue(page["body"].startswith("@owner — your AI is Claude now. Do the three steps below in it"))
+        self.assertTrue(page["body"].startswith("@owner — your AI is Claude now. Do what the page below says in it"))
         self.assertIn("**You need the Pro plan.**", page["body"])
-        self.assertIn("connect Notion", page["body"])
+        self.assertIn("Notion and GitHub must be connected", page["body"])
         self.assertNotIn("Paste them again", page["body"])
 
     def test_a_page_that_cannot_be_opened_after_the_merge_is_said_and_left_to_the_night(self):
@@ -1440,7 +1444,7 @@ class Refused(unittest.TestCase):
         self.assertEqual(lock_check.wanted_release(repo.path, main, moved, paths_check.SETUP), "v0.1.0",
                          "main's release, never one the PR names")
         self.assertEqual(gate_checks.manifest_url(repo.path, main, head, paths_check.SETUP),
-                         "https://raw.githubusercontent.com/Garik98129/memory-engine-releases/refs/tags/v0.1.0/"
+                         "https://raw.githubusercontent.com/grafyla/releases/refs/tags/v0.1.0/"
                          "release-manifest.json")
         other = {**repo.manifest(main, "v0.1.0"), "release": "v0.2.0"}
         found = [f.message for f in lock_check.check(repo.path, main, head, paths_check.SETUP, other)]

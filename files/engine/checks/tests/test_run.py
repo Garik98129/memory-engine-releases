@@ -63,7 +63,7 @@ class Runner(unittest.TestCase):
         head = self.repo.commit({"user/fields/chat.md": b"x\n"})
         code, out = self.call("--head", head, "--manifest-url")
         self.assertEqual(code, 0)
-        self.assertEqual(out.strip(), "https://raw.githubusercontent.com/Garik98129/memory-engine-releases"
+        self.assertEqual(out.strip(), "https://raw.githubusercontent.com/grafyla/releases"
                                       "/refs/tags/v0.1.0/release-manifest.json")
 
     def test_manifest_url_for_an_update_names_the_new_tag(self):
