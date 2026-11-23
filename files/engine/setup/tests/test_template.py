@@ -26,7 +26,7 @@ from engine.setup.tests.test_release import TEMPLATE, frozen, topics_of
 ROOT = Path(__file__).resolve().parents[3]
 README = (ROOT / "docs" / "template" / "README.md").read_text(encoding="utf-8")
 FLAT = " ".join(README.split())           # as the user reads it: the lines' breaks are the file's, not the text's
-RELEASES = "Garik98129/memory-engine-releases"
+RELEASES = "grafyla/releases"
 PUBLISHED = datetime(2026, 11, 13, 9, 0, tzinfo=timezone.utc)
 FACTORY = {**TEMPLATE, "LICENSE": b"MIT License\n", "docs/template/README.md": b"# Your AI memory\n"}
 
@@ -291,24 +291,26 @@ class Readme(unittest.TestCase):
     def test_it_says_what_her_ai_needs_of_github_and_that_her_copy_is_not_it(self):
         """The rules are public: the user's AI reads them through GitHub's app in it, and the user's own repository —
         the user's settings, later the user's nightly copy — is never given to it (DESIGN_PHASE3 §5)."""
-        self.assertIn("connect Notion and GitHub, send the first message", FLAT)
+        self.assertIn("check that Notion and GitHub are connected to your AI, put the text into your AI's instructions", FLAT)
         self.assertIn("GitHub is how your AI reads its rules, and those are public: do not give it this copy.", FLAT)
         self.assertIn("do not choose this one; if it wants at least one, give it an empty repository of yours", FLAT,
                       "told what to do, not promised that it works: reading under another login is not tried (§8)")
 
-    def test_it_says_where_her_assistant_lives_is_her_choice_and_what_is_not_tried(self):
-        """Owner, 16.11.2026: the choice of all the user's chats or one project is given at once; and only
-        ChatGPT was seen reading the rules this way."""
-        self.assertIn("Where your assistant lives is your choice at step 4. On ChatGPT: only in a project", FLAT)
-        self.assertIn("or in all your chats: it then looks at your Notion before its first answer in every chat", FLAT)
+    def test_it_says_her_assistant_lives_in_all_her_chats_and_what_is_not_tried(self):
+        """Owner, 20.11 and 23.11.2026: one place on every platform, the field for all the user's chats — the
+        choice of 16.11.2026 between that and a project is gone; and only ChatGPT was seen reading the rules
+        this way."""
+        self.assertIn("Your assistant lives in all your chats: the text goes into your AI's field for standing "
+                      "instructions, and in each new chat your AI looks at your Notion before its first answer.", FLAT)
+        self.assertNotIn("project", FLAT, "no platform's text goes into a project (owner, 20.11 and 23.11.2026)")
         self.assertIn("On Grok and Claude this way of reading the rules has not been tried yet; the Issue says so.", FLAT)
         # Owner, 17.11.2026 (the first post in X): ChatGPT Plus is the first path, Claude and Grok in beta.
         # ChatGPT keeps its «beta» too (Tolik on PR #63): the first path is still a test.
-        self.assertIn("ChatGPT (the Plus plan) — the first path, in beta; Claude (the Pro plan) or Grok (a paid plan) — in beta too.", FLAT)
+        self.assertIn("ChatGPT (the Plus plan) — the first path, in beta; Claude (the Pro plan) or Grok (the Plus plan) — in beta too.", FLAT)
         self.assertIn("does not fit the free ChatGPT plan: its Custom Instructions box holds 1 500 characters", FLAT)
         self.assertIn("and check its facts when it helps you with those", FLAT,
                       "the fact check is read with a topic's rules now, not held in every answer (DESIGN_PHASE3 §4)")
-        self.assertEqual([name for name, row in setup.platforms().items() if row.get("field_all")], ["chatgpt"])
+        self.assertEqual([name for name, row in setup.platforms().items() if row.get("field_all")], [])
         for name in ("grok", "claude"):
             self.assertEqual(setup.platforms()[name]["status"], "beta", name)
 

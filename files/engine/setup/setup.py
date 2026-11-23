@@ -296,11 +296,11 @@ def field_text(fixed: str | None = None) -> str:
     return fixed.strip("\n")
 
 
-# The user's own word that starts the installation, and what the AI is to know of the user from the start: the
-# rules of the topic «installation» are found as every topic's are, by the index the field names, and
+# The user's own word that starts the setup, and what the AI is to know of the user from the start: the
+# rules of the topic «setup» are found as every topic's are, by the index the field names, and
 # the user's part goes on the map (INSTALL-7) — the field holds nothing of the user's. NOTION-10 names this
 # message by its first words, which stand.
-FIRST_MESSAGE = ("Start the installation: read the rules of the topic «installation» and follow them. "
+FIRST_MESSAGE = ("Start the setup: read the rules of the topic «setup» and follow them. "
                  "My part — keep these lines on my map as they are:")
 # The same lines again, after a change of the user's settings: one message to send, never a text to paste.
 SETTINGS_MESSAGE = "My settings changed. My part is now this — put these lines on my map in place of the old ones:"
@@ -313,7 +313,7 @@ PART_MESSAGE = "My part is this — keep these lines on my map, in place of olde
 LATER = ("**Later.** The rules your AI reads are brought up to date by themselves, usually about a week after a "
          "release: you paste nothing for that. To change a setting — your language, your time zone, your name — "
          "run the workflow «settings» in this repository: it gives you one message to send to your AI; change "
-         "your AI itself there, and it gives you the three steps for the new one. The text "
+         "your AI itself there, and it gives you the two texts for the new one. The text "
          "above changes only if its core ever does — a rare thing: your copy then opens a new page like this one, "
          "and GitHub tells you, by e-mail — in GitHub's notification settings — or on your phone — in the GitHub "
          "app: Profile, the gear, Notifications, «Direct mentions». With neither, the page still waits in your "
@@ -368,34 +368,37 @@ def issue(row: dict, field: str, part: str, manifests: str) -> str:
     return (
         f"# Your assistant's instructions — {row['title']}\n\n"
         f"{plan}"
-        "Three steps, all on your phone.\n\n"
-        f"**1. The instructions.** {_where(row)} The text below takes that place alone: put it in place of whatever "
+        "Two texts, and they go to different places.\n\n"
+        "**First, check the connections.** In your AI's settings, Notion and GitHub must be connected — and "
+        "Google, if you want your mail and calendar. GitHub is how your AI reads its rules: they are public, in "
+        f"`{manifests}`. Do not give it this repository of yours.\n\n"
+        f"**1. The instructions — not into a chat.** This text goes into your AI's settings, into the field for "
+        f"standing instructions. {_where(row)} The text below takes that place alone: put it in place of whatever "
         "stands there — exactly as it is — and save. If you wrote instructions of your own there, copy them out "
-        "first: you give them to your AI after the first message. Check that its last line came "
+        "first — into a notes app on your phone, for one. Do not put them back into this field: after the setup "
+        "you send them to your AI in a chat. Check that its last line came "
         f"in too: it is «{field.rsplit(chr(10), 1)[-1]}» — keep it: your AI reads it to know its text is whole and "
         "current. The text is the same for everybody: new rules do not change it, and "
-        f"neither does a change of your settings. It is {limits_check.length(field)} characters long: it fills "
-        "most of the place, and nothing else goes beside it.\n\n"
+        f"neither does a change of your settings. It is {limits_check.length(field)} characters long, and "
+        "nothing else goes beside it. It works in all your chats: in each new one your AI "
+        "looks at your Notion before its first answer.\n\n"
         f"{fenced(field)}\n\n"
-        "**2. Connections.** In the same app, connect Notion and GitHub — and Google, if you want your mail "
-        f"and calendar. GitHub is how your AI reads its rules: they are public, in `{manifests}`. Do not give "
-        "it this repository of yours.\n\n"
-        "**3. The first message.** Send your AI, in a new conversation — inside the project, if the text went "
-        "into one:\n\n"
+        "**2. The first message — into a chat.** Send your AI, in a new conversation:\n\n"
         f"{fenced(first_message(part))}\n\n"
         "It answers in your language, first tells you what it can do — and that it shows you and asks "
         "before it sends, buys or deletes anything (short e-mails you dictate can go without the question, if "
         "you choose) — then looks at what you already have in Notion and asks "
         "«is it this one?» for what fits, asks — if your language is not English — in which language to name what it makes, "
         "and asks one «yes?» for the whole plan. It makes only what is missing; you make nothing there by "
-        "hand. Not using Notion yet? Send the same message on the day you connect it. If it stops halfway, "
-        "send it again.\n\n"
+        "hand. If it says it cannot see your Notion, check the connection and send the same message again. "
+        "If it stops halfway, send it again.\n\n"
         "Then it asks a few questions — how to address you, what to help with first, how you like answers, "
         "what you must avoid; skip any. It can learn more about you later: on any day, say «continue setup» in your language.\n\n"
-        "**Your old instructions**, if you copied any: once your AI has finished, send them to it with the words "
-        "«My old instructions — keep in my Notion what is worth keeping», in your language. It tells you what it "
-        "recorded, or that nothing needed keeping.\n\n"
-        f"**What works on {row['title']}.** {notion} {schedule}{unknown} No daily task is set up at installation "
+        "**Your old instructions**, if you copied any: once your AI has finished, send them to it as an ordinary "
+        "message in a chat, with the words «My old instructions — keep in my Notion what is worth keeping», in "
+        "your language. It moves what is worth keeping into your Notion and tells you what it recorded, or that "
+        "nothing needed keeping.\n\n"
+        f"**What works on {row['title']}.** {notion} {schedule}{unknown} No daily task is set up at setup "
         "yet: a later release brings them. The nightly copy of your Notion is off; it can be turned on "
         "later.\n\n"
         f"{LATER}"

@@ -25,7 +25,7 @@ ISSUES = f"repos/{REPO}/issues"
 RUN = "https://github.com/owner/person-memory/actions/runs/1"
 NOW = datetime.fromisoformat(COMMITTED) + timedelta(hours=1)
 PLATFORMS = {"engine/platforms.toml": b'[grok]\ntitle = "Grok"\nfield = "Grok app: the instructions field"\n'}
-MANIFESTS = "Garik98129/memory-engine-releases"
+MANIFESTS = "grafyla/releases"
 TREE = {**BASE_FILES, **SOLO, **PLATFORMS, "user/config.toml": NO_BOT}
 FIXED = "engine/rules/fields/fixed.md"
 FIELD = SOLO[FIXED].decode().strip("\n")                        # the one text: nothing of the user's is joined to it
@@ -112,7 +112,7 @@ class Sync(unittest.TestCase):
                          "leaves an old page open, never the user without the new one")
         self.assertTrue(issue["body"].startswith("@owner — Your assistant's instructions changed."))
         self.assertIn(f"```\n{FIELD}\n```", issue["body"])
-        self.assertIn("Open the place you pasted your assistant's instructions into — Grok app: the instructions "
+        self.assertIn("Open the place for your assistant's instructions — Grok app: the instructions "
                       "field.", issue["body"])
         self.assertIn("Replace what stands there with the text below, exactly as it is, and save: the text takes that place alone", issue["body"],
                       "the text takes the place alone (owner, 19.11.2026): her own instructions she copies out first")
@@ -272,8 +272,8 @@ class Sync(unittest.TestCase):
         for changed in (True, False):
             body = field_issue.body(ENTRY, "@owner", RUN, first=False, text_changed=changed)
             self.assertIn(f"```\n{setup.FIRST_MESSAGE}\n\n{PART}\n```", body)
-        self.assertTrue(setup.FIRST_MESSAGE.startswith("Start the installation"), "NOTION-10 names it by these words")
-        self.assertNotIn("Start the installation", field_issue.body({**ENTRY, "part": ""}, "@owner", RUN, first=False))
+        self.assertTrue(setup.FIRST_MESSAGE.startswith("Start the setup"), "NOTION-10 names it by these words")
+        self.assertNotIn("Start the setup", field_issue.body({**ENTRY, "part": ""}, "@owner", RUN, first=False))
 
 
 class FromReport(unittest.TestCase):

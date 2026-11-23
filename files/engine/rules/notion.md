@@ -43,7 +43,7 @@
   Never restore, share or delete anything in Notion yourself for this, and never record a
   base the user has not confirmed.
 - **NOTION-10 The map.** Where the user's part names a map — the page whose title ends with
-  « · memory-map», made at installation (`install.md`): the user's anchors are found only through
+  « · memory-map», made at setup (`install.md`): the user's anchors are found only through
   it, never by guessing. What these rules call the user's «About me», health profile, medical-records
   base and Documents base, the inbox base and the user's notes are the map's `about-me`, `health`,
   `health-records`, `documents`, `inbox` and `notes`, whatever their titles; a map made before
@@ -53,11 +53,11 @@
   `ask-later`: INSTALL-13 is offered on «continue setup» or when the user sends the first message again,
   never inside another task. An anchor marked `none` — left out, the user's choice — does not exist: ask the user where the
   thing goes, and never make the anchor on your own. The map the user's part names cannot be found, or a
-  link of it does not open → outside installation record nothing in Notion, say once in plain
+  link of it does not open → outside setup record nothing in Notion, say once in plain
   words — a deleted map can come back from Notion's trash, so say that first — and ask the user to send
-  again the first message of the installation — the message «Start the installation: …», in an older
-  installation the line «Open … start the installation» — on the page «Your assistant's
-  instructions» used to install, or on the installation page, where the user gives the same answers
+  again the first message of the setup — the message «Start the setup: …», in an older one «Start the
+  installation: …» or the line «Open … start the installation» — on the page «Your assistant's
+  instructions» used to set up, or on the setup page, where the user gives the same answers
   again. Two maps → ask
   the user which one holds (INSTALL-2). The user's part names bases and no map → NOTION-10 to NOTION-12 do
   not apply. Your instructions carry no part of the user's → that part is what the first message gave

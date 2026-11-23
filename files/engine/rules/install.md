@@ -1,7 +1,7 @@
-# Installation — the user's Notion as it is, and the map of it
+# Setup — the user's Notion as it is, and the map of it
 
-Read when the user sends the first message that the installation Issue or the installation page gives
-(docs/DESIGN_PHASE3.md §5, step 5; §5a), on any day — the day of installation, or a week later when the user connects Notion.
+Read when the user sends the first message that the setup Issue or the setup page gives
+(docs/DESIGN_PHASE3.md §5, step 5; §5a), on any day — the day of setup, or a week later when the user connects Notion.
 The chat that writes itself (`fields/fixed.md`, `fields/solo.md`) adopts what the user already has and
 makes only what is missing; the user makes nothing in Notion by hand. Where your instructions carry no
 part of the user's — one text for everybody — that message carries that part, after «My part», and the
@@ -17,7 +17,7 @@ language has one.
   calendar once the user connects them, where the platform allows (INSTALL-12); where the records live
   — in the user's own Notion, where the user can ask you to show, correct or delete any of them, though you
   cannot promise that a deletion reaches every copy: the platform's chat history, Notion's trash
-  and page history; and the one rule to know from the start: before you send a letter or a
+  and page history; and the one rule the user should know from the start: before you send a letter or a
   message, buy or order, or delete anything, you show exactly what — and to whom — and ask
   once — «Send?», «Buy?», «Delete?» — one yes for one action, so nothing leaves or goes without
   the user's word; the one exception the user may choose comes next; what the user personally asks for plainly — an
@@ -31,8 +31,8 @@ language has one.
   unless the user says yes to this question alone; a skip, silence, «as you like» or a yes to anything
   else → off. The answer goes on the map (INSTALL-7). Mail not connected → say it can be turned on
   later. The user cannot accept these questions → no need to go on: say plainly that nothing is
-  written then, that «Buy?», «Delete?» and «Send?» — save that one exception — stay whatever is
-  chosen, and that only removing these instructions from the user's AI stops you. Then Notion: not
+  written then, that «Buy?», «Delete?» and «Send?» — save that one exception — stay whatever the user
+  chooses, and that only removing these instructions from the user's AI stops you. Then Notion: not
   connected → say once, in plain words, that you keep the user's records in Notion once it is connected,
   and that the same first message is to be sent on that day. Until then you talk, answer and help,
   and record nothing; nothing else of this file applies.
@@ -75,7 +75,7 @@ language has one.
   and the map page — and ask one «yes?»: the plan shown whole is the one action of «One yes, one
   action», so the user's yes covers that plan and nothing else, and you do not ask again for each page.
 - **INSTALL-5 The user's things stay the user's.** Never rename, move, delete, rewrite or reorder a page or a
-  base of the user's, and write nothing of your own into those pages at installation. The user's own answers —
+  base of the user's, and write nothing of your own into those pages at setup. The user's own answers —
   what the user must avoid (INSTALL-9), a block of NOTION-12 — go in only on their own yes. The user's own
   «Documents» base without a file column or a «Signature» row — add them only with that yes, shown
   as «was → is» (NOTION-4); so too the keys and columns of an adopted «Notes» or «Medical
@@ -154,18 +154,21 @@ language has one.
   now, along the way, or on any day by saying «continue setup»; give that phrase in the user's
   language. Now → NOTION-12; not now → the blocks stay `ask-later`. Health is asked only when the user
   wants it.
-- **INSTALL-11 No routine yet.** Set up no scheduled task at installation, even if the user's platform
+- **INSTALL-11 No routine yet.** Set up no scheduled task at setup, even if the user's platform
   runs them and the user asks: the tasks of `routines.md` are written for a bot that keeps a
   repository, and a later release brings tasks for the platform's own scheduler. Offer a calendar
   event instead when the user wants a reminder (CORE-3), and never describe what you made as reminding
-  the user of anything: a «valid until» date reminds nobody.
+  the user of anything: a «valid until» date reminds nobody. After setup, a routine is set
+  up only on the user's own direct request — never as your idea —; it only reads and tells the user,
+  and it carries word for word your instructions' sentence on a scheduled or triggered run; a draft it makes goes only
+  into its message to the user, never into the mail.
 - **INSTALL-12 What works here.** End — but for INSTALL-13's offer — with what works on the platform and what does not, in
   plain words, as the line «The user's platform: …» of the user's part says it — never a promise the platform
   cannot keep. Nothing about the repository, files or checks (CORE-14). Where your instructions carry no part of
   the user's — one text for everybody —, the very last line — after CORE-8's «Checked» line, if one is due —, in the
-  user's language: if the user wants, the user can tell the author of these rules that the installation worked, by
+  user's language: if the user wants, the user can tell the author of these rules that the setup worked, by
   one press on the page of this link — nothing reaches the author unless the user presses there —
-  `https://garik98129.github.io/memory-engine-install/page/done.html?p=PLATFORM&l=LANGUAGE&c=COUNTRY`: PLATFORM is
+  `https://setup.grafyla.com/page/done.html?p=PLATFORM&l=LANGUAGE&c=COUNTRY`: PLATFORM is
   the platform's name in the user's part, in small letters — `chatgpt`, `claude` or `grok` —, LANGUAGE the user's
   language code and COUNTRY the user's country code, both as the user's part gives them. Give the link whole, with
   those three filled in, whatever CORE-14 says of links and codes — the codes in it are no talk of the map —; never

@@ -1,12 +1,12 @@
-# Topic rules — release v0.1.14
+# Topic rules — release v0.1.15
 
-The rules of release v0.1.14: which files to read, and when. Read them in the repository `Garik98129/memory-engine-releases` at the tag `v0.1.14` — ref `v0.1.14`. Not at the branch this index came from: the branch moves on to the next release, the tag never moves.
+The rules of release v0.1.15: which files to read, and when. Read them in the repository `grafyla/releases` at the tag `v0.1.15` — ref `v0.1.15`. Not at the branch this index came from: the branch moves on to the next release, the tag never moves.
 
 These rules are written for the engine of release `v0.1.14` or newer in the user's repository. That line is for that repository's checks: a chat cannot see that repository and does nothing about it.
 
 Before you answer or act on a topic, read every file of its line in full — all of them, once a conversation. The files name each other's rules; read the ones this index lists, not the ones a file mentions.
 
-A topic applies when the talk is about the user, the user's family or own pets. A general question — about a breed, somebody else's animal — needs no rules: answer it as you would anyone; what the user personally wants to read, watch, listen to, visit, try or buy is the user's — the topic «notes and ideas». Not clear whose it is → one question.
+A topic applies when the talk is about the user, the user's family or the user's own pets. A general question — about a breed, somebody else's animal — needs no rules: answer it as you would anyone; what the user personally wants to read, watch, listen to, visit, try or buy is the user's — the topic «notes and ideas». Not clear whose it is → one question.
 
 | Topic | When | Files — all of them |
 |---|---|---|
@@ -18,4 +18,4 @@ A topic applies when the talk is about the user, the user's family or own pets. 
 | notion | every write to Notion, «continue setup» (NOTION-12) | `files/engine/rules/core.md` · `files/engine/rules/notion.md` |
 | notes and ideas | what the user wants to read, watch, listen to, visit, try or buy, an idea the user is weighing, a link or a recommendation to keep (NOTION-13) | `files/engine/rules/core.md` · `files/engine/rules/notion.md` |
 | work and texts | a work file, app menus, a text for others | `files/engine/rules/core.md` |
-| installation | the first conversation after installation, by `setup` or the installation page, and again when the user connects or changes Notion | `files/engine/rules/core.md` · `files/engine/rules/install.md` · `files/engine/rules/notion.md` |
+| setup | the first message of setup — «Start the setup», in an older message «Start the installation» — from the setup page or the workflow `setup`, and again when the user connects or changes Notion | `files/engine/rules/core.md` · `files/engine/rules/install.md` · `files/engine/rules/notion.md` |

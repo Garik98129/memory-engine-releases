@@ -26,8 +26,8 @@ TEMPLATE = {
     "engine/rules/fields/bot.md": b"Bot safety rules.\n",
     # the one text for everybody: the cut holds its address, and refuses a release without it
     "engine/rules/fields/fixed.md": (
-        b"Rules: the repository `Garik98129/memory-engine-releases`; without an app, at "
-        b"https://raw.githubusercontent.com/Garik98129/memory-engine-releases/ + branch or tag + / + path. "
+        b"Rules: the repository `grafyla/releases`; without an app, at "
+        b"https://raw.githubusercontent.com/grafyla/releases/ + branch or tag + / + path. "
         b"First read `rules-index.md` at the branch `stable`.\n"),
     "engine/checks/run.py": b"# the gate\n",
     "engine/workflows/check.yml": b"name: check\n",
@@ -220,7 +220,7 @@ class Cut(unittest.TestCase):
     """The release as the public repository of releases holds it: the manifest and the
     files, so an update can fetch the engine without a token."""
 
-    REPOSITORY = "Garik98129/memory-engine-releases"
+    REPOSITORY = "grafyla/releases"
 
     def setUp(self):
         self.template = Repo(TEMPLATE)
@@ -278,7 +278,7 @@ class Cut(unittest.TestCase):
     def test_a_folder_that_is_not_a_checkout_of_the_releases_repository_writes_nothing(self):
         kept = self.keep()
         _git(self.releases.path, "remote", "set-url", "origin", "https://github.com/someone/other-repo")
-        with self.assertRaisesRegex(ValueError, "is not a checkout of Garik98129/memory-engine-releases"):
+        with self.assertRaisesRegex(ValueError, "is not a checkout of grafyla/releases"):
             self.cut()
         self.assert_nothing_written(kept)
         plain = self.releases.path.parent / f"{self.releases.path.name}-plain"
@@ -356,7 +356,7 @@ class FrozenWorkflows(unittest.TestCase):
     workflow files differ from those of the release before, unless it is told so and the
     record's version rose — every installed repository applies such a release by hand."""
 
-    REPOSITORY = "Garik98129/memory-engine-releases"
+    REPOSITORY = "grafyla/releases"
 
     def setUp(self):
         self.template = Repo(TEMPLATE)
@@ -533,7 +533,7 @@ class TheOneTextsAddress(unittest.TestCase):
     releases go: the cut holds its address — this repository and no other, the branch `stable`,
     the index's name, and no release (docs/DESIGN_PHASE3.md §4)."""
 
-    REPOSITORY = "Garik98129/memory-engine-releases"
+    REPOSITORY = "grafyla/releases"
     GOOD = TEMPLATE[release.FIXED_FIELD].decode("utf-8")
 
     def found(self, text: str, repository: str = REPOSITORY) -> str:
@@ -548,17 +548,17 @@ class TheOneTextsAddress(unittest.TestCase):
                          [f"{release.FIXED_FIELD} is missing: setup gives it to every new installation"])
 
     def test_every_way_the_address_goes_wrong_by_a_slip_is_refused(self):
-        raw = "https://raw.githubusercontent.com/Garik98129/memory-engine-releases/"
+        raw = "https://raw.githubusercontent.com/grafyla/releases/"
         inside = "no word of this text has a slash in it or a dot inside it"
         for change, why in (
                 (self.GOOD.replace("`stable`", "`main`"), "does not name `stable`"),
                 (self.GOOD.replace("`stable`", "stable"), "does not name `stable`"),
                 (self.GOOD.replace("`rules-index.md`", "`index.md`"), "does not name `rules-index.md`"),
-                (self.GOOD.replace("`Garik98129/", "`mallory/"), "holds 'mallory/memory-engine-releases' in code marks"),
-                (self.GOOD.replace("`Garik98129/memory-engine-releases`", "Garik98129/memory-engine-releases"),
-                 "does not name `Garik98129/memory-engine-releases`"),
-                (self.GOOD.replace("`Garik98129/memory-engine-releases`", "`garik98129/Memory-Engine-Releases`"),
-                 "does not name `Garik98129/memory-engine-releases`"),      # spelled as the release's own, or refused
+                (self.GOOD.replace("`grafyla/", "`mallory/"), "holds 'mallory/releases' in code marks"),
+                (self.GOOD.replace("`grafyla/releases`", "grafyla/releases"),
+                 "does not name `grafyla/releases`"),
+                (self.GOOD.replace("`grafyla/releases`", "`Grafyla/Releases`"),
+                 "does not name `grafyla/releases`"),      # spelled as the release's own, or refused
                 (self.GOOD + "Or read `mallory/rules` too.\n", "holds 'mallory/rules' in code marks"),
                 (self.GOOD + "Read it at the branch `dev` (`stable` is old).\n", "holds 'dev' in code marks"),
                 (self.GOOD + "Read the index at the branch `\nmain\n` instead.\n", "opens a code mark on one line"),
@@ -583,7 +583,7 @@ class TheOneTextsAddress(unittest.TestCase):
                 self.assertIn(why, self.found(change))
         self.assertIn("does not name `acme/releases`", self.found(self.GOOD, "acme/releases"),
                       "a repository of releases under another name: the text must follow it")
-        self.assertEqual(self.found(self.GOOD.replace("Garik98129/memory-engine-releases", "acme/rules.public"),
+        self.assertEqual(self.found(self.GOOD.replace("grafyla/releases", "acme/rules.public"),
                                     "acme/rules.public"), "", "a dot in the repository's own name is no finding")
         self.assertEqual(release.fixed_findings({release.FIXED_FIELD: b"\xff\xfe"}, self.REPOSITORY),
                          [f"{release.FIXED_FIELD} is not valid UTF-8"])
@@ -655,8 +655,8 @@ class ChatLink(unittest.TestCase):
     release's own files: the chat never reads rules the person's release
     does not have."""
 
-    REPOSITORY = "Garik98129/memory-engine-releases"
-    BASE = "https://raw.githubusercontent.com/Garik98129/memory-engine-releases/{tag}/files/engine/rules/"
+    REPOSITORY = "grafyla/releases"
+    BASE = "https://raw.githubusercontent.com/grafyla/releases/{tag}/files/engine/rules/"
 
     def setUp(self):
         self.template = Repo({**TEMPLATE, "engine/rules/health.md": b"# Health\n",
@@ -719,7 +719,7 @@ class ChatLink(unittest.TestCase):
         self.assertIn("newer than v0.1.9", self.refused(self.files(self.link("v0.2.0"))))
 
     def test_a_link_to_another_repository_is_refused(self):
-        line = self.link("v0.1.9").replace("Garik98129/memory-engine-releases", "someone/rules")
+        line = self.link("v0.1.9").replace("grafyla/releases", "someone/rules")
         self.assertIn("links someone/rules", self.refused(self.files(line)))
 
     def test_a_link_that_is_not_a_release_tag_is_refused(self):
@@ -738,7 +738,7 @@ class ChatLink(unittest.TestCase):
     def test_a_link_in_another_form_is_refused_not_skipped(self):
         for line in (self.link("v0.1.8")[:-1],                                  # no trailing slash
                      self.link("v0.1.8").replace("https://", "http://"),
-                     "Topic rules: health.md at https://github.com/Garik98129/memory-engine-releases/tree/v0.1.8/files/engine/rules"):
+                     "Topic rules: health.md at https://github.com/grafyla/releases/tree/v0.1.8/files/engine/rules"):
             with self.subTest(line=line):
                 self.assertIn("not as https://raw.githubusercontent.com", self.refused(self.files(line)))
 
@@ -799,7 +799,7 @@ class Cli(unittest.TestCase):
 
     def test_cut_lists_what_it_wrote(self):
         releases = Repo({"README.md": b"x\n"})
-        _git(releases.path, "remote", "add", "origin", "https://github.com/Garik98129/memory-engine-releases.git")
+        _git(releases.path, "remote", "add", "origin", "https://github.com/grafyla/releases.git")
         try:
             code, out, _ = self.call("cut", "--repo", str(self.template.path), "--rev", "main",
                                      "--tag", "v0.1.6", "--into", str(releases.path))
@@ -812,13 +812,13 @@ class Cli(unittest.TestCase):
     def test_cut_with_a_chat_link_older_than_its_files_is_exit_two_and_writes_nothing(self):
         """Through the command the factory runs: the chat field links v0.1.8, health.md changed
         since, and v0.1.9 is cut — refused, with nothing written into the releases checkout."""
-        link = "Topic rules — health.md: https://raw.githubusercontent.com/Garik98129/memory-engine-releases/v0.1.8/files/engine/rules/ + name."
+        link = "Topic rules — health.md: https://raw.githubusercontent.com/grafyla/releases/v0.1.8/files/engine/rules/ + name."
         self.template.commit({"engine/rules/health.md": b"# Health, new\n",
                               "engine/rules/fields/chat.md": f"Rules.\n{link}\n".encode(),
                               **topics_of("core.md", "health.md")})
         releases = Repo({"README.md": b"x\n", "files/engine/rules/health.md": b"# Health, old\n"})
         _git(releases.path, "tag", "v0.1.8")
-        _git(releases.path, "remote", "add", "origin", "https://github.com/Garik98129/memory-engine-releases.git")
+        _git(releases.path, "remote", "add", "origin", "https://github.com/grafyla/releases.git")
         try:
             code, out, err = self.call("cut", "--repo", str(self.template.path), "--rev", "main",
                                        "--tag", "v0.1.9", "--into", str(releases.path))
@@ -848,19 +848,19 @@ class ThisTemplate(unittest.TestCase):
         files = release.release_files(ROOT, head)
         for name in ("check.yml", "watch.yml", "backup.yml"):
             self.assertIn(f".github/workflows/{name}", files)
-        self.assertIn(b'manifests = "Garik98129/memory-engine-releases"', files["engine/defaults.toml"])
+        self.assertIn(b'manifests = "grafyla/releases"', files["engine/defaults.toml"])
 
     def test_the_one_text_of_this_template_passes_the_cut(self):
         files = release.release_files(ROOT, _git(ROOT, "rev-parse", "HEAD"))
         if release.FIXED_FIELD in files:            # committed with this change; a run before the commit has none
-            self.assertEqual(release.fixed_findings(files, "Garik98129/memory-engine-releases"), [])
+            self.assertEqual(release.fixed_findings(files, "grafyla/releases"), [])
         text = (ROOT / release.FIXED_FIELD).read_bytes()
-        self.assertEqual(release.fixed_findings({release.FIXED_FIELD: text}, "Garik98129/memory-engine-releases"), [])
+        self.assertEqual(release.fixed_findings({release.FIXED_FIELD: text}, "grafyla/releases"), [])
 
     def test_the_chat_fields_link_names_the_releases_repository_and_files_it_ships(self):
         files = release.release_files(ROOT, _git(ROOT, "rev-parse", "HEAD"))
         linked_repo, tag, names = release.chat_rules(files)
-        self.assertEqual(linked_repo, "Garik98129/memory-engine-releases")
+        self.assertEqual(linked_repo, "grafyla/releases")
         self.assertRegex(tag, release.PUBLISHED_TAG_RE)
         self.assertTrue(names)
         for name in names:

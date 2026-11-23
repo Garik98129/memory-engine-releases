@@ -224,7 +224,7 @@ class TheChecks(Steps):
         found = integrity.GATE_LINE.match(STAMP + out.splitlines()[0])
         self.assertEqual(found.groups(), (str(PR), head, self.main, RUN), "the line N1 reads, as N1 reads it")
         self.assertIn("SUMMARY block=0", out)
-        tag = "https://raw.githubusercontent.com/Garik98129/memory-engine-releases/refs/tags/v0.1.0/release-manifest.json"
+        tag = "https://raw.githubusercontent.com/grafyla/releases/refs/tags/v0.1.0/release-manifest.json"
         self.assertEqual(self.fetched, [tag, tag], "the PR's manifest, then main's own for the watch")
         self.assertEqual(json.loads((self.temp / "manifest-main.json").read_text()), self.repo.manifest(self.main))
 

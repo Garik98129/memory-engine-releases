@@ -24,7 +24,7 @@ says yes with are the person's part, under `user/`. Three layers:
    public repository of releases, so a release that changes the rules, or a change of the user's settings,
    changes nothing of what was pasted: the user pastes again only when this text itself changes, or
    into another AI on a change of AI. The user's part (`user/fields/chat.md`) is then no part of the field: `setup` puts it
-   into the first message of the installation, and the user's AI keeps it on the map (INSTALL-7).
+   into the first message of the setup, and the user's AI keeps it on the map (INSTALL-7).
 2. **The core and the topic files** — the full rules behind the fields: `core.md`,
    `health.md`, `mail.md`, `shopping.md`, `documents.md`, `notion.md`, `calendar.md`,
    `repository.md`. The bot reads them in the user's repository. The chat cannot: its field
@@ -55,7 +55,7 @@ is in this index (F2).
 | `calendar.md` | chat by its link, bot | reading the user's calendar, creating events, invitations to the user |
 | `routines.md` | bot | writing or changing a routine; the daily mark; updating after a release |
 | `repository.md` | bot | every pull request; a read-back the trusted contact asks for |
-| `install.md` | the chat that writes, on the first message its installation Issue or page gives | the first conversation after installation, by `setup` or the installation page, and again when the user connects or changes Notion: the map of the user's anchors, then a few questions |
+| `install.md` | the chat that writes, on the first message its setup Issue or page gives | the first message of setup — «Start the setup», in an older message «Start the installation» — from the setup page or the workflow `setup`, and again when the user connects or changes Notion: the map of the user's anchors, then a few questions |
 | `topics.toml` | `release cut`: the source of the topic index (below) | — |
 | `fields/chat.md` | the platform: the chat's instruction field | — |
 | `fields/bot.md` | the platform: the bot's instruction field | — |

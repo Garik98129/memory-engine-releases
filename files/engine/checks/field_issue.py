@@ -193,15 +193,15 @@ def body(entry: dict, names: str, run_url: str, first: bool, lead: str | None = 
     words = installer.PART_MESSAGE if text_changed else installer.SETTINGS_MESSAGE
     message = f"{_fenced(installer.first_message(entry['part'], words))}\n\n" if entry["part"] else ""
     again = (
-        "If your AI ever asks you to send the first message of your installation again — or you have not sent "
+        "If your AI ever asks you to send the first message of your setup again — or you have not sent "
         "it yet — send it this, in a new conversation:\n\n"
         f"{_fenced(installer.first_message(entry['part']))}\n\n") if entry["part"] else ""
     if not text_changed:
         lead = lead or "Your settings changed."
         return (
             f"{to}{lead}\n\n"
-            "**One message to send.** Send your AI this, in a new conversation — inside the project, if your "
-            "assistant lives in one. It puts the lines on your map in place of the old ones:\n\n"
+            "**One message to send.** Send your AI this, in a new conversation. It puts the lines on your map in "
+            "place of the old ones:\n\n"
             f"{message}"
             "Until you send it, your AI goes on with what it was told of you before. Your assistant's "
             "instructions have not changed since the page before this one: if you did with them what that page "
@@ -219,13 +219,15 @@ def body(entry: dict, names: str, run_url: str, first: bool, lead: str | None = 
         stays = "your Notion and your settings stay as they are"
     else:
         stays = "your Notion stays as it is"         # the caller's lead says what changed: the user's settings may have
-    send = ("**Then one message.** Send your AI this, in a new conversation — inside the project, if your "
-            "assistant lives in one — so that your map holds your part as it stands:\n\n"
+    send = ("**Then one message.** Send your AI this, in a new conversation, so that your map holds your part "
+            "as it stands:\n\n"
             f"{message}") if message else ""
     return (
         f"{to}{lead}\n\n"
-        f"**Put them in the old text's place.** Open the place you pasted your assistant's instructions into — "
-        f"{entry['where']}. Replace what stands there with the text below, exactly as it is, and save: the text "
+        f"**Put them in the old text's place.** Open the place for your assistant's instructions — "
+        f"{entry['where']}. If you pasted the old text somewhere else — into a project's instructions — take it "
+        "out of there: the text stands in one place only, this one. "
+        "Replace what stands there with the text below, exactly as it is, and save: the text "
         "takes that place alone — if you kept instructions of your own there beside the old text, copy them out "
         "first and send them to your AI, which keeps in your Notion what is worth keeping. Check that its last "
         "line came in too: it is "
@@ -305,7 +307,7 @@ def hold(api, entry: dict, alarm: int | None, reasons: list[str], run_url: str) 
 
 def another_ai(entry: dict, to: str) -> str | None:
     """The page for an AI the user did not have before: not «one message to send» but that platform's own
-    three steps — the plan it needs, the text, the connections, the first message — as `setup`'s
+    page — the plan it needs, the connections, the text, the first message — as `setup`'s
     Issue says them. None where the platform, the user's part or the repository of releases is not known:
     the plain page then."""
     row = next((r for r in installer.platforms().values() if r.get("title") == entry["title"]), None)
@@ -316,7 +318,7 @@ def another_ai(entry: dict, to: str) -> str | None:
     except (KeyError, installer.SetupError):
         return None
     steps = steps.split("\n", 2)[2] if steps.startswith("# ") else steps       # the Issue's title carries the heading
-    return (f"{to}your AI is {row['title']} now. Do the three steps below in it; your Notion and what it holds "
+    return (f"{to}your AI is {row['title']} now. Do what the page below says in it; your Notion and what it holds "
             f"stay as they are.\n\n{steps}")
 
 

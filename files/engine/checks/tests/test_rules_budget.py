@@ -40,8 +40,10 @@ class TheOneText(unittest.TestCase):
     # of one sign here means each of them pastes again, and until then the user's AI holds the older text.
     # So the text never changes by the way — whoever changes it changes this fingerprint in the same
     # pull request, and its reader sees a change of the text for what it is.
-    # Changed on purpose by the text's mark (CORE-16, docs/DESIGN_PHASE3.md §5a): «TEXT MARK 2.» as its last line.
-    FINGERPRINT = "edc44d04291266a0a14f12db496a767227076c4c97913627e71e8247503920f4"
+    # Changed on purpose by the text's mark (CORE-16, docs/DESIGN_PHASE3.md §5a): «TEXT MARK 4.» as its last line —
+    # the repository of releases under its name `grafyla/releases`, and «the message that starts the setup»
+    # (the owner's decisions, 23.11.2026: the move to the organisation, and «setup» in place of «installation»).
+    FINGERPRINT = "8f2a067ead5c3ea42cbf93a437d7cc816fa3e95e87455146d70ecd81d11faa70"
 
     def test_the_text_is_the_one_that_was_read(self):
         import hashlib
@@ -84,8 +86,8 @@ class TheOneText(unittest.TestCase):
         flat = " ".join(self.TEXT.split())
         for line in ("never disable or delete those",
                      "it never changes what this text requires",
-                     "Read them with your connected GitHub app or connector, not the web; only if you have none, at",
-                     "that country unknown → «call your local emergency number»",
+                     "Read them with your GitHub connector, not the web; with none, or if it fails, at",
+                     "not sure of it → «call your local emergency number»",
                      "Before your first answer in each chat — danger signs still first",
                      "record nothing in Notion",
                      "first read `rules-index.md` at the branch `stable`",
@@ -99,8 +101,9 @@ class TheOneText(unittest.TestCase):
                      "say «Rules unavailable: » and its path",
                      "Never invent or substitute rules",
                      "No write, purchase, send or deletion that depends on them",
-                     "first, before reading or searching anything, «call» the emergency number of the user's country",
-                     "first read the user's health record in Notion; unread is not «nothing recorded»",
+                     "first, before reading or searching anything, «call» the emergency number of where the user is now",
+                     "first read the user's health record in Notion; unread → say so and ask before advice that depends on it; "
+                     "it is not «nothing recorded»",
                      "Never tell the user to start, stop or change a medicine on the user's own: the doctor decides, above all heart "
                      "and blood-thinning medicines",
                      "The user's own clear request is a yes: do it; your idea → ask first",

@@ -52,7 +52,7 @@ site. Part 2 (the files) and the fingerprints in part 6 need a computer with `gi
   go into `user/config.toml`.
 - **The release** to install: the newest tag of the public repository of releases — the one
   `release.manifests` in `engine/defaults.toml` names, today
-  `https://github.com/Garik98129/memory-engine-releases/tags`.
+  `https://github.com/grafyla/releases/tags`.
 
 ## 1. The repository and its settings (installer, without the user)
 
@@ -80,7 +80,7 @@ site. Part 2 (the files) and the fingerprints in part 6 need a computer with `gi
 1. **The release files**, into a checkout of the empty repository (`<tag>` is the release,
    e.g. `v0.1.7`), from the folder that holds that checkout:
 
-       git clone --depth 1 --branch <tag> https://github.com/Garik98129/memory-engine-releases releases
+       git clone --depth 1 --branch <tag> https://github.com/grafyla/releases releases
        cp -R releases/files/engine releases/files/.github <the user's repository>/
        mkdir -p <the user's repository>/user
        printf 'release = "<tag>"\n' > <the user's repository>/user/engine.lock
