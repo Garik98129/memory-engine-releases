@@ -61,7 +61,9 @@ code, `.github/scripts/stable.py`:
   the channel `stable` in a person's repository. Whole is read again here: the tag is on
   `main`, `files/` is the manifest's files byte for byte, the index is the manifest's and is
   a text its release's topics give — in any of the words the copy keeps: today's, or those
-  an index was published in before —, and the commit that brought the release to `main` changed
+  an index was published in before; and under this repository's name of today or, for the
+  releases the copy lists as cut under it, a name this repository had before (`FORMER` in the
+  copy) —, and the commit that brought the release to `main` changed
   nothing but `files/`, the manifest and the index.
 - **By hand** — Actions → `stable` → «Run workflow», on `main`: field «to», the release;
   field «reason», why, in one line. For a fix that cannot wait its week, or to move back.
@@ -96,6 +98,20 @@ to is a release it has just read as whole.
 GitHub switches a schedule off in a public repository after 60 days without activity in it,
 and writes to the owner; a workflow switched off stays off until it is enabled again (Actions
 → `stable` → «Enable workflow»). While it sleeps the branch stays where it is.
+
+## A new name
+
+An index names the repository it was cut for, so the releases that are out go on naming this
+repository as it was called on their day. Before this repository is renamed, or handed to
+another owner, the copy must already list the new name with the old one and the releases cut
+under it (`FORMER`): the pull request that brings that copy is merged first, and the rename
+is one step. Renamed before the copy came, or through a name in between that the copy does
+not list, this repository has releases out under a name the copy does not take for them, and
+a night's run that reads such a release is red until the copy lists the name the repository
+has. Renamed back, it has no such release until one was cut under the name it left. Nothing
+here checks that order. The old name leads to this repository only
+while GitHub redirects it, and GitHub stops for good once a repository or a fork is made at
+the old place.
 
 ## Pull requests
 
