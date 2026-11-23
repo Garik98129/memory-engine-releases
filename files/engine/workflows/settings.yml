@@ -1,0 +1,90 @@
+# A change of her settings on an installed repository: its owner presses «Run workflow» on
+# main and gives only the answer that changes — a list left on its first item, a text field
+# left empty, keeps what she has. This file is frozen: it holds what GitHub reads from a
+# workflow file — the form, the rights and the one step. What the step does is main's code
+# under engine/. The answers reach the code as environment variables, never inside the
+# script's text.
+name: settings
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Your AI
+        required: false
+        type: choice
+        default: keep as it is
+        options: [keep as it is, chatgpt, claude, grok]
+      language:
+        description: Your language, as a code — ru, en, he, uk, de, pt-BR (empty — keep as it is)
+        required: false
+        type: string
+        default: ""
+      country:
+        description: Your country, two letters — IL, DE, US (empty — keep as it is)
+        required: false
+        type: string
+        default: ""
+      timezone:
+        description: Your time zone — Asia/Jerusalem, Europe/Berlin, America/New_York (empty — keep as it is)
+        required: false
+        type: string
+        default: ""
+      name:
+        description: Your name, as your AI will call you (empty — keep as it is)
+        required: false
+        type: string
+        default: ""
+      gender:
+        description: For the grammar of your language
+        required: false
+        type: choice
+        default: keep as it is
+        options: [keep as it is, female, male]
+      work_languages:
+        description: Other languages you work in, as codes, comma-separated — en,he (empty — keep as it is; none — no other language)
+        required: false
+        type: string
+        default: ""
+
+permissions: {}
+
+concurrency:
+  group: setup
+  cancel-in-progress: false
+
+jobs:
+  settings:
+    # A dispatch on any other branch would run that branch's copy of this file.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write         # the branch of the change
+      pull-requests: write    # its PR
+      issues: write           # the Issue with her instructions
+      actions: write          # start the gate on that PR
+      statuses: read          # what the gate said to that PR's head
+    steps:
+      - name: Code from main — the commit whose copy of this workflow runs
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Settings
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PLATFORM: ${{ inputs.platform }}
+          LANGUAGE: ${{ inputs.language }}
+          COUNTRY: ${{ inputs.country }}
+          TIMEZONE: ${{ inputs.timezone }}
+          NAME: ${{ inputs.name }}
+          GENDER: ${{ inputs.gender }}
+          WORK_LANGUAGES: ${{ inputs.work_languages }}
+        run: >-
+          python3 -m engine.setup.setup_run --keep --main "$GITHUB_SHA"
+          --run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          --platform="$PLATFORM" --language="$LANGUAGE" --country="$COUNTRY" --timezone="$TIMEZONE"
+          --name="$NAME" --gender="$GENDER" --work-languages="$WORK_LANGUAGES"

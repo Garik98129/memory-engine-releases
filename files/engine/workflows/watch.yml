@@ -1,0 +1,56 @@
+# The watch of this repository's main: every night, and on every push to main. This file is
+# frozen: it holds what GitHub reads from a workflow file — the triggers, the rights and the
+# order of the steps. What a step does is main's code under engine/.
+name: watch
+
+on:
+  schedule:
+    - cron: "41 0 * * *"      # nightly, 00:41 UTC
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  # One group with backup.yml: the two wait for each other, and `queue: max` keeps every
+  # waiting run — by default a newer run cancels the one that waits.
+  group: notion-copy
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  watch:
+    # A dispatch on another branch would run that branch's copy of this file.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read          # main, the branches, the record of main, its settings
+      pull-requests: read     # which PR a merge came from, and who merged it
+      statuses: read          # the status `gate` on a merged head
+      actions: read           # the runs of the gate and their logs
+      issues: write           # the alarm Issues
+    steps:
+      - name: Code from main — the commit whose copy of this workflow runs
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: The release manifest of main
+        # No token here: this step asks a host that is not GitHub's API.
+        run: python3 -m engine.checks.night manifest
+
+      - name: The watch of main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -m engine.checks.night watch
+
+      - name: Alarms
+        # Also after a failed step.
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -m engine.checks.night alarms

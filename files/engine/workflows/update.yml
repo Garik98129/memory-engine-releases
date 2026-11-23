@@ -1,0 +1,41 @@
+# The engine update of this repository: every week, and by hand. This file is frozen: it holds
+# what GitHub reads from a workflow file — the schedule, the rights and the one step. What the
+# step does is main's code under engine/.
+name: update
+
+on:
+  schedule:
+    - cron: "23 4 * * 1"      # Mondays, 04:23 UTC — away from the nightly runs (00:41, 01:11)
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    # A dispatch on any other branch would run that branch's copy of this file.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write         # the update's branch
+      pull-requests: write    # the update's PR
+      issues: write           # the Issue that asks for hands
+      actions: write          # start the gate on that PR
+    steps:
+      - name: Code from main — the commit whose copy of this workflow runs
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Update
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          python3 -m engine.setup.update --main "$GITHUB_SHA"
+          --run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"

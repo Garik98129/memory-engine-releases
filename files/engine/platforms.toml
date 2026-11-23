@@ -1,0 +1,80 @@
+# The AI platforms a person can install the engine for (docs/DESIGN_PHASE3.md §3).
+# Facts of one day, 11.11.2026, from three reports, the platforms' own pages and checks in the
+# apps; a release changes them, never a person's config. `setup` reads this file (§5).
+#
+# field_limit  the instruction field as C6 counts it (UTF-16 units), on the plan named;
+#              C6 never goes above the floor chat_field_limit_max in defaults.toml
+# field        where the field is, in the platform's own app or on its site
+# field_all    where its field for every chat is, when `field` is a project's: the user then chooses
+#              between the two at installation (docs/DESIGN_PHASE3.md §4); absent — one place
+# notion       whether its AI creates pages and bases in Notion itself: "yes", "unknown", "no"
+# schedule     whether it runs a task on its own at a time: "yes", "paid", "unconfirmed", "no"
+# plan         the plan the engine needs there
+# status       "supported", "beta" (installs, with what is unknown said), "not-supported"
+# unknown      for "beta" when notion is not "unknown": what is not known yet, said in the Issue
+#
+# The one text for everybody (engine/rules/fields/fixed.md) sends the chat to the rules by the
+# branch `stable` of the repository of releases. Reading a file there by a branch's name was seen
+# on ChatGPT alone, through its GitHub app (owner's probe, 16.11.2026); Grok and Claude were not
+# tried with it, so both are "beta" until a test installation shows it (the owner's decision,
+# 16.11.2026: the first installation from end to end goes one way, ChatGPT Plus).
+
+[grok]
+title = "Grok"
+field_limit = 4000                  # the limit the app shows
+field = "Grok app: the instructions field"
+notion = "yes"                      # seen: the chat created a base and a row (11.11.2026)
+# its chat opened the rules' raw link through its GitHub connector and, told not to use it, as a
+# web page (owner's test, 12.11.2026): it reads the rules by the raw link
+schedule = "unconfirmed"            # Automations «available to everyone» (x.ai), not yet seen on a free account
+plan = "Plus"                       # the owner's word, 22.11.2026: on the free plan it does not work
+status = "beta"
+unknown = "whether its chat finds and reads the rules by itself, as it must: not tried yet on Grok"
+
+[claude]
+title = "Claude"
+field_limit = 4000                  # one text for all; the field took 12 000 characters whole (the owner's check,
+                                    # 19.11.2026), a project's holds more (19 931 seen)
+field = "Claude: Settings, Your Claude, Instructions"
+                                    # the field for every chat (the owner's decision, 20.11.2026: every chat — a
+                                    # project stays the user's own for separate things); Anthropic's help
+                                    # names it «Instructions» under Settings, «Your Claude», «Account» in the older
+                                    # view (read 19.11.2026)
+notion = "yes"                      # the Notion connector creates and updates pages and bases
+schedule = "paid"                   # scheduled tasks need Pro; projects may need it too (one report)
+plan = "Pro"
+status = "beta"
+unknown = "whether its chat finds and reads the rules by itself, as it must: not tried yet on Claude"
+
+[chatgpt]
+title = "ChatGPT"
+field_limit = 5000                  # the field for every chat — Plus and above; Free and Go: 1 500 (OpenAI help;
+                                    # the owner saw 1 500 on Free, and about 3 800 went in on Plus, 12.11.2026).
+                                    # A project's instructions kept 4 000 whole and refused 8 000 (owner's
+                                    # check, 14.11.2026); C6 stays at the floor of 4 000 either way
+field = "chatgpt.com in your browser: the menu under your name, Personalization"
+                                    # the field for every chat, the one place (the owner's word, 23.11.2026: no
+                                    # project); where the owner put a field, 12.11.2026. OpenAI's help names the
+                                    # apps' menu «Customize ChatGPT», the web's «Personalization» in Settings (read
+                                    # 19.11.2026); the owner's iPhone app showed him no Personalization, Safari did —
+                                    # an item of the menu under his name, beside Settings, not inside them (his
+                                    # screens, 19.11.2026, docs/DESIGN_PHASE3.md §4): the Issue names his way, the
+                                    # phone's; with `field` it must fit `field_issue.PLAIN_RE`, 120 characters
+notion = "yes"                      # seen 12.11.2026 in a test workspace: pages and the two bases (owner's check)
+# its chat did not open the rules' raw link, with its GitHub app on or off; with the app off it opened
+# GitHub's page of the same file (owner's tests, 12.11.2026): engine/checks/limits_check.py, BLOB_RULES;
+# through its GitHub app it read a rules file at a tag and a file by a branch's name (owner's probes,
+# 14.11.2026 and 16.11.2026)
+schedule = "yes"
+plan = "Plus"
+status = "beta"
+unknown = "how it keeps to its rules day to day: so far it has been tried in one test setup"
+
+[gemini]
+title = "Gemini"
+field_limit = 0                     # several entries; no limit found
+field = ""
+notion = "no"                       # Notion not found among its apps; own servers only in the US
+schedule = "yes"
+plan = "AI Pro"
+status = "not-supported"

@@ -1,0 +1,62 @@
+# The nightly text copy of the person's Notion, on the branch notion-backup. This file is
+# frozen: it holds what GitHub reads from a workflow file — the schedule, the rights, the
+# environment that keeps the Notion key and the order of the steps. What a step does is main's
+# code under engine/.
+name: backup
+
+on:
+  schedule:
+    - cron: "11 1 * * *"      # nightly, 01:11 UTC — after the watch (00:41)
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  # One group with watch.yml, every waiting run kept (see there).
+  group: notion-copy
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  backup:
+    # A dispatch on another branch would run that branch's copy of this file.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: backup
+    permissions:
+      contents: write         # the push to notion-backup
+      issues: write           # the alarm Issues
+    steps:
+      - name: Code from main — the commit whose copy of this workflow runs
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: The copy's branch, as a worktree
+        id: worktree
+        run: python3 -m engine.backup.night worktree
+
+      - name: Copy Notion
+        # The Notion key and no other: GitHub's token is not given to this step.
+        id: copy
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+        run: python3 -m engine.backup.night copy
+
+      - name: Commit and push the copy
+        id: push
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -m engine.backup.night push
+
+      - name: Alarms
+        # Also after a failed step, and told which one failed.
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WORKTREE: ${{ steps.worktree.outcome }}
+          PUSH: ${{ steps.push.outcome }}
+        run: python3 -m engine.backup.night alarms
