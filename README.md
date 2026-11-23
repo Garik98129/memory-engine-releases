@@ -1,11 +1,15 @@
-# memory-engine-releases
-Releases of memory-engine: at each tag its manifest and, from v0.1.6, its files — the engine's
+# Grafyla — releases
+Releases of the Grafyla engine: at each tag its manifest and, from v0.1.6, its files — the engine's
 code, public on the owner's word of 09.11.2026. No personal data. License: MIT (`LICENSE`).
+Until 23.11.2026 this repository was `Garik98129/memory-engine-releases`; that name leads here
+while GitHub redirects it («A new name», below).
 
 One tag per release, `vMAJOR.MINOR.PATCH`. At each tag, `release-manifest.json` lists every
 file the release puts into a person's repository, with its sha256, and the template commit it
 was cut from (`source`). A person's gate (check C1) reads it without a token at
-`https://raw.githubusercontent.com/Garik98129/memory-engine-releases/refs/tags/<tag>/release-manifest.json`.
+`https://raw.githubusercontent.com/grafyla/releases/refs/tags/<tag>/release-manifest.json` — an
+engine of a release up to v0.1.14 at the same path under the old name, which its own
+`engine/defaults.toml` holds.
 From v0.1.6, `files/` at the same tag holds those files themselves, byte for byte, for an
 update to fetch without a token; `files/.github/workflows/` is not where GitHub runs
 workflows, so nothing there runs here. Both are written by `python -m engine.setup.release cut`
