@@ -105,9 +105,11 @@ An index names the repository it was cut for, so the releases that are out go on
 repository as it was called on their day. Before this repository is renamed, or handed to
 another owner, the copy must already list the new name with the old one and the releases cut
 under it (`FORMER`): the pull request that brings that copy is merged first, and the rename
-is one step — a name in between that the copy does not list, a rename made before the copy
-came, or a rename back makes every night's run red until the copy lists the name the
-repository has. Nothing here checks that order. The old name leads to this repository only
+is one step. Renamed before the copy came, or through a name in between that the copy does
+not list, this repository has releases out under a name the copy does not take for them, and
+a night's run that reads such a release is red until the copy lists the name the repository
+has. Renamed back, it has no such release until one was cut under the name it left. Nothing
+here checks that order. The old name leads to this repository only
 while GitHub redirects it, and GitHub stops for good once a repository or a fork is made at
 the old place.
 

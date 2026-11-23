@@ -313,8 +313,10 @@ INDEX_TEXTS = (_index_1, _index_2)
 # it is out. At a next rename the whole list moves under the new name, with the name just left
 # added to it. The entry must be in the copy the repository of releases runs before the
 # repository takes the name it is listed under, and nothing checks that order: a repository
-# renamed first, renamed in two steps through a name that is not listed, or renamed back, is
-# red each night until the copy lists the name it has. A chat sent to an old name still finds
+# renamed first, or renamed in two steps through a name that is not listed, has releases out
+# under a name the copy does not take for them, and a night that reads such a release is red
+# until the copy lists the name the repository has; renamed back, it has none until a release
+# was cut under the name it left. A chat sent to an old name still finds
 # the files only while GitHub answers that name with the repository's new place — which it
 # stops doing once a repository or a fork is made at the old place again; nothing here can see
 # that. So, unlike a text, a name is bound to the releases of its day: an old name is taken
