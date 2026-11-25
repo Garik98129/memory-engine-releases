@@ -213,8 +213,9 @@ def build(platform: str, language: str, country: str, timezone: str, name: str, 
     )
     grammar = GRAMMAR[gender]
     part = (
-        f"PERSON PART — {name} (v2).\n"
-        f"The user's name: {name}; address the user as the map's «How we talk» says. {grammar}\n"
+        f"PERSON PART — {name} (v3).\n"
+        f"The user's name: {name}; address the user as the map's «How we talk» says; no map read, or no form of "
+        f"address chosen there → the formal «you» where the user's language has one. {grammar}\n"
         f"Language codes — the user's: {language}; work: {', '.join(work_languages) or 'none'}.\n"
         f"The user's time zone: {timezone}.\n"
         f"The user's country: {country}. Its emergency number — name it from what you know; not sure → "

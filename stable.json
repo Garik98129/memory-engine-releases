@@ -1,8 +1,8 @@
 {
-  "commit": "2f6a06f94b1ab7ca1d5ceec8317bf2ee9a1c6b8b",
+  "commit": "d650d8c798ef69a2a3ef1acba488e004e4da925f",
   "how": "by hand",
-  "moved": "2026-11-23T15:10:26Z",
-  "reason": "The first release under the name Grafyla: the setup page is written from it, and the setup is tested on it (the owner's word, 23.11.2026)",
-  "release": "v0.1.15",
+  "moved": "2026-11-25T20:03:03Z",
+  "reason": "Rules after the owner's four test setups, the audit and the brainstorm (TEXT MARK 5); moved at once after the merge, by hand (the owner's word, 25.11.2026)",
+  "release": "v0.1.16",
   "withdrawn": []
 }

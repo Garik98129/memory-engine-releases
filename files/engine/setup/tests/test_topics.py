@@ -523,6 +523,9 @@ class ThisTemplate(unittest.TestCase):
         """A purchase reads the health rules too, named in full — not left to SHOP-5's link."""
         data = {t["name"]: t["files"] for t in topics.load(self.files)["topics"]}
         self.assertEqual(data["shopping"], ["core.md", "shopping.md", "health.md", "notion.md"])
+        # Tolik's audit of 24.11.2026, finding 1: a fact of the user's own affairs reached core.md alone
+        self.assertEqual(data["affairs and projects"], ["core.md", "notion.md"])
+        self.assertEqual(data["work and texts"], ["core.md"], "a work file is not the user's Notion (CORE-11)")
         self.assertRegex(topics.load(self.files)["min_engine"], stable.TAG_RE)
         for name, files in data.items():
             self.assertIn("core.md", files, f"{name}: every other file cites the core's rules by their ids")

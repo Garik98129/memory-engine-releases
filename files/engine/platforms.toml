@@ -18,6 +18,9 @@
 # on ChatGPT alone, through its GitHub app (owner's probe, 16.11.2026); Grok and Claude were not
 # tried with it, so both are "beta" until a test installation shows it (the owner's decision,
 # 16.11.2026: the first installation from end to end goes one way, ChatGPT Plus).
+# ChatGPT is "supported" from the release v0.1.16 on (the owner's decision, 25.11.2026), after his four
+# test setups there on 23.11.2026 — three in Russian, one in Hebrew; none of them had been run to the
+# last line of setup yet.
 
 [grok]
 title = "Grok"
@@ -67,8 +70,7 @@ notion = "yes"                      # seen 12.11.2026 in a test workspace: pages
 # 14.11.2026 and 16.11.2026)
 schedule = "yes"
 plan = "Plus"
-status = "beta"
-unknown = "how it keeps to its rules day to day: so far it has been tried in one test setup"
+status = "supported"                # the owner's decision, 25.11.2026 (the note at the top of this file)
 
 [gemini]
 title = "Gemini"

@@ -28,7 +28,7 @@ README = (ROOT / "docs" / "template" / "README.md").read_text(encoding="utf-8")
 FLAT = " ".join(README.split())           # as the user reads it: the lines' breaks are the file's, not the text's
 RELEASES = "grafyla/releases"
 PUBLISHED = datetime(2026, 11, 13, 9, 0, tzinfo=timezone.utc)
-FACTORY = {**TEMPLATE, "LICENSE": b"MIT License\n", "docs/template/README.md": b"# Your AI memory\n"}
+FACTORY = {**TEMPLATE, "LICENSE": b"MIT License\n", "docs/template/README.md": b"# Grafyla\n"}
 
 
 class Fixture(unittest.TestCase):
@@ -296,6 +296,25 @@ class Readme(unittest.TestCase):
         self.assertIn("do not choose this one; if it wants at least one, give it an empty repository of yours", FLAT,
                       "told what to do, not promised that it works: reading under another login is not tried (§8)")
 
+    def test_it_is_called_grafyla_and_says_setup_in_three_languages(self):
+        """Owner, 23.11.2026: the name is Grafyla and the word is «setup» in Russian and Hebrew too, as on the
+        setup page and the site; and what stood in the field before does not go back into it. The Russian and
+        Hebrew words are spelled by their code points: this file is English only (F2)."""
+        self.assertTrue(README.startswith("# Grafyla\n"))
+        self.assertIn("Grafyla is not a program: there is nothing to download or install.", FLAT)
+        self.assertIn("**Grafyla** \u2014 \u043d\u0435 \u043f\u0440\u043e\u0433\u0440\u0430\u043c\u043c\u0430: \u0441\u043a\u0430\u0447\u0438\u0432\u0430\u0442\u044c \u0438 \u0443\u0441\u0442\u0430\u043d\u0430\u0432\u043b\u0438\u0432\u0430\u0442\u044c \u043d\u0438\u0447\u0435\u0433\u043e \u043d\u0435 \u043d\u0443\u0436\u043d\u043e.", FLAT)
+        self.assertIn("**Grafyla** \u05d4\u05d9\u05d0 \u05dc\u05d0 \u05ea\u05d5\u05db\u05e0\u05d4: \u05dc\u05d0 \u05e6\u05e8\u05d9\u05da \u05dc\u05d4\u05d5\u05e8\u05d9\u05d3 \u05d0\u05d5 \u05dc\u05d4\u05ea\u05e7\u05d9\u05df \u05e9\u05d5\u05dd \u05d3\u05d1\u05e8.", FLAT)
+        left = FLAT.replace("nothing to download or install", "").replace("\u05dc\u05d0 \u05e6\u05e8\u05d9\u05da \u05dc\u05d4\u05d5\u05e8\u05d9\u05d3 \u05d0\u05d5 \u05dc\u05d4\u05ea\u05e7\u05d9\u05df \u05e9\u05d5\u05dd \u05d3\u05d1\u05e8", "")
+        for old in ("AI memory", "the engine", "installation",
+                    "\u041f\u0430\u043c\u044f\u0442\u044c \u0432\u0430\u0448\u0435\u0433\u043e \u0418\u0418", "\u05d4\u05d6\u05d9\u05db\u05e8\u05d5\u05df \u05e9\u05dc \u05d4-AI", "\u0434\u0432\u0438\u0436\u043a",
+                    "\u05d4\u05de\u05e0\u05d5\u05e2", "\u0443\u0441\u0442\u0430\u043d\u043e\u0432\u043a", "\u05d4\u05ea\u05e7\u05e0\u05d4",
+                    "\u05dc\u05d4\u05ea\u05e7\u05d9\u05df"):
+            self.assertNotIn(old, left, "the old name or the old word: " + old.encode("unicode_escape").decode("ascii"))
+        self.assertNotRegex(left, r"(?i)\binstall", "an update is applied, a setup is run: nothing is installed")
+        self.assertIn("copy out what was there before, and do not put it back into that field.", FLAT)
+        self.assertIn("\u0432 \u044d\u0442\u043e \u043f\u043e\u043b\u0435 \u043d\u0435 \u0432\u043e\u0437\u0432\u0440\u0430\u0449\u0430\u0439\u0442\u0435", FLAT)
+        self.assertIn("\u05d5\u05d0\u05dc \u05ea\u05d7\u05d6\u05d9\u05e8\u05d5 \u05d0\u05d5\u05ea\u05d5 \u05dc\u05e9\u05d3\u05d4 \u05d4\u05d6\u05d4", FLAT)
+
     def test_it_says_her_assistant_lives_in_all_her_chats_and_what_is_not_tried(self):
         """Owner, 20.11 and 23.11.2026: one place on every platform, the field for all the user's chats — the
         choice of 16.11.2026 between that and a project is gone; and only ChatGPT was seen reading the rules
@@ -305,14 +324,47 @@ class Readme(unittest.TestCase):
         self.assertNotIn("project", FLAT, "no platform's text goes into a project (owner, 20.11 and 23.11.2026)")
         self.assertIn("On Grok and Claude this way of reading the rules has not been tried yet; the Issue says so.", FLAT)
         # Owner, 17.11.2026 (the first post in X): ChatGPT Plus is the first path, Claude and Grok in beta.
-        # ChatGPT keeps its «beta» too (Tolik on PR #63): the first path is still a test.
-        self.assertIn("ChatGPT (the Plus plan) — the first path, in beta; Claude (the Pro plan) or Grok (the Plus plan) — in beta too.", FLAT)
+        # ChatGPT kept its «beta» too (Tolik on PR #63) until the owner's decision of 25.11.2026, after his
+        # four test setups there on 23.11.2026: «supported» from the release v0.1.16 on.
+        self.assertIn("ChatGPT (the Plus plan) — the first path; Claude (the Pro plan) or Grok (the Plus plan) — in beta.", FLAT)
+        self.assertNotIn("in beta too", FLAT)
+        self.assertEqual(setup.platforms()["chatgpt"]["status"], "supported")
         self.assertIn("does not fit the free ChatGPT plan: its Custom Instructions box holds 1 500 characters", FLAT)
-        self.assertIn("and check its facts when it helps you with those", FLAT,
+        self.assertIn("and checks its facts when it helps you with those", FLAT,
                       "the fact check is read with a topic's rules now, not held in every answer (DESIGN_PHASE3 §4)")
         self.assertEqual([name for name, row in setup.platforms().items() if row.get("field_all")], [])
         for name in ("grok", "claude"):
             self.assertEqual(setup.platforms()[name]["status"], "beta", name)
+
+    def test_the_four_steps_keep_their_names_in_each_language(self):
+        """The reader of the change that brought the README its three languages under the new name (Tolik,
+        23.11.2026): the test above forbids the old words and holds no new one — a step renamed wrongly, with
+        no forbidden root in it, would pass. So the names of the four steps and the sentence on what stood in
+        the field before are held here, each language by its own words, spelled by their code points."""
+        steps = {
+            "English": ("1. **Your copy.**", "2. **One setting.**", "3. **Setup.**", "4. **Your AI.**"),
+            "Russian": ("1. **\u0412\u0430\u0448\u0430 \u043a\u043e\u043f\u0438\u044f.**", "2. **\u041e\u0434\u043d\u043e \u0440\u0430\u0437\u0440\u0435\u0448\u0435\u043d\u0438\u0435.**", "3. **\u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0430.**", "4. **\u0412\u0430\u0448 \u0418\u0418.**"),
+            "Hebrew": ("1. **\u05d4\u05e2\u05d5\u05ea\u05e7 \u05e9\u05dc\u05db\u05dd.**", "2. **\u05d4\u05e8\u05e9\u05d0\u05d4 \u05d0\u05d7\u05ea.**", "3. **\u05d4\u05d2\u05d3\u05e8\u05d4.**", "4. **\u05d4-AI \u05e9\u05dc\u05db\u05dd.**"),
+        }
+        for language, names in steps.items():
+            for name in names:
+                self.assertEqual(FLAT.count(name), 1, f"{language}: " + name.encode("unicode_escape").decode("ascii"))
+        for sentence in (
+                "Once your AI has finished the setup, give it to your AI in a chat: it will pick out what is needed o"
+                "n its own and put it where it belongs in your Notion.",
+                "\u041a\u043e\u0433\u0434\u0430 \u0418\u0418 \u0437\u0430\u043a\u043e\u043d\u0447\u0438\u0442 \u043d"
+                "\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0443, \u0434\u0430\u0439\u0442\u0435 \u044d\u0442\u043e "
+                "\u0435\u043c\u0443 \u0432 \u0447\u0430\u0442\u0435 \u2014 \u043e\u043d \u0441\u0430\u043c \u0432"
+                "\u044b\u0442\u0430\u0449\u0438\u0442 \u0447\u0442\u043e \u043d\u0430\u0434\u043e \u0438 \u043f\u043e"
+                "\u043b\u043e\u0436\u0438\u0442 \u043a\u0443\u0434\u0430 \u043d\u0430\u0434\u043e \u0432 \u0432\u0430"
+                "\u0448\u0435\u043c Notion.",
+                "\u05db\u05e9\u05d4-AI \u05d9\u05e1\u05d9\u05d9\u05dd \u05d0\u05ea \u05d4\u05d4\u05d2\u05d3\u05e8"
+                "\u05d4, \u05ea\u05e0\u05d5 \u05dc\u05d5 \u05d0\u05ea \u05d6\u05d4 \u05d1\u05e6'\u05d0\u05d8 \u2014 "
+                "\u05d4\u05d5\u05d0 \u05db\u05d1\u05e8 \u05d9\u05d5\u05e6\u05d9\u05d0 \u05de\u05e9\u05dd \u05d0\u05ea "
+                "\u05de\u05d4 \u05e9\u05e6\u05e8\u05d9\u05da \u05d5\u05d9\u05e9\u05d9\u05dd \u05d0\u05d5\u05ea\u05d5 "
+                "\u05d1\u05de\u05e7\u05d5\u05dd \u05d4\u05e0\u05db\u05d5\u05df \u05d1-Notion \u05e9\u05dc\u05db\u05dd.",
+        ):
+            self.assertIn(sentence, FLAT, sentence.encode("unicode_escape").decode("ascii"))
 
     def test_it_says_how_she_hears_of_new_instructions_and_that_the_choice_is_hers(self):
         """Said at installation, not asked in the form (DESIGN_PHASE3 §5): GitHub's e-mail or its app."""
