@@ -60,6 +60,12 @@ class Build(unittest.TestCase):
         self.assertIn("The user's country: IL. Its emergency number — name it from what you know", part,
                       "no number asked (owner, 12.11.2026)")
         self.assertIn("The user is a woman", part)
+        self.assertIn("address the user as the map's «How we talk» says; no map read, or no form of address chosen "
+                      "there → the formal «you» where the user's language has one.", part,
+                      "said where the first answer looks: three Russian test setups of three began with the "
+                      "informal «you» (the owner's runs, 23.11.2026), though install.md says the same")
+        self.assertIn("Until the user chooses a form of address (INSTALL-9), use the formal «you» where the user's "
+                      "language has one", " ".join((HERE / "rules/install.md").read_text(encoding="utf-8").split()))
         self.assertIn("The user's platform: Grok; plan: Plus; writes Notion itself: yes;", part,
                       "INSTALL-12 reads what works here, not the Issue")
         self.assertIn("Before your first answer in each chat — danger signs still first — find in the user's Notion the page "
@@ -68,7 +74,7 @@ class Build(unittest.TestCase):
         self.assertNotIn("ontinue setup", part, "the map's own «Still to ask» and NOTION-12 hold the phrase")
         self.assertIn("Language codes — the user's: ru; work: none.", part, "«no» is Norwegian, not a word")
         self.assertNotIn("work_languages", config, "none chosen, none written")
-        self.assertTrue(part.startswith("PERSON PART — Anna (v2).\n") and part.endswith("Trusted contact: none.\n"),
+        self.assertTrue(part.startswith("PERSON PART — Anna (v3).\n") and part.endswith("Trusted contact: none.\n"),
                         "INSTALL-7 copies these lines to the map from the first to the last")
         self.assertEqual(setup.field_text(), FIXED.strip("\n"), "the text the user pastes is the one text, alone")
         self.assertNotIn("Anna", setup.field_text(), "nothing of the user's is in it")
@@ -366,7 +372,7 @@ class InstallRules(unittest.TestCase):
                      "never written as a setting (the one exception: MAIL-8's line, on the user's yes); if noted at all, "
                      "then as «asked not to be asked before sending — the question stays»",
                      "one standing line — «food, recipes, cosmetics: the user's «Health» list kept to quietly, no question "
-                     "each time, never „safe for you“; Health unread — say so»",
+                     "each time, never „safe for you“; Health unread — say so, ask once a chat»",
                      "in full only when there is no map yet, otherwise in one line",
                      "«Buy?» and «Delete?» have no exception",
                      "the formal or the informal «you» where the language has both",
@@ -449,8 +455,27 @@ class InstallRules(unittest.TestCase):
                       "the field names the recipient, and its one exception — closed until mail.md is read")
         self.assertNotIn("natural, field terms as they are", solo, "room for the exception; CORE-1 keeps it")
         self.assertIn("natural and professional, field terms as they are", core)
-        self.assertIn("The user's profile could not be read in this chat — Notion not answering, a link that does not open "
-                      "→ say so in one line before the advice: unread is not «nothing recorded»", health)
+        # The one text asks before advice that depends on an unread profile; HEALTH-7 said one line and the advice.
+        # Both now say the same (the owner's decision after the brainstorm of 25.11.2026): the line, one question,
+        # and meanwhile only what does not rest on the profile — and the map's standing line never says less.
+        for line in ("The user's profile could not be read in this chat — Notion not answering, a link that does not "
+                     "open → in one answer: one line that it could not be read; one question (any allergy, and "
+                     "anything the user must avoid because of a medicine or an illness); and only advice that does "
+                     "not rest on the profile",
+                     "What rests on it waits for the user's answer — a food or a cosmetic to buy or order, a cream, "
+                     "an oil or any other cosmetic to put on the skin (a medicine is a medicine, on the skin too: "
+                     "the bullet above), any dish that contains peanuts, tree nuts, milk, eggs, fish, "
+                     "shellfish, wheat, soy or sesame, a food known to clash with common medicines, such as "
+                     "grapefruit, licorice or a lot of leafy greens; in doubt, it waits.",
+                     "Meanwhile a version of the dish without them may be given, said to be one.",
+                     "The user would rather not answer, or goes on without answering → give what was asked, said to "
+                     "be given without the profile, never «safe for you»; the question is not asked again in this "
+                     "chat.",
+                     "Asked once a chat: the answer holds until the profile is read",
+                     "Unread is not «nothing recorded».",
+                     "where it says less than this rule, this rule holds"):
+            self.assertIn(line, health)
+        self.assertIn("unread → say so and ask before advice that depends on it", flat(FIXED))
         shopping = flat((HERE / "rules/shopping.md").read_text(encoding="utf-8"))
         self.assertIn("Before you advise or choose a food, a cosmetic, a medicine", shopping,
                       "a cream or a food opens shopping.md, not health.md; the user's own named order is not advice")
@@ -579,7 +604,8 @@ class TheIssue(unittest.TestCase):
         self.assertNotIn("project", claude)
         chatgpt = self.text("chatgpt")
         self.assertIn("You need the Plus plan.", chatgpt, "on Free its field holds 1 500 (owner, 12.11.2026)")
-        self.assertIn("In beta — not known yet: how it keeps to its rules day to day", chatgpt)
+        self.assertNotIn("In beta", chatgpt, "«supported» from v0.1.16 on (the owner's decision, 25.11.2026)")
+        self.assertEqual(setup.platforms()["chatgpt"]["status"], "supported")
         self.assertIn("Your AI writes your records into Notion itself.", chatgpt, "seen 12.11.2026 (owner's check)")
         grok = self.text("grok")
         self.assertIn("You need the Plus plan.", grok, "on the free plan it does not work (owner, 22.11.2026)")
@@ -632,9 +658,9 @@ class TheIssue(unittest.TestCase):
                 self.assertNotRegex(page, release.PUBLISHED_TAG_RE.pattern, "no release anywhere on the user's page")
                 self.assertNotIn("jsdelivr", page.lower(), "no third party between GitHub and the chat")
                 self.assertIn("run the workflow «settings» in this repository: it gives you one message to send", page)
-        self.assertTrue(setup.field_text().endswith("\n\nTEXT MARK 4."),
+        self.assertTrue(setup.field_text().endswith("\n\nTEXT MARK 5."),
                         "the text ends with its mark (CORE-16), which the Issue names for a paste cut short")
-        self.assertIn("Check that its last line came in too: it is «TEXT MARK 4.» — keep it: your AI reads it to "
+        self.assertIn("Check that its last line came in too: it is «TEXT MARK 5.» — keep it: your AI reads it to "
                       "know its text is whole and current. The text is the same for everybody", pages["grok"])
         self.assertIn("Open Grok app: the instructions field.", pages["grok"])
 

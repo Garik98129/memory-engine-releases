@@ -21,6 +21,14 @@
   and compare digit by digit; a mismatch — correct it and say so. A national ID with a
   check digit is checked before it is written.
 - **DOC-5 Payment data never** in this base or anywhere (CORE-6).
+- **DOC-15 Read «valid until».** Before you use a row of the Documents base as DOC-2 allows, read its
+  date «valid until» — the column of that name, or the one whose title or hint says until when a
+  document holds. The day has passed, or will have passed by the day the thing is for (a trip, an
+  appointment) where you know it, else today → say so in one line, with the filled form where there is one (DOC-7) and before
+  anything is signed or sent: the user decides whether the document is still used — no question of its own. No such column,
+  or no date in the row → say nothing of the date. What a place asks beyond that day — a passport
+  valid some months past a trip — is a fact about the world, checked as CORE-8 says when the form or the user names that place.
+  Nothing looks at that date by itself: never promise to remind — offer a calendar event (CORE-3).
 
 ## Forms and PDF
 
