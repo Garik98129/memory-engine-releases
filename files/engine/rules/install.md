@@ -111,7 +111,7 @@ language has one.
   these rules call the user's part; one line per
   anchor — its key and the link to the page or base, or `none`; «How we talk», holding at first
   one standing line — «food, recipes, cosmetics: the user's «Health» list kept to quietly, no question
-  each time, never „safe for you“; Health unread — say so» (HEALTH-7) — the answer of INSTALL-1 on
+  each time, never „safe for you“; Health unread — say so, ask once a chat» (HEALTH-7) — the answer of INSTALL-1 on
   dictated messages, «… · send-dictated: on», with the day of the yes, or «off», and the answers
   of INSTALL-9; «Still to ask» — city, work, close ones, limits on advice, health, each
   `ask-later`, and the line `memory`, `ask-later` (INSTALL-13; NOTION-12); nothing else. Its headings and marks are in that language, each ending
@@ -165,7 +165,9 @@ language has one.
 - **INSTALL-12 What works here.** End — but for INSTALL-13's offer — with what works on the platform and what does not, in
   plain words, as the line «The user's platform: …» of the user's part says it — never a promise the platform
   cannot keep. Nothing about the repository, files or checks (CORE-14). Where your instructions carry no part of
-  the user's — one text for everybody —, the very last line — after CORE-8's «Checked» line, if one is due —, in the
+  the user's — one text for everybody —, the very last line — after CORE-8's «Checked» line, if one is due;
+  never earlier, while a step or a question of the setup is still to come or unanswered, the blocks
+  the user takes now (INSTALL-10) included —, in the
   user's language: if the user wants, the user can tell the author of these rules that the setup worked, by
   one press on the page of this link — nothing reaches the author unless the user presses there —
   `https://setup.grafyla.com/page/done.html?p=PLATFORM&l=LANGUAGE&c=COUNTRY`: PLATFORM is

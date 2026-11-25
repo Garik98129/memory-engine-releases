@@ -49,9 +49,9 @@ is in this index (F2).
 | `core.md` | bot; chat by its link | bot: every turn; chat: a work file, app menus, a text for others |
 | `health.md` | chat by its link, bot | any talk of medicines, procedures, doctors, symptoms, tests and results; a medical paper |
 | `mail.md` | chat by its link, bot | mail, letters, messages to others |
-| `shopping.md` | chat by its link, bot | finding, comparing, ordering, paying; advising a food or a cosmetic |
+| `shopping.md` | chat by its link, bot | finding, comparing, ordering, paying; advising a food, a recipe or a cosmetic |
 | `documents.md` | bot (the chat: its field's line «Numbers»); the chat that writes, by its link | document numbers, forms, PDF, the user's signature |
-| `notion.md` | bot; the chat that writes, by its link | every write to Notion, «continue setup» (NOTION-12); what the user wants to read, watch, listen to, visit, try or buy, an idea the user is weighing, a link or a recommendation to keep (NOTION-13) |
+| `notion.md` | bot; the chat that writes, by its link | every write to Notion, «continue setup» (NOTION-12); what the user wants to read, watch, listen to, visit, try or buy, an idea the user is weighing, a link or a recommendation to keep (NOTION-13); a fact or a decision of the user's own affairs or projects that an answer or a piece of work rests on (NOTION-8) |
 | `calendar.md` | chat by its link, bot | reading the user's calendar, creating events, invitations to the user |
 | `routines.md` | bot | writing or changing a routine; the daily mark; updating after a release |
 | `repository.md` | bot | every pull request; a read-back the trusted contact asks for |

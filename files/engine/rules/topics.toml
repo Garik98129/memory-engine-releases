@@ -11,7 +11,8 @@
 about = """A topic applies when the talk is about the user, the user's family or the user's own pets. A general \
 question — about a breed, somebody else's animal — needs no rules: answer it as you would \
 anyone; what the user personally wants to read, watch, listen to, visit, try or buy is the user's — the \
-topic «notes and ideas». Not clear whose it is → one question."""
+topic «notes and ideas»; the user's own affairs and projects, with what was decided in them, are the user's \
+too — the topic «affairs and projects». Not clear whose it is → one question."""
 
 # The oldest release of the engine these rules are written for: what they say of the user's Notion, the user's
 # repository and its checks holds from that release on. Raised — by hand, in the pull request
@@ -40,7 +41,7 @@ files = ["core.md", "health.md", "notion.md"]
 
 [[topic]]
 name = "shopping"
-when = "finding, comparing, ordering, paying; advising a food or a cosmetic"
+when = "finding, comparing, ordering, paying; advising a food, a recipe or a cosmetic"
 files = ["core.md", "shopping.md", "health.md", "notion.md"]
 
 [[topic]]
@@ -66,6 +67,16 @@ files = ["core.md", "notion.md"]
 [[topic]]
 name = "notes and ideas"
 when = "what the user wants to read, watch, listen to, visit, try or buy, an idea the user is weighing, a link or a recommendation to keep (NOTION-13)"
+files = ["core.md", "notion.md"]
+
+# A fact of the user's own affairs or projects — what a sign of the user's means, what was decided — had no
+# topic: «work and texts» reads core.md alone, so such a question reached no file that holds NOTION-8
+# (Tolik's audit of 24.11.2026, finding 1; the owner's decision of that day: this topic, and NOTION-8's
+# working half in the one text as well). The pilot's chat, whose field names its own files, is not sent
+# here: it reads no notion.md.
+[[topic]]
+name = "affairs and projects"
+when = "a fact or a decision of the user's own affairs or projects that an answer or a piece of work rests on (NOTION-8)"
 files = ["core.md", "notion.md"]
 
 [[topic]]
