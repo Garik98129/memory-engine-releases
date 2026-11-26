@@ -482,6 +482,48 @@ class InstallRules(unittest.TestCase):
                       shopping, "owner, 12.11.2026: no reminder about allergies on every food question")
 
 
+    def test_what_the_owners_full_run_of_26_11_taught(self):
+        """The owner's full setup on ChatGPT, v0.1.17, 26.11.2026, and his test questions after it (memory-files
+        #2059): the chat named «PERSON PART (v3)» to him, counted «six» and then «seven», called the link an
+        installation, took «remember» for no request, sent the same failing write twice on a new topic, and held
+        a recipe back as «the profile is not read yet» without reading it. The one text stays as it is (the
+        owner chose to keep the line that names the release and files read), so each fix is a rule the chat
+        reads, and this test keeps it there."""
+        install = flat((HERE / "rules/install.md").read_text(encoding="utf-8"))
+        for line in ("The user's part goes there as it is and without a word about it: to the user, never name it, its "
+                     "heading, its version or its lines' keys — «PERSON PART», «(v3)», «Trusted contact» —; it is «your "
+                     "settings — name, language, time zone» (CORE-14).",
+                     "and the map as «your settings → link». No number of them: the lines are the count.",
+                     "(its words call it the setup, never an installation: in the user's language, the word the "
+                     "setup page itself uses for it)"):
+            self.assertIn(line, install)
+        notion = flat((HERE / "rules/notion.md").read_text(encoding="utf-8"))
+        for line in ("«Remember», «keep», «save», «note it» — in any language — is the user asking to keep it: in "
+                     "this base, now, never only in this chat or in your own memory.",
+                     "it goes into the base first (NOTION-4). Notion refuses the new topic even so → do not send the "
+                     "same write again on your own: one line that Notion did not take the new topic, and the offer to "
+                     "write the row without it, the word kept in `note`; on the user's yes, so, read back.",
+                     # Claude Code's probe of 26.11.2026 through Notion's own tools: a row with a topic the base lacks
+                     # is refused, «If a new multi_select option is needed, the data source must be updated to add
+                     # it»; the option added first, the same row went in. Setting the options names them all.
+                     "A new option goes into the base before the row that uses it — Notion's tools refuse a row whose "
+                     "option the base lacks, «the data source must be updated to add it»: read the column's options, "
+                     "set them all with the new one added — a list that leaves one out deletes it —, read them back, "
+                     "every old one still there, and only then write the row."):
+            self.assertIn(line, notion)
+        # The owner's starting topics, 26.11.2026: Claude Code's fourteen and his five — sport, leisure, drinks, food, other.
+        self.assertIn("topics (multi-select, starting with nineteen options in the language of the names, so that a "
+                      "new one is seldom needed: films, series, books, music, places, trips, restaurants, recipes, "
+                      "food, drinks, shopping, gifts, home, sport, leisure, ideas, work, links, other)", install)
+        self.assertNotIn("topics (multi-select, with no options yet)", install)
+        health = flat((HERE / "rules/health.md").read_text(encoding="utf-8"))
+        self.assertIn("Read the profile yourself, first and unasked, before the answer: never hold the answer back as "
+                      "«not read yet», and ask the user nothing about it before you have read it — only a profile you "
+                      "tried to read and could not is unread.", health)
+        # The text itself is not touched by this release: its fingerprint and mark stay (test_rules_budget.py).
+        self.assertTrue(FIXED.rstrip().endswith("TEXT MARK 6."))
+
+
 class ThePilot(unittest.TestCase):
     """DESIGN_PHASE3 §1: every phase-3 code PR carries a scenario on a tree shaped like the pilot's —
     two fields, the user's parts naming the user's bases, no map, no new keys — in which nothing green turns red;

@@ -90,7 +90,9 @@ language has one.
   `area`, `status`, `source`, `findings`, `file`, `next-check`, `note` —, which HEALTH-8 finds it
   by; the hint of «next check» says that nothing looks at it by itself unless a routine of the user's
   does (INSTALL-11); «Notes» as a base with the columns name (title), kind (select: note, idea, link,
-  recommendation, to try), topics (multi-select, with no options yet), status (select: new, in
+  recommendation, to try), topics (multi-select, starting with nineteen options in the language of the
+  names, so that a new one is seldom needed: films, series, books, music, places, trips, restaurants,
+  recipes, food, drinks, shopping, gifts, home, sport, leisure, ideas, work, links, other), status (select: new, in
   progress, done, put aside), link (URL), from (text), look again on (date), added (created time),
   note (text), each column's hint but the name's ending with « · » and its English key — `kind`, `topics`,
   `status`, `link`, `from`, `revisit`, `added`, `note` —, which NOTION-13 finds it by: a hint stays
@@ -107,12 +109,16 @@ language has one.
   one standing line — «food, recipes, cosmetics: the user's «Health» list kept to quietly, no question
   each time, never „safe for you“; Health unread — say so, ask once a chat» (HEALTH-7) — and the answers
   of INSTALL-9; «Still to ask» — city, work, close ones, limits on advice, health, each
-  `ask-later`, and the line `memory`, `ask-later` (INSTALL-13; NOTION-12); nothing else. Its headings and marks are in that language, each ending
+  `ask-later`, and the line `memory`, `ask-later` (INSTALL-13; NOTION-12); nothing else. The user's part goes
+  there as it is and without a word about it: to the user, never name it, its heading, its version or its
+  lines' keys — «PERSON PART», «(v3)», «Trusted contact» —; it is «your settings — name, language, time
+  zone» (CORE-14). Its headings and marks are in that language, each ending
   with « · » and its English key, like the titles: the headings `her-part`, `how-we-talk` and `still-to-ask`,
   the marks `none`, `ask-later`, `not-wanted` and `done` — the rules find them by the key. A
   change of an anchor later — a line of the map, on the user's yes. The user's part given again later — NOTION-10.
 - **INSTALL-8 Read back.** After making or adopting, open each item and the map again and give the user
-  one line per anchor with its link: «Mapped: what → link» (NOTION-3). An item of the user's left
+  one line per anchor with its link: «Mapped: what → link» (NOTION-3), and the map as «your settings →
+  link». No number of them: the lines are the count. An item of the user's left
   beside an anchor — a «Documents» page of the user's own, say — stays as it is. Say so, and that the user can
   ask you to copy things from it into the anchor, each on a yes of its own. What could not be made —
   one plain line, and that the user can send the same first message again later.
@@ -161,7 +167,9 @@ language has one.
   never earlier, while a step or a question of the setup is still to come or unanswered, the blocks
   the user takes now (INSTALL-10) included —, in the
   user's language: if the user wants, the user can tell the author of these rules that the setup worked, by
-  one press on the page of this link — nothing reaches the author unless the user presses there —
+  one press on the page of this link (its words call it the setup, never an installation: in the user's
+  language, the word the setup page itself uses for it) — nothing reaches
+  the author unless the user presses there —
   `https://setup.grafyla.com/page/done.html?p=PLATFORM&l=LANGUAGE&c=COUNTRY`: PLATFORM is
   the platform's name in the user's part, in small letters — `chatgpt`, `claude` or `grok` —, LANGUAGE the user's
   language code and COUNTRY the user's country code, both as the user's part gives them. Give the link whole, with

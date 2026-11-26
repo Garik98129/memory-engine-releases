@@ -84,14 +84,14 @@
     "engine/rules/core.md": "0ce4ae8b4c2879a52e8ae0a4634f4e57cde7522f5ddd8f1533c13db0c200f9ae",
     "engine/rules/documents.md": "e524ec41a6e0c6595f59df7770c478c08cb8567e82ae6b6c9a9d93e6f85b7352",
     "engine/rules/fields/bot.md": "e6fec92f5525aa263ca9062c8dcea4a8d6bf0c0facf27b2ff9af360feb68ff99",
-    "engine/rules/fields/chat.md": "d29b265d25d9894cfd99d08380557e233cde3b1cda1c69f5485d86d293fb6947",
+    "engine/rules/fields/chat.md": "2b5b232ce2f5eb931bff536425a3b15bf4102c970c22bd6a076f8be0c5bbc0b7",
     "engine/rules/fields/fixed.md": "7f08c02f5c9f764f26b1de43bacc8c6fe3eeafb9a81924260678162388ab16fc",
-    "engine/rules/fields/solo-blob.md": "c170318ab10ad6c272e398430f4364e461c5b472b090cd8861f60cb62feb5489",
-    "engine/rules/fields/solo.md": "4c2d375b1f04380eff7104220876518c0ba888efa0e2fe77f237f7988113a8b6",
-    "engine/rules/health.md": "50fe76380550479338bf944a157643441888eb6a282e04c6bf7f4242142dc619",
-    "engine/rules/install.md": "4296164342669e8e60a6e0411e02cb1c701e2a2718c2310bbd3a9d07b4777110",
+    "engine/rules/fields/solo-blob.md": "1339d1408c3f23ced9449a280dca981a55613cb6d2b0a2606d27d81bf1dcbd15",
+    "engine/rules/fields/solo.md": "a0fd3a1b1cebc8d1a195544b8e48799bc33ef238b41e1b42e7ea0f1cdd56c843",
+    "engine/rules/health.md": "415194a7a355f3aa2b44a7b627724b3b11e46f9061b5fefbeaae0386b48fda7d",
+    "engine/rules/install.md": "efcb03c17a4962dab47248cb02889bceac84aad17983544400d0196d3eabc3fd",
     "engine/rules/mail.md": "edd3d82e766b4e8545a21a871cf01d4c28442a1a0a9aa0f28da7747e27a3aac6",
-    "engine/rules/notion.md": "01a52b194dd497e1876fb7385d6af1b8c426c689dd6fad066c0924a46765f943",
+    "engine/rules/notion.md": "8de1858b2a939147c64b14ba8f5e823902b37dae526bec6f11ae020429bea40d",
     "engine/rules/repository.md": "823470961b7a069b30dc4661f269c8850838e55e2c93dee7d8a979ab6c7d8eb5",
     "engine/rules/routines.md": "9591ee98954236a6fce1563be8cae0b4d6610a051466d5536339f71207614b7c",
     "engine/rules/shopping.md": "ba4846632867459bd562654753e18e641334415aff06dabe68e5772d2e12b59b",
@@ -106,7 +106,7 @@
     "engine/setup/tests/__init__.py": "d27c621cc108a2318dc86ac77d695a1720bb9a448638ec4a3064927999095a8c",
     "engine/setup/tests/test_release.py": "fdd96e354f7a1f678f1f6c43e9a064a66f043e1d19e41e7b13a467416988af0e",
     "engine/setup/tests/test_release_scenarios.py": "208e7955288f30e703d574f9e5e72a5fffc88adf7338d9ebe6be4fd3f7edbf81",
-    "engine/setup/tests/test_setup.py": "b684a0f38994a6c9064236b8cef13a21b5af7663f302d333b1073373faee6d42",
+    "engine/setup/tests/test_setup.py": "568a8421c08976c660ff5524bf4fe7d82147865b7543b3f48fef9cde7daa5fa4",
     "engine/setup/tests/test_setup_run.py": "3d593956ec3d78826b1c6c3f6f9a81cbd7e842a96e8e95ff4ea63de7be4ae680",
     "engine/setup/tests/test_stable.py": "93e59ff798e998fa2fb21ceb280b17e8b91371cd52ef2b58dae690882e8f7b28",
     "engine/setup/tests/test_template.py": "1016b61691d67bf2f041f57a286b1ac20fd30a119b36b058c575f4a97a87e799",
@@ -123,9 +123,9 @@
   },
   "index": {
     "path": "rules-index.md",
-    "sha256": "2f669b8c5d187b0117dbec81ae742b19b085886efaa1d7bf15c6df6085b71343"
+    "sha256": "4b42645786274333306b7a205e322e03e5eea2efa404e5246e3a0a33edaf14cd"
   },
-  "published": "2026-11-26T10:50:01Z",
-  "release": "v0.1.17",
-  "source": "c5b2d3865498ca30006f2b182d9dfd261c680921"
+  "published": "2026-11-26T18:24:35Z",
+  "release": "v0.1.18",
+  "source": "e957151c0bc9a518c7b299f1ae3357fb90d91bfa"
 }
