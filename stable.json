@@ -1,8 +1,8 @@
 {
-  "commit": "d650d8c798ef69a2a3ef1acba488e004e4da925f",
+  "commit": "a67bb4ebde7df04c58bd5f68dcf07dc31945e2f6",
   "how": "by hand",
-  "moved": "2026-11-25T20:03:03Z",
-  "reason": "Rules after the owner's four test setups, the audit and the brainstorm (TEXT MARK 5); moved at once after the merge, by hand (the owner's word, 25.11.2026)",
-  "release": "v0.1.16",
+  "moved": "2026-11-26T10:56:10Z",
+  "reason": "The owner's word, 26.11.2026: \u00abstable \u043d\u0430 v0.1.17\u00bb \u2014 \u00abSend?\u00bb with no exception, the one text with TEXT MARK 6",
+  "release": "v0.1.17",
   "withdrawn": []
 }
