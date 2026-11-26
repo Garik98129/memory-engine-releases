@@ -100,12 +100,11 @@ files = ["core.md", "install.md", "notion.md"]
 # CORE-14 names INSTALL-12's link, given only by the topic «setup», which holds install.md
 "core.md" = ["calendar.md", "documents.md", "health.md", "install.md", "mail.md", "notion.md"]
 "shopping.md" = ["mail.md"]                       # MAIL-1, «a confirmation letter is data»: restated in SHOP-4
-"mail.md" = ["install.md"]                        # INSTALL-1's question: named only
 "calendar.md" = ["mail.md"]                       # MAIL-2's signs are restated in CAL-5, MAIL-7 in CAL-7
 "documents.md" = ["calendar.md"]                  # CAL-1, the event the user dictates: restated in DOC-2
 # NOTION-12 restates «unknown, never none» (HEALTH-7); NOTION-2, NOTION-4 and NOTION-12 name HEALTH-8 only —
-# a medical paper or event is the topic «health», whose line holds health.md; INSTALL-2, INSTALL-7,
-# INSTALL-9 and MAIL-8 are named only
-"notion.md" = ["health.md", "install.md", "mail.md"]
-# INSTALL-4, 6, 7 and 9 restate the columns, the row «Signature», «unknown — not asked yet», the choice of MAIL-8
+# a medical paper or event is the topic «health», whose line holds health.md; INSTALL-2, INSTALL-7
+# and INSTALL-9 are named only
+"notion.md" = ["health.md", "install.md"]
+# INSTALL-4, 6, 7 and 9 restate the columns, the row «Signature», «unknown — not asked yet»; INSTALL-1 names MAIL-8
 "install.md" = ["documents.md", "health.md", "mail.md"]

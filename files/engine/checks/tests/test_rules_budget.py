@@ -40,14 +40,17 @@ class TheOneText(unittest.TestCase):
     # of one sign here means each of them pastes again, and until then the user's AI holds the older text.
     # So the text never changes by the way — whoever changes it changes this fingerprint in the same
     # pull request, and its reader sees a change of the text for what it is.
-    # Changed on purpose by the text's mark (CORE-16, docs/DESIGN_PHASE3.md §5a): «TEXT MARK 5.» as its last line —
+    # Changed on purpose by the text's mark (CORE-16, docs/DESIGN_PHASE3.md §5a): «TEXT MARK 6.» — «Send?» has no
+    # exception any more: «— one exception, a message the user dictated, only as the mail rules read in this chat
+    # allow» is gone, and MAIL-8 now says a dictated message asks too (the owner's decision of 26.11.2026, quoted in
+    # docs/DESIGN_PHASE3.md §5: no exception, said plainly). Before it, «TEXT MARK 5.» as its last line —
     # the working half of NOTION-8, «when a fact about the user or the user's affairs matters, read Notion; not
     # found → say so, ask; rules may waive» (Tolik's audit of 24.11.2026, finding 1; the owner's decision of that day: in the text and as a
     # topic of the index, both), and its room: «Nobody in particular (somebody else's animal) → no rules», which
     # the sentence before it implies and the index says, is gone — «Unsure whose → one question» stays. Two
     # words made exact by the reading before the merge: «that topic's files», not «each of those files», and
     # the health «profile», not «record».
-    FINGERPRINT = "9d7f8e097be29564afe8f5da55713dbab6fce7f0777ad25271af562c1c685f6a"
+    FINGERPRINT = "7f08c02f5c9f764f26b1de43bacc8c6fe3eeafb9a81924260678162388ab16fc"
 
     def test_the_text_is_the_one_that_was_read(self):
         import hashlib
@@ -111,8 +114,7 @@ class TheOneText(unittest.TestCase):
                      "Never tell the user to start, stop or change a medicine on the user's own: the doctor decides, above all heart "
                      "and blood-thinning medicines",
                      "The user's own clear request is a yes: do it; your idea → ask first",
-                     "«Buy?»", "«Send?» — one exception, a message the user dictated, only as the mail rules read in this "
-                     "chat allow", "«Delete?»", "One yes, one action; silence is no yes; no silent retry",
+                     "«Buy?»", "a letter or message → to whom, text → «Send?»; deleting → «Delete?»", "One yes, one action; silence is no yes; no silent retry",
                      "«Recorded: what → where»",
                      "the user's Documents base, only for a form, letter or event the user asks for; none leaves without «Send?»",
                      "Card numbers, CVV, expiry, PIN, passwords, codes: never written anywhere",
@@ -186,15 +188,22 @@ class TheOneText(unittest.TestCase):
         self.assertIn("somebody else's animal — needs no rules: answer it as you would anyone", about)
         self.assertIn("Not clear whose it is → one question.", about)
 
-    def test_the_exception_to_send_is_closed_until_the_mail_rules_are_read(self):
-        """MAIL-8 lets a dictated message go without «Send?» only where the user turned it on. The text
-        names that one exception and nothing wider: without the mail rules read in the chat, «Send?»
-        stands, and no rules file can drop «Buy?» or «Delete?»."""
+    def test_send_has_no_exception(self):
+        """«Send?» for every message, a dictated one too (the owner's decision of 26.11.2026; MAIL-8). The text
+        names no exception at «Send?», and no rules file can drop «Buy?», «Send?» or «Delete?»."""
         flat = " ".join(self.TEXT.split())
-        self.assertEqual(flat.count("exception"), 2, "the first message at the map, a dictated message at «Send?»")
-        self.assertIn("only as the mail rules read in this chat allow", flat)
+        self.assertEqual(flat.count("exception"), 1, "the first message at the map — and none at «Send?»")
+        self.assertNotIn("dictated", flat)
+        self.assertNotIn("mail rules", flat)
         mail = " ".join((FIELDS.parent / "mail.md").read_text(encoding="utf-8").split())
-        self.assertIn("**MAIL-8 A dictated e-mail without «Send?».**", mail)
+        self.assertIn("**MAIL-8 No message without «Send?».** A message the user dictated word for word is no exception", mail)
+        self.assertNotIn("send-dictated: on", mail)
+        for name in ("core.md", "install.md", "notion.md"):
+            rules = " ".join((FIELDS.parent / name).read_text(encoding="utf-8").split())
+            self.assertNotIn("send-dictated: on", rules, name)
+            self.assertNotIn("the one exception the user may choose", rules, name)
+        for field in ("solo.md", "solo-blob.md", "chat.md", "bot.md"):
+            self.assertNotIn("unless MAIL-8", (FIELDS / field).read_text(encoding="utf-8"), field)
 
 
 if __name__ == "__main__":

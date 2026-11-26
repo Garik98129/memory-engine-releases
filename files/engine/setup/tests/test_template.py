@@ -292,9 +292,15 @@ class Readme(unittest.TestCase):
         """The rules are public: the user's AI reads them through GitHub's app in it, and the user's own repository —
         the user's settings, later the user's nightly copy — is never given to it (DESIGN_PHASE3 §5)."""
         self.assertIn("check that Notion and GitHub are connected to your AI, put the text into your AI's instructions", FLAT)
-        self.assertIn("GitHub is how your AI reads its rules, and those are public: do not give it this copy.", FLAT)
-        self.assertIn("do not choose this one; if it wants at least one, give it an empty repository of yours", FLAT,
+        self.assertIn("GitHub is how your AI reads its rules, and those are public.", FLAT)
+        self.assertIn("choose «Only select repositories» and do not tick this copy: it holds your settings.", FLAT)
+        # The owner's review, 25.11.2026: her other repositories are neither needed nor forbidden, and an empty one is
+        # asked for only where GitHub keeps «Install» disabled with none chosen (GitHub Community #191059, unofficial).
+        self.assertIn("Your other repositories are up to you: Grafyla does not need them, and they do no harm.", FLAT)
+        self.assertIn("If this copy is all you have and GitHub will not let you press «Install», create an empty "
+                      "repository and choose it.", FLAT,
                       "told what to do, not promised that it works: reading under another login is not tried (§8)")
+        self.assertNotIn("give it an empty repository of yours", FLAT, "an empty one is not for everybody")
 
     def test_it_is_called_grafyla_and_says_setup_in_three_languages(self):
         """Owner, 23.11.2026: the name is Grafyla and the word is «setup» in Russian and Hebrew too, as on the
@@ -305,6 +311,8 @@ class Readme(unittest.TestCase):
         self.assertIn("**Grafyla** \u2014 \u043d\u0435 \u043f\u0440\u043e\u0433\u0440\u0430\u043c\u043c\u0430: \u0441\u043a\u0430\u0447\u0438\u0432\u0430\u0442\u044c \u0438 \u0443\u0441\u0442\u0430\u043d\u0430\u0432\u043b\u0438\u0432\u0430\u0442\u044c \u043d\u0438\u0447\u0435\u0433\u043e \u043d\u0435 \u043d\u0443\u0436\u043d\u043e.", FLAT)
         self.assertIn("**Grafyla** \u05d4\u05d9\u05d0 \u05dc\u05d0 \u05ea\u05d5\u05db\u05e0\u05d4: \u05dc\u05d0 \u05e6\u05e8\u05d9\u05da \u05dc\u05d4\u05d5\u05e8\u05d9\u05d3 \u05d0\u05d5 \u05dc\u05d4\u05ea\u05e7\u05d9\u05df \u05e9\u05d5\u05dd \u05d3\u05d1\u05e8.", FLAT)
         left = FLAT.replace("nothing to download or install", "").replace("\u05dc\u05d0 \u05e6\u05e8\u05d9\u05da \u05dc\u05d4\u05d5\u05e8\u05d9\u05d3 \u05d0\u05d5 \u05dc\u05d4\u05ea\u05e7\u05d9\u05df \u05e9\u05d5\u05dd \u05d3\u05d1\u05e8", "")
+        # GitHub's own button, named as the screen shows it in every language (the owner's review, 25.11.2026)
+        left = left.replace("\u00abInstall\u00bb", "").replace("**Install**", "")
         for old in ("AI memory", "the engine", "installation",
                     "\u041f\u0430\u043c\u044f\u0442\u044c \u0432\u0430\u0448\u0435\u0433\u043e \u0418\u0418", "\u05d4\u05d6\u05d9\u05db\u05e8\u05d5\u05df \u05e9\u05dc \u05d4-AI", "\u0434\u0432\u0438\u0436\u043a",
                     "\u05d4\u05de\u05e0\u05d5\u05e2", "\u0443\u0441\u0442\u0430\u043d\u043e\u0432\u043a", "\u05d4\u05ea\u05e7\u05e0\u05d4",
@@ -358,11 +366,13 @@ class Readme(unittest.TestCase):
                 "\u044b\u0442\u0430\u0449\u0438\u0442 \u0447\u0442\u043e \u043d\u0430\u0434\u043e \u0438 \u043f\u043e"
                 "\u043b\u043e\u0436\u0438\u0442 \u043a\u0443\u0434\u0430 \u043d\u0430\u0434\u043e \u0432 \u0432\u0430"
                 "\u0448\u0435\u043c Notion.",
-                "\u05db\u05e9\u05d4-AI \u05d9\u05e1\u05d9\u05d9\u05dd \u05d0\u05ea \u05d4\u05d4\u05d2\u05d3\u05e8"
-                "\u05d4, \u05ea\u05e0\u05d5 \u05dc\u05d5 \u05d0\u05ea \u05d6\u05d4 \u05d1\u05e6'\u05d0\u05d8 \u2014 "
-                "\u05d4\u05d5\u05d0 \u05db\u05d1\u05e8 \u05d9\u05d5\u05e6\u05d9\u05d0 \u05de\u05e9\u05dd \u05d0\u05ea "
-                "\u05de\u05d4 \u05e9\u05e6\u05e8\u05d9\u05da \u05d5\u05d9\u05e9\u05d9\u05dd \u05d0\u05d5\u05ea\u05d5 "
-                "\u05d1\u05de\u05e7\u05d5\u05dd \u05d4\u05e0\u05db\u05d5\u05df \u05d1-Notion \u05e9\u05dc\u05db\u05dd.",
+                "\u05db\u05e9\u05d4-AI \u05d9\u05e1\u05d9\u05d9\u05dd \u05d0\u05ea "
+                "\u05d4\u05d4\u05d2\u05d3\u05e8\u05d4, \u05e9\u05dc\u05d7\u05d5 \u05dc\u05d5 "
+                "\u05d1\u05e6'\u05d0\u05d8 \u05d0\u05ea \u05de\u05d4 \u05e9\u05d4\u05e2\u05ea\u05e7\u05ea\u05dd "
+                "\u2014 \u05d4\u05d5\u05d0 \u05d9\u05d5\u05e6\u05d9\u05d0 \u05de\u05d6\u05d4 "
+                "\u05d1\u05e2\u05e6\u05de\u05d5 \u05d0\u05ea \u05de\u05d4 \u05e9\u05e6\u05e8\u05d9\u05da "
+                "\u05d5\u05d9\u05e9\u05d9\u05dd \u05d0\u05d5\u05ea\u05d5 \u05d1\u05de\u05e7\u05d5\u05dd "
+                "\u05d4\u05e0\u05db\u05d5\u05df \u05d1-Notion \u05e9\u05dc\u05db\u05dd.",
         ):
             self.assertIn(sentence, FLAT, sentence.encode("unicode_escape").decode("ascii"))
 
@@ -390,8 +400,13 @@ class Readme(unittest.TestCase):
             flat = " ".join(text.split())
             for label in labels:
                 self.assertIn(f"**{label}**", flat, name)
-            for shown in ("«Use this template»", "«Create a new repository»", "**Private**",
-                          "«Create repository from template»", "**Settings**", "**Actions**", "**General**",
+            # In Hebrew the three buttons of step 1 are bold, not in «»: a «» between two runs of Latin words is
+            # read left to right with them, and GitHub showed the step's buttons out of order (the owner's review
+            # of the Hebrew, 25.11.2026; its screenshot).
+            buttons = (("**Use this template**", "**Create a new repository**", "**Create repository from template**")
+                       if name == "Hebrew" else
+                       ("«Use this template»", "«Create a new repository»", "«Create repository from template»"))
+            for shown in (*buttons, "**Private**", "**Settings**", "**Actions**", "**General**",
                           "«Workflow permissions»", f"**«{setting}»**", "**Save**", "**setup**", "**Run workflow**",
                           f"**«{setup_run.ISSUE_TITLE}»**", "«Direct mentions»", "`my-memory`", "`en,he`"):
                 self.assertIn(shown, flat, f"{name}: {shown}")
