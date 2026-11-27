@@ -1,6 +1,6 @@
-# Topic rules — release v0.1.20
+# Topic rules — release v0.1.21
 
-The rules of release v0.1.20: which files to read, and when. Read them in the repository `grafyla/releases` at the tag `v0.1.20` — ref `v0.1.20`. Not at the branch this index came from: the branch moves on to the next release, the tag never moves.
+The rules of release v0.1.21: which files to read, and when. Read them in the repository `grafyla/releases` at the tag `v0.1.21` — ref `v0.1.21`. Not at the branch this index came from: the branch moves on to the next release, the tag never moves.
 
 These rules are written for the engine of release `v0.1.14` or newer in the user's repository. That line is for that repository's checks: a chat cannot see that repository and does nothing about it.
 

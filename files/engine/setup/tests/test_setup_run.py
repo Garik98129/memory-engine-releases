@@ -59,7 +59,7 @@ def born() -> dict[str, bytes]:
     real = {p: (ENGINE.parent / p).read_bytes() for p in (
         "engine/defaults.toml", "engine/platforms.toml", "engine/rules/fields/chat.md",
         "engine/rules/fields/bot.md", "engine/rules/fields/solo.md", "engine/rules/fields/solo-blob.md",
-        "engine/rules/fields/fixed.md",
+        "engine/rules/fields/fixed.md", "engine/rules/fields/addendum.md",
         "engine/workflows/setup.yml", "engine/workflows/settings.yml")}
     factory = {**real, "engine/rules/core.md": b"Core rules.\n", "engine/workflows/check.yml": b"name: check\n"}
     tree = {"README.md": b"A person's memory.\n", "user/engine.lock": b'release = "v0.1.0"\n'}
@@ -285,7 +285,7 @@ class FirstInstallation(unittest.TestCase):
         self.assertIn("N2 NOTE the nightly copy is off", out)
 
         # The user's Issue carries the fingerprints of the text and of the user's part: the night opened no second one.
-        field = setup.field_text()
+        field = setup.field_text(row=setup.platforms()[CHOICES["platform"]])
         self.assertIn(f"```\n{field}\n```", issue["body"])
         self.assertNotIn("Anna", field, "the text is one for everybody")
         self.assertTrue(issue["body"].endswith(field_issue.marker(field, part.strip())))
@@ -522,11 +522,11 @@ class MadeBeforeTheOneText(unittest.TestCase):
         self.assertEqual((old["state"], page["state"]), ("closed", "open"))
         self.assertTrue(page["body"].startswith("@owner — Your assistant's instructions changed."))
         self.assertIn("**Put them in the old text's place.**", page["body"])
-        self.assertIn(f"```\n{setup.field_text()}\n```", page["body"])
+        self.assertIn(f"```\n{setup.field_text(row=setup.platforms()[CHOICES["platform"]])}\n```", page["body"])
         self.assertIn(f"```\n{setup.PART_MESSAGE}\n\n{self.OLDER_PART.strip()}\n```", page["body"],
                       "the user's part as main holds it — the older wording — goes to the user's map: nothing rewrites it unasked")
         self.assertNotIn("My settings changed", page["body"], "they did not: the page says the user's settings stay")
-        self.assertTrue(page["body"].endswith(field_issue.marker(setup.field_text(), self.OLDER_PART.strip())))
+        self.assertTrue(page["body"].endswith(field_issue.marker(setup.field_text(row=setup.platforms()[CHOICES["platform"]]), self.OLDER_PART.strip())))
         self.i.w.api.writes.clear()
         self.assertEqual(self.i.watch()[:2], (0, 0))
         self.assertEqual(self.i.w.api.writes, [])
@@ -586,8 +586,8 @@ class Settings(Installed):
         self.assertNotIn("your settings stay", page["body"], "the page says they changed")
         part = new[setup.PART].decode("utf-8").strip()
         self.assertIn(f"```\n{setup.SETTINGS_MESSAGE}\n\n{part}\n```", page["body"])
-        self.assertIn(f"```\n{setup.field_text()}\n```", page["body"], "the text as it stands, for the day the user needs it")
-        self.assertTrue(page["body"].endswith(field_issue.marker(setup.field_text(), part)))
+        self.assertIn(f"```\n{setup.field_text(row=setup.platforms()[CHOICES["platform"]])}\n```", page["body"], "the text as it stands, for the day the user needs it")
+        self.assertTrue(page["body"].endswith(field_issue.marker(setup.field_text(row=setup.platforms()[CHOICES["platform"]]), part)))
         self.assertNotIn("anew", out, "main was what setup builds: only the user's answers changed")
         self.assertIn("SETTINGS the user's answers, as they were → as they are now: timezone Asia/Jerusalem → Europe/Berlin; "
                       "name Anna → Anya", out)
@@ -622,8 +622,9 @@ class Settings(Installed):
                      "**2. The first message — into a chat.**",
                      "**What works on Claude.**", "Start the setup: read the rules of the topic «setup»"):
             self.assertIn(said, page["body"])
-        field, part = setup.field_text(), new[setup.PART].decode("utf-8").strip()
-        self.assertIn(f"```\n{field}\n```", page["body"])
+        field, part = setup.field_text(row=setup.platforms()["claude"]), new[setup.PART].decode("utf-8").strip()
+        self.assertIn(f"```\n{field}\n```", page["body"], "Claude's text: the one text, no addendum")
+        self.assertNotIn("ABOUT THE USER.", page["body"], "the addendum is ChatGPT's alone")
         self.assertIn("The user's platform: Claude;", page["body"])
         self.assertTrue(page["body"].endswith(field_issue.marker(field, part)), "the watch knows this page as given")
         self.assertNotIn("One message to send", page["body"])
@@ -923,10 +924,10 @@ class Settings(Installed):
         self.assertIn("FIELD opened #", out)
         [page] = self.titled()
         part = her_files()[setup.PART].decode("utf-8").strip()
-        self.assertIn(f"```\n{setup.field_text()}\n```", page["body"])
+        self.assertIn(f"```\n{setup.field_text(row=setup.platforms()[CHOICES["platform"]])}\n```", page["body"])
         self.assertIn(f"```\n{setup.PART_MESSAGE}\n\n{part}\n```", page["body"])
         self.assertIn(f"```\n{setup.FIRST_MESSAGE}\n\n{part}\n```", page["body"])
-        self.assertTrue(page["body"].endswith(field_issue.marker(setup.field_text(), part)))
+        self.assertTrue(page["body"].endswith(field_issue.marker(setup.field_text(row=setup.platforms()[CHOICES["platform"]]), part)))
 
     def test_a_setup_pr_on_an_installed_repository_changes_the_two_files_and_nothing_else(self):
         new = her_files(country="DE")

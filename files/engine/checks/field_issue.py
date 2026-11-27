@@ -68,6 +68,7 @@ from ..setup import setup as installer
 
 TITLE = "Your assistant's instructions"
 PLATFORMS = "engine/platforms.toml"
+ADDENDUM = "engine/rules/fields/addendum.md"     # setup.ADDENDUM, as the repository holds it
 DIGEST_RE = re.compile(r"<!-- field-digest: ([0-9a-f]{64}) -->")
 PART_RE = re.compile(r"<!-- part-digest: ([0-9a-f]{64}) -->")
 RELEASE_RE = re.compile(r"v[0-9]+\.[0-9]+\.[0-9]+")
@@ -112,14 +113,21 @@ def check(repo: Path, main: str, config: dict) -> dict | None:
     person_part = gitio.file_at(repo, main, person_path)
     if engine_part is None or person_part is None:
         return None
-    try:
-        part = person_part.decode("utf-8")
-        text = limits_check.installed(config, engine_part.decode("utf-8"), part)
-    except UnicodeDecodeError:
-        return None
     platform = config.get("platform") if isinstance(config.get("platform"), dict) else {}
     row = _toml(repo, main, PLATFORMS).get(str(platform.get("name")))
     row = row if isinstance(row, dict) else {}
+    try:
+        part = person_part.decode("utf-8")
+        text = limits_check.installed(config, engine_part.decode("utf-8"), part)
+        if limits_check.fixed(config) and row.get("addendum") is True:
+            # The platform's addendum, as setup gives it to a new installation (setup.field_text): the
+            # text handed over is the one the user's platform takes, the one a page of this release shows.
+            addendum = gitio.file_at(repo, main, ADDENDUM)
+            if addendum is None:
+                return None
+            text = installer.field_text(text, row, addendum.decode("utf-8"))
+    except UnicodeDecodeError:
+        return None
     release = _toml(repo, main, LOCK_FILE).get("release")
     section = _toml(repo, main, DEFAULTS).get("release")
     manifests = section.get("manifests") if isinstance(section, dict) else None

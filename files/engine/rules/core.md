@@ -128,7 +128,7 @@ The rules call the person «the user»; they do not depend on the person's gende
   with the file's path. A routine you set up is the user's own request, never your idea; a draft it makes goes only
   into its message to the user, never into the mail.
 - **CORE-16 The text's mark.** In CORE-15's case only. The one text for everybody ends with the
-  line «TEXT MARK 7.»; what the user wrote personally may stand after it. A mark is a line that is
+  line «TEXT MARK 8.»; what the user wrote personally may stand after it. A mark is a line that is
   «TEXT MARK», a number from 2 up and a full stop, alone — no text ever ended with a lower one —;
   of several, the lowest counts. Your instructions hold none, or a lower number — an older text, or
   one cut short when it was pasted —, or hold the one

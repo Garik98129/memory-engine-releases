@@ -110,6 +110,7 @@ class Build(unittest.TestCase):
         for platform, row in table.items():
             if row.get("status") in setup.INSTALLABLE:
                 self.assertLessEqual(limits_check.length(setup.field_text()), setup.limit_of(row, floor), platform)
+                self.assertLessEqual(limits_check.length(setup.field_text(row=row)), setup.field_limit(row, floor), platform)
 
     def test_names_with_marks_and_initials(self):
         """Accents typed apart, vowel signs of Devanagari, initials, Hebrew: names of real people."""
@@ -579,7 +580,7 @@ class InstallRules(unittest.TestCase):
                       "«not read yet», and ask the user nothing about it before you have read it — only a profile you "
                       "tried to read and could not is unread.", health)
         # The text itself is not touched by this release: its fingerprint and mark stay (test_rules_budget.py).
-        self.assertTrue(FIXED.rstrip().endswith("TEXT MARK 7."))
+        self.assertTrue(FIXED.rstrip().endswith("TEXT MARK 8."))
 
 
 class ThePilot(unittest.TestCase):
@@ -659,7 +660,7 @@ class TheIssue(unittest.TestCase):
 
     def text(self, platform: str) -> str:
         files = setup.build(**{**CHOICES, "platform": platform})
-        return setup.issue(self.table[platform], setup.field_text(), files[setup.PART], MANIFESTS)
+        return setup.issue(self.table[platform], setup.field_text(row=self.table[platform]), files[setup.PART], MANIFESTS)
 
     def test_it_promises_what_install_md_does(self):
         text = self.text("grok")
@@ -677,7 +678,7 @@ class TheIssue(unittest.TestCase):
 
     def test_it_carries_the_field_the_link_and_the_plan(self):
         claude = self.text("claude")
-        self.assertIn(f"```\n{setup.field_text()}\n```", claude)
+        self.assertIn(f"```\n{setup.field_text()}\n```", claude, "Claude's row asks for no addendum: the one text alone")
         part = setup.build(**{**CHOICES, "platform": "claude"})[setup.PART]
         self.assertIn(f"```\n{setup.FIRST_MESSAGE}\n\n{part.strip()}\n```", claude,
                       "the first message carries the user's part: the text holds nothing of the user's")
@@ -702,9 +703,10 @@ class TheIssue(unittest.TestCase):
 
 
     def test_one_text_for_every_platform_alone_in_its_place(self):
-        """The text is one for everybody (DESIGN_PHASE3 §4): no platform has its own, it names no
-        release and nothing of the user's, and it takes its place alone — what stood there the user copies out
-        and gives the AI after the first message (owner, 19.11.2026)."""
+        """The text is one for everybody (DESIGN_PHASE3 §4), with the addendum set before its mark where the
+        platform's row asks for it (ChatGPT, from text mark 8): it names no release and nothing of the user's, and
+        it takes its place alone — what stood there the user copies out and gives the AI after the first message
+        (owner, 19.11.2026)."""
         pages = {platform: self.text(platform) for platform in ("grok", "claude", "chatgpt")}
         for platform, page in pages.items():
             with self.subTest(platform=platform):
@@ -715,7 +717,8 @@ class TheIssue(unittest.TestCase):
                                 page.index("**2. The first message — into a chat.** Send your AI, in a new conversation:"))
                 self.assertIn("This text goes into your AI's settings, into the field for standing instructions.", page)
                 self.assertNotIn("project", page, "no platform's text goes into a project any more")
-                self.assertEqual(page.split("```")[1], f"\n{setup.field_text()}\n", "the same text on every platform")
+                self.assertEqual(page.split("```")[1], f"\n{setup.field_text(row=self.table[platform])}\n",
+                                 "the one text, with the addendum where the platform's row asks for it")
                 self.assertIn("The text below takes that place alone: put it in place of whatever stands there — "
                               "exactly as it is — and save. If you wrote instructions of your own there, copy them out "
                               "first — into a notes app on your phone, for one. Do not put them back into this field: after "
@@ -727,11 +730,12 @@ class TheIssue(unittest.TestCase):
                               "answer.", page, "the price of every chat, said where the text goes")
                 self.assertIn("If it says it cannot see your Notion, check the connection and send the same message again.", page)
                 self.assertNotIn("Not using Notion yet?", page, "Notion is connected before the setup now")
-                self.assertIn("The text is the same for everybody: new rules do not change it, and neither does a change "
-                              "of your settings.", page)
+                self.assertIn("The text is the same for everybody on your platform: new rules do not change it, and neither "
+                              "does a change of your settings.", page)
                 self.assertIn("The text above changes only if its core ever does — a rare thing", page,
                               "a release can change the text itself: the page does not say «never»")
-                self.assertIn(f"It is {limits_check.length(setup.field_text())} characters long, and nothing else goes "
+                self.assertIn(f"It is {limits_check.length(setup.field_text(row=self.table[platform]))} characters long, "
+                              "and nothing else goes "
                               "beside it.", page,
                               "5 000 on ChatGPT, 4 000 on Grok: no room to share (owner, 19.11.2026); Claude's field "
                               "holds more, so the page no longer says the text fills the place")
@@ -742,10 +746,15 @@ class TheIssue(unittest.TestCase):
                 self.assertNotRegex(page, release.PUBLISHED_TAG_RE.pattern, "no release anywhere on the user's page")
                 self.assertNotIn("jsdelivr", page.lower(), "no third party between GitHub and the chat")
                 self.assertIn("run the workflow «settings» in this repository: it gives you one message to send", page)
-        self.assertTrue(setup.field_text().endswith("\n\nTEXT MARK 7."),
-                        "the text ends with its mark (CORE-16), which the Issue names for a paste cut short")
-        self.assertIn("Check that its last line came in too: it is «TEXT MARK 7.» — keep it: your AI reads it to "
+        for platform in pages:
+            self.assertTrue(setup.field_text(row=self.table[platform]).endswith("\n\nTEXT MARK 8."),
+                            "the text ends with its mark (CORE-16), which the Issue names for a paste cut short — the "
+                            "addendum stands before it")
+        self.assertIn("Check that its last line came in too: it is «TEXT MARK 8.» — keep it: your AI reads it to "
                       "know its text is whole and current. The text is the same for everybody", pages["grok"])
+        addendum = setup.ADDENDUM.read_text(encoding="utf-8").strip("\n")
+        self.assertIn(f"\n\n{addendum}\n\nTEXT MARK 8.\n```", pages["chatgpt"], "ChatGPT's text: the addendum before the mark")
+        self.assertNotIn(addendum.split(".")[0], pages["grok"] + pages["claude"], "no addendum where the row asks for none")
         self.assertIn("Open Grok app: the instructions field.", pages["grok"])
 
     def test_every_platform_has_one_place_the_field_for_all_her_chats(self):
