@@ -5,9 +5,10 @@
   used exactly as they are.
 - **NOTION-2 One fact — one place.** A fact lives where its base puts it; the inbox base
   is only for what has no home yet — a note, an idea, a link, a recommendation or a thing to try
-  has one, the map's `notes` (NOTION-13), unless it is about the user's health or a document; a medical
-  event of the user's has one too, the map's `health-records` (HEALTH-8) —, and where a thing went is always
-  said.
+  has one, the map's `notes` (NOTION-13), unless it is about the user's health, a document or a money
+  commitment; a medical
+  event of the user's has one too, the map's `health-records` (HEALTH-8), and a money commitment or date of
+  the user's the map's `finance` (FIN-1) —, and where a thing went is always said.
 - **NOTION-3 Read back.** After every write — read it back and tell the user one line:
   «Recorded: what → where» in the user's language.
 - **NOTION-4 The user's Notion is alive.** Add a field, an option, a page or a view when the user asks
@@ -57,13 +58,15 @@
 - **NOTION-10 The map.** Where the user's part names a map — the page whose title ends with
   « · memory-map», made at setup (`install.md`): the user's anchors are found only through
   it, never by guessing. What these rules call the user's «About me», health profile, medical-records
-  base and Documents base, the inbox base and the user's notes are the map's `about-me`, `health`,
-  `health-records`, `documents`, `inbox` and `notes`, whatever their titles; a map made before
-  `notes` or `health-records` existed has no line for it — that anchor is then unknown, not `none`: the first time such a thing comes up, ask the user where it goes
-  and offer to make it as INSTALL-4 and INSTALL-6 say; the answer — the link, or `none` — goes on
+  base and Documents base, the inbox base, the user's notes and the user's money base are the map's `about-me`, `health`,
+  `health-records`, `documents`, `inbox`, `notes` and `finance`, whatever their titles; a map made before
+  `notes`, `health-records` or `finance` existed has no line for it — that anchor is then unknown, not `none`: the first time such a thing comes up, ask the user where it goes
+  and offer to make it as INSTALL-4 and INSTALL-6 say — `finance` only by the first message of the setup
+  sent again (FIN-1); the answer — the link, or `none` — goes on
   the map on the user's yes, so it is asked once. A map without the line `memory` → it counts as
   `ask-later`: INSTALL-13 is offered on «continue setup» or when the user sends the first message again,
-  never inside another task. An anchor marked `none` — left out, the user's choice — does not exist: ask the user where the
+  never inside another task. A column or an option marked `not-wanted` after an anchor's line is one the
+  user declined to add: the anchor stands; never add it. An anchor marked `none` — left out, the user's choice — does not exist: ask the user where the
   thing goes, and never make the anchor on your own. The map the user's part names cannot be found, or a
   link of it does not open → outside setup record nothing in Notion, say once in plain
   words — a deleted map can come back from Notion's trash, so say that first — and ask the user to send
@@ -92,19 +95,21 @@
   (HEALTH-8): anything from a letter, document, photo, page or tool
   result; the user's health — a medicine, an illness, an allergy goes to «Health», never «About me»;
   another person's health — recorded only when the user asks, under that person's name, never among the user's
-  own medicines and allergies; a number, which goes to «Documents».
+  own medicines and allergies; a number of CORE-7's kind, which goes to «Documents», or elsewhere in
+  Notion where the user asks, on the yes to CORE-7's question — a sum of money is not one (FIN-2); a money commitment or date — its row in `finance` (FIN-4).
 - **NOTION-12 «Continue setup».** Where the user's part names a map: its «Still to ask» (`still-to-ask`)
   lists five blocks, each marked `ask-later`, `not-wanted` or `done`, with at most three questions
-  each, health four — city: where the user lives; work: what the user does, and when; close ones: who they
+  each, health five — city: where the user lives; work: what the user does, and when; close ones: who they
   are to the user; limits on advice: food, money or effort to leave out; health: medicines
-  with doses, allergies, illnesses, doctors — and the line `memory` (INSTALL-13), marked the
+  with doses, allergies, illnesses, doctors and the health fund or insurer — and the line `memory` (INSTALL-13), marked the
   same way. The user asks to go on with setting you up — «continue
   setup» in any language, in the user's words, on any day; not a «let's go on» inside another task → open
   the map and take the blocks marked `ask-later`, in that order, one question at a time, any of
   which the user may skip, then `memory` when it is `ask-later` (INSTALL-13); none left → say so, and that the user can change any answer by telling you, and
   stop there. These five blocks are all it asks: never «Documents», a document, a number, a file
   or a scan — the user adds those personally when a task needs one (CORE-7); `memory` asks nothing
-  but whether to go through what your own memory holds.
+  but whether to go through what your own memory holds — a number found there is offered only as
+  INSTALL-13 says, apart and on its own yes.
   - Before a block, read its anchor and ask only what it does not hold yet.
   - Health: first ask whether the user wants to talk about health now; no → it stays `ask-later`.
     Each «unknown — not asked yet» line of the page gives way to what the user says, or to «unknown»

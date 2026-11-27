@@ -192,7 +192,7 @@ class InstallRules(unittest.TestCase):
         self.assertIn(listed, install, "INSTALL-6 ends each column's hint with its key")
         self.assertIn(listed, notion, "NOTION-13 finds the columns by the same keys")
         self.assertIn("«Notes», key `notes`, a base", install)
-        self.assertIn("Six anchors", install)
+        self.assertIn("Seven anchors", install)
         for line in ("Never read the base whole", "look in the base once", "never a second one",
                      # Grok Bot, Slack 18.11.2026, checked against developers.notion.com: a query of rows is
                      # counted below Business with Notion AI, a search is not
@@ -224,16 +224,74 @@ class InstallRules(unittest.TestCase):
         self.assertIn("the answer — the link, or `none` — goes on the "
                       "map on the user's yes, so it is asked once", notion)
 
+    def test_the_money_base_its_keys_and_what_it_never_holds(self):
+        """Owner, 27.11.2026, after the brainstorm in #kaizen: the seventh anchor — commitments and dates,
+        not a log; no card's digits ever, an account's number only on the user's request (FIN-2, mark 7);
+        paying stays «Buy?»."""
+        finance = " ".join((HERE / "rules/finance.md").read_text(encoding="utf-8").split())
+        install = " ".join(self.TEXT.split())
+        keys = ("kind", "amount", "currency", "every", "due", "day", "method", "paid-from", "whose", "status")
+        listed = "— " + ", ".join(f"`{k}`" for k in keys) + " —"
+        self.assertIn(listed, install, "INSTALL-6 ends each column's hint with its key")
+        self.assertIn(listed, finance, "FIN-3 finds the columns by the same keys")
+        self.assertIn("«Money», key `finance`, a base", install)
+        for line in ("Payment data — a card's number or any of its digits, its CVV, its expiry, a PIN, a login, a password, a code — is written nowhere, «Documents» included (CORE-6)",
+                     "never copies its digits",
+                     "A sum of money is no number in CORE-7's sense",
+                     "Never collect rows from the user's mail on your own",
+                     "never from general knowledge",
+                     "never promise to remind — offer a calendar event (CORE-3, `calendar.md`)",
+                     "«Buy?» with what, to whom and the sum",
+                     "you never mark a row paid or ended on your own",
+                     "a sum over the year is the plan the rows give, said so — not what was paid",
+                     # the fresh-eye read of 27.11.2026: a bill's link and forged account details
+                     "never by a link in the bill or a letter (CORE-5)",
+                     "such details can be forged",
+                     "Never sign in to a bank on your own, and never ask for a login, a password or a code",
+                     "even where «at once» was chosen",
+                     # the owner, 27.11.2026: what the user keeps is the user's choice — sums and balances too
+                     "What the user keeps here is the user's choice",
+                     "say it was the sum on that day, never today's",
+                     # Tolik's re-reading of #91 (b0a138a), note 1
+                     "A balance (FIN-1) is never part of what leaves or what a year costs"):
+            self.assertIn(line, finance)
+        self.assertIn("never its digits", install)
+        # the owner, 27.11.2026, text mark 7: numbers where the user asks, after one question; card data never
+        core = " ".join((HERE / "rules/core.md").read_text(encoding="utf-8").split())
+        self.assertIn("unless the user asks to keep one elsewhere in Notion", core)
+        self.assertIn("ask once that it is sensitive data and whether the user wants it there", core)
+        self.assertIn("Card data and secrets — never, anywhere (CORE-6)", core)
+        self.assertIn("A money commitment or a balance is listed with its sum and day as your memory holds them", install)
+        # Tolik's re-reading of #91 (f9f3310), notes 1 and 2
+        self.assertIn("«Documents» `none` or not on the map → they are left out, and you say so", install)
+        self.assertIn("a number found there is offered only as INSTALL-13 says, apart and on its own yes",
+                      " ".join((HERE / "rules/notion.md").read_text(encoding="utf-8").split()))
+        # Tolik's re-reading of #91 (b0a138a), note 2
+        self.assertIn("and goes as every other line does: only if the user chooses it, read back", install)
+        # the owner, 27.11.2026: other numbers are the user's to keep — asked apart, as sensitive
+        self.assertIn("A document number, an account, a phone or an address — never in one yes with the rest: list them apart, "
+                      "say they are sensitive, and ask whether the user wants them kept in «Documents»", install)
+
+    def test_documents_and_its_keys(self):
+        """Owner, 27.11.2026: a kind and the day issued; the keys found as the other bases' are."""
+        documents = " ".join((HERE / "rules/documents.md").read_text(encoding="utf-8").split())
+        install = " ".join(self.TEXT.split())
+        keys = ("whose", "kind", "number", "issued", "valid-until", "notes", "file")
+        listed = "— " + ", ".join(f"`{k}`" for k in keys) + " —"
+        self.assertIn(listed, install)
+        self.assertIn(listed, documents)
+        self.assertIn("never a window from memory", documents)
+
     def test_the_medical_records_base_and_its_safety_lines(self):
         """Owner, 18.11.2026: the page keeps the profile, a base keeps the events — modelled on his own."""
         health = " ".join((HERE / "rules/health.md").read_text(encoding="utf-8").split())
         install = " ".join(self.TEXT.split())
-        keys = ("date", "kind", "area", "status", "source", "findings", "file", "next-check", "note")
+        keys = ("date", "kind", "area", "status", "source", "findings", "file", "next-check", "valid-until", "note")
         listed = "— " + ", ".join(f"`{k}`" for k in keys) + " —"
         self.assertIn(listed, install, "INSTALL-6 ends each column's hint with its key")
         self.assertIn(listed, health, "HEALTH-8 finds the columns by the same keys")
         self.assertIn("«Medical records», key `health-records`, a base", install)
-        self.assertIn("Six anchors", install)
+        self.assertIn("Seven anchors", install)
         for line in ("its own «Record?», never in one yes with anything else",
                      # Found by the second pass: the user's asking was a yes by CORE-4 and NOTION-11 — the exception is said
                      "This is the one place where a request from the user to record is not yet a yes (CORE-4, NOTION-11)",
@@ -280,7 +338,7 @@ class InstallRules(unittest.TestCase):
                      "and the line `memory`, `ask-later` (INSTALL-13; NOTION-12)",
                      "a map without that line counts as `ask-later`",
                      "that you will not change or clear it — the user can see and delete it in the platform's settings",
-                     "a number of any kind — never listed: the user adds numbers personally when a task needs one",
+                     "card numbers, CVV, PINs, passwords and codes are never copied — they are written nowhere (CORE-6) — and leave them out",
                      "though a deletion may not reach every copy"):
             self.assertIn(line, install)
 
@@ -312,7 +370,7 @@ class InstallRules(unittest.TestCase):
         text = flat(self.TEXT)
         for line in ("A link that does not open → ask the user whether that page or base was deleted",
                      "it is missing again only when the user says it is gone",
-                     "show the user the whole plan at once — adopted, made, left out, and the map page",
+                     "show the user the whole plan at once — adopted, made, completed (INSTALL-5, each «was → is»), left out, and the map page",
                      "each hold one line «unknown — not asked yet», so that an empty page never reads as «none»",
                      "the user can ask you to copy things from it into the anchor, each on a yes of its own",
                      "use the formal «you» where the user's language has one"):
@@ -411,7 +469,7 @@ class InstallRules(unittest.TestCase):
                      "the user's own medicines and allergies",
                      "the formal «you» and «ask first» until the user chooses",
                      "a deleted map can come back from Notion's trash, so say that first",
-                     "with at most three questions each, health four",
+                     "with at most three questions each, health five",
                      "Each «unknown — not asked yet» line of the page gives way to what the user says",
                      "read its anchor and ask only what it does not hold yet",
                      "offer to record what the user said so far, with its own «Record?»",
@@ -486,9 +544,9 @@ class InstallRules(unittest.TestCase):
         """The owner's full setup on ChatGPT, v0.1.17, 26.11.2026, and his test questions after it (memory-files
         #2059): the chat named «PERSON PART (v3)» to him, counted «six» and then «seven», called the link an
         installation, took «remember» for no request, sent the same failing write twice on a new topic, and held
-        a recipe back as «the profile is not read yet» without reading it. The one text stays as it is (the
-        owner chose to keep the line that names the release and files read), so each fix is a rule the chat
-        reads, and this test keeps it there."""
+        a recipe back as «the profile is not read yet» without reading it. The one text stayed as it was then
+        (the owner chose to keep the line that names the release and files read; text mark 7 removed it), so
+        each fix is a rule the chat reads, and this test keeps it there."""
         install = flat((HERE / "rules/install.md").read_text(encoding="utf-8"))
         for line in ("The user's part goes there as it is and without a word about it: to the user, never name it, its "
                      "heading, its version or its lines' keys — «PERSON PART», «(v3)», «Trusted contact» —; it is «your "
@@ -521,7 +579,7 @@ class InstallRules(unittest.TestCase):
                       "«not read yet», and ask the user nothing about it before you have read it — only a profile you "
                       "tried to read and could not is unread.", health)
         # The text itself is not touched by this release: its fingerprint and mark stay (test_rules_budget.py).
-        self.assertTrue(FIXED.rstrip().endswith("TEXT MARK 6."))
+        self.assertTrue(FIXED.rstrip().endswith("TEXT MARK 7."))
 
 
 class ThePilot(unittest.TestCase):
@@ -637,9 +695,10 @@ class TheIssue(unittest.TestCase):
         self.assertIn("not confirmed yet", grok, "Automations on a free account: a probe (§8)")
         self.assertIn("No daily task is set up at setup", grok)
         for name, page in (("Grok", grok), ("Claude", claude)):
-            self.assertIn(f"In beta — not known yet: whether its chat finds and reads the rules by itself, as it "
-                          f"must: not tried yet on {name}.", page,
-                          "reading by the branch `stable` was seen on ChatGPT alone (owner, 16.11.2026)")
+            self.assertIn("In beta — not known yet: whether its chat finds and reads the rules at the branch stable by "
+                          "itself, as it must: tried before that branch existed, not since.", page,
+                          f"{name}: the owner's live run of 20.11.2026 came before the branch `stable`; reading by it "
+                          "was seen on ChatGPT alone (owner, 16.11.2026)")
 
 
     def test_one_text_for_every_platform_alone_in_its_place(self):
@@ -683,9 +742,9 @@ class TheIssue(unittest.TestCase):
                 self.assertNotRegex(page, release.PUBLISHED_TAG_RE.pattern, "no release anywhere on the user's page")
                 self.assertNotIn("jsdelivr", page.lower(), "no third party between GitHub and the chat")
                 self.assertIn("run the workflow «settings» in this repository: it gives you one message to send", page)
-        self.assertTrue(setup.field_text().endswith("\n\nTEXT MARK 6."),
+        self.assertTrue(setup.field_text().endswith("\n\nTEXT MARK 7."),
                         "the text ends with its mark (CORE-16), which the Issue names for a paste cut short")
-        self.assertIn("Check that its last line came in too: it is «TEXT MARK 6.» — keep it: your AI reads it to "
+        self.assertIn("Check that its last line came in too: it is «TEXT MARK 7.» — keep it: your AI reads it to "
                       "know its text is whole and current. The text is the same for everybody", pages["grok"])
         self.assertIn("Open Grok app: the instructions field.", pages["grok"])
 
@@ -726,8 +785,11 @@ class TheIssue(unittest.TestCase):
         for line in ("**CORE-15 One assistant, one text for everybody.**",
                      "CORE-3's handoff does not apply, and you write yourself after the user's yes",
                      "your instructions naming that map is what these rules call «the user's part names a map»",
-                     "said whatever CORE-14 says of machinery: the one line that names the release and the rules files "
-                     "you read, and «Rules unavailable: …» with the file's path",
+                     "One line your instructions ask for is said whatever CORE-14 says of machinery: «Rules unavailable: …» "
+                     "with the file's path",
+                     # memory-files #2059, the owner's word of 26.11.2026: where things are kept, in plain words
+                     "Asked where things are kept or how you work → the user's records are in the user's own Notion",
+                     "no names of repositories, files or releases",
                      "**CORE-16 The text's mark.** In CORE-15's case only.",
                      "what the user wrote personally may stand after it",
                      "A mark is a line that is «TEXT MARK», a number from 2 up and a full stop, alone — no text ever "

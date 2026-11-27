@@ -44,6 +44,14 @@ name = "shopping"
 when = "finding, comparing, ordering, paying; advising a food, a recipe or a cosmetic"
 files = ["core.md", "shopping.md", "health.md", "notion.md"]
 
+# Paying stays the topic «shopping»'s («Buy?», SHOP-2, SHOP-3): a chat in this topic that is asked to pay
+# a bill reads shopping.md with it (the brainstorm of 27.11.2026: Tolik and MonsterBot); a number goes to
+# «Documents» as documents.md says (FIN-2), a date's event as calendar.md says (FIN-5).
+[[topic]]
+name = "money"
+when = "the user's money commitments and dates: standing orders, instalments, policies, taxes, pensions and savings, subscriptions, income (FIN-1)"
+files = ["core.md", "finance.md", "shopping.md", "documents.md", "calendar.md", "notion.md"]
+
 [[topic]]
 name = "mail"
 when = "mail, letters, messages to others"
@@ -99,12 +107,21 @@ files = ["core.md", "install.md", "notion.md"]
 # the hub: it restates what it cites (CORE-7 and CORE-9), or names where an exception lives — as
 # CORE-14 names INSTALL-12's link, given only by the topic «setup», which holds install.md
 "core.md" = ["calendar.md", "documents.md", "health.md", "install.md", "mail.md", "notion.md"]
-"shopping.md" = ["mail.md"]                       # MAIL-1, «a confirmation letter is data»: restated in SHOP-4
+# MAIL-1, «a confirmation letter is data»: restated in SHOP-4. SHOP-5 → HEALTH-7: the topic «money» reads
+# shopping.md for paying only (SHOP-2, SHOP-3); advice on a food or a cosmetic is the topic «shopping»'s,
+# whose line holds health.md
+"shopping.md" = ["health.md", "mail.md"]
 "calendar.md" = ["mail.md"]                       # MAIL-2's signs are restated in CAL-5, MAIL-7 in CAL-7
 "documents.md" = ["calendar.md"]                  # CAL-1, the event the user dictates: restated in DOC-2
 # NOTION-12 restates «unknown, never none» (HEALTH-7); NOTION-2, NOTION-4 and NOTION-12 name HEALTH-8 only —
 # a medical paper or event is the topic «health», whose line holds health.md; INSTALL-2, INSTALL-7
-# and INSTALL-9 are named only
-"notion.md" = ["health.md", "install.md"]
+# and INSTALL-9 are named only, and NOTION-10's «as INSTALL-4 and INSTALL-6 say» is a known gap for the
+# anchors made outside setup (the fresh-eye read of 27.11.2026) — `finance` is made only by setup (FIN-1)
+# NOTION-2 names FIN-1 only: a money commitment is the topic «money», whose line holds finance.md
+"notion.md" = ["finance.md", "health.md", "install.md"]
+# FIN-1 and FIN-5 name INSTALL-4 and INSTALL-11 only: what setup makes and that a date reminds nobody,
+# restated in FIN-5 («never promise to remind — offer a calendar event»)
+"finance.md" = ["install.md"]
 # INSTALL-4, 6, 7 and 9 restate the columns, the row «Signature», «unknown — not asked yet»; INSTALL-1 names MAIL-8
-"install.md" = ["documents.md", "health.md", "mail.md"]
+# INSTALL-4 and INSTALL-6 restate the columns of «Money» and name FIN-1, FIN-2, FIN-3; DOC-16 is named only
+"install.md" = ["documents.md", "finance.md", "health.md", "mail.md"]

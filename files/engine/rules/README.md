@@ -26,7 +26,7 @@ says yes with are the person's part, under `user/`. Three layers:
    into another AI on a change of AI. The user's part (`user/fields/chat.md`) is then no part of the field: `setup` puts it
    into the first message of the setup, and the user's AI keeps it on the map (INSTALL-7).
 2. **The core and the topic files** — the full rules behind the fields: `core.md`,
-   `health.md`, `mail.md`, `shopping.md`, `documents.md`, `notion.md`, `calendar.md`,
+   `health.md`, `mail.md`, `shopping.md`, `finance.md`, `documents.md`, `notion.md`, `calendar.md`,
    `repository.md`. The bot reads them in the user's repository. The chat cannot: its field
    links them in the public repository of releases, at one release's tag, and names the
    files it opens there — once a conversation, before it answers on that topic. The
@@ -50,6 +50,7 @@ is in this index (F2).
 | `health.md` | chat by its link, bot | any talk of medicines, procedures, doctors, symptoms, tests and results; a medical paper |
 | `mail.md` | chat by its link, bot | mail, letters, messages to others |
 | `shopping.md` | chat by its link, bot | finding, comparing, ordering, paying; advising a food, a recipe or a cosmetic |
+| `finance.md` | the chat that writes, by its link; bot | the user's money commitments and dates: standing orders, instalments, policies, taxes, pensions and savings, subscriptions, income (FIN-1) |
 | `documents.md` | bot (the chat: its field's line «Numbers»); the chat that writes, by its link | document numbers, forms, PDF, the user's signature |
 | `notion.md` | bot; the chat that writes, by its link | every write to Notion, «continue setup» (NOTION-12); what the user wants to read, watch, listen to, visit, try or buy, an idea the user is weighing, a link or a recommendation to keep (NOTION-13); a fact or a decision of the user's own affairs or projects that an answer or a piece of work rests on (NOTION-8) |
 | `calendar.md` | chat by its link, bot | reading the user's calendar, creating events, invitations to the user |
