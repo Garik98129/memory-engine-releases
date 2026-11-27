@@ -46,7 +46,7 @@ is in this index (F2).
 
 | File | Read by | When |
 |---|---|---|
-| `core.md` | bot; chat by its link | bot: every turn; chat: a work file, app menus, a text for others |
+| `core.md` | bot; chat by its link | bot: every turn; chat: a work file, app menus, a text for others; chat: what you know of the user, how you work, where things are kept (CORE-14, CORE-17) |
 | `health.md` | chat by its link, bot | any talk of medicines, procedures, doctors, symptoms, tests and results; a medical paper |
 | `mail.md` | chat by its link, bot | mail, letters, messages to others |
 | `shopping.md` | chat by its link, bot | finding, comparing, ordering, paying; advising a food, a recipe or a cosmetic |

@@ -194,6 +194,44 @@ class TheOneText(unittest.TestCase):
         self.assertIn("somebody else's animal — needs no rules: answer it as you would anyone", about)
         self.assertIn("Not clear whose it is → one question.", about)
 
+    def test_the_map_found_is_opened_and_the_index_alone_names_nothing(self):
+        """The owner's test run of v0.1.19 on ChatGPT, 27.11.2026: a chat searched Notion for the map, took the
+        hit for the map read, and so kept nothing in Notion and offered its own memory; another read the index
+        and no topic's file — «what do you know about me?» matched no topic — and named GitHub and the release to
+        the user. The text says «find … and read it»; NOTION-10 says what reading is, and the index — the one file
+        such a chat did read — says it too, with CORE-14's ban and its answer; the topic «about the user» takes
+        the question to core.md and notion.md."""
+        import tomllib
+        topics = tomllib.loads((FIELDS.parent / "topics.toml").read_text(encoding="utf-8"))
+        about = " ".join(topics["about"].split())
+        for line in ("Outside setup, before a chat's first answer (danger signs first), open the user's map in Notion "
+                     "and read it: a search result is not the page (NOTION-10).",
+                     "To the user, nothing of how you work — no GitHub, repository, rules file, release, rule id or map "
+                     "key; the text's mark only if asked; except «Rules unavailable: …» and the link ending a setup.",
+                     "Asked how you work → records in the user's Notion, rules Grafyla's and public (CORE-14)."):
+            self.assertIn(line, about)
+        [mine] = [t for t in topics["topic"] if t["name"] == "about the user"]
+        self.assertEqual(mine["files"], ["core.md", "notion.md"])
+        self.assertIn("what you know of the user, how you work, where things are kept", mine["when"])
+        notion = " ".join((FIELDS.parent / "notion.md").read_text(encoding="utf-8").split())
+        for line in ("A search result is not the page: outside setup, open the map and read it before the first "
+                     "answer of a chat, danger signs first; a map found and not opened is unread.",
+                     "Notion out of your reach in this chat — no tool for it, or its search fails → say so once, and how "
+                     "the user brings it in on the user's platform (not sure how → say so; not connected at all → "
+                     "INSTALL-1); once it is in, open the map and do what was asked.",
+                     "Never offer to keep something in your platform's own memory instead of Notion (NOTION-8)."):
+            self.assertIn(line, notion)
+        core = " ".join((FIELDS.parent / "core.md").read_text(encoding="utf-8").split())
+        self.assertIn("Searched for and not there, or found and its page does not open → the sentence on a map that "
+                      "cannot be found, below.", notion, "Tolik's note N1 on #97: a page that does not open is the map lost")
+        for line in ("Never the machinery: the repository, pull requests, checks, file names and paths",
+                     "save the one link that ends a setup (INSTALL-12)",
+                     "Nor release numbers, the text's mark, the map's keys and marks",
+                     "the rules you follow are Grafyla's, public and open for anyone to read",
+                     "unless the user asks about it"):
+            self.assertIn(line, core, "what the index repeats is CORE-14's and CORE-16's")
+        self.assertIn("**NOTION-8 What is not in Notion is not known; your memory is a hint.**", notion)
+
     def test_send_has_no_exception(self):
         """«Send?» for every message, a dictated one too (the owner's decision of 26.11.2026; MAIL-8). The text
         names no exception at «Send?», and no rules file can drop «Buy?», «Send?» or «Delete?»."""
