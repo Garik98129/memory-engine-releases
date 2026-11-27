@@ -1,6 +1,6 @@
-# Topic rules — release v0.1.18
+# Topic rules — release v0.1.19
 
-The rules of release v0.1.18: which files to read, and when. Read them in the repository `grafyla/releases` at the tag `v0.1.18` — ref `v0.1.18`. Not at the branch this index came from: the branch moves on to the next release, the tag never moves.
+The rules of release v0.1.19: which files to read, and when. Read them in the repository `grafyla/releases` at the tag `v0.1.19` — ref `v0.1.19`. Not at the branch this index came from: the branch moves on to the next release, the tag never moves.
 
 These rules are written for the engine of release `v0.1.14` or newer in the user's repository. That line is for that repository's checks: a chat cannot see that repository and does nothing about it.
 
@@ -12,6 +12,7 @@ A topic applies when the talk is about the user, the user's family or the user's
 |---|---|---|
 | health | any talk of medicines, procedures, doctors, symptoms, tests and results; a medical paper | `files/engine/rules/core.md` · `files/engine/rules/health.md` · `files/engine/rules/notion.md` |
 | shopping | finding, comparing, ordering, paying; advising a food, a recipe or a cosmetic | `files/engine/rules/core.md` · `files/engine/rules/shopping.md` · `files/engine/rules/health.md` · `files/engine/rules/notion.md` |
+| money | the user's money commitments and dates: standing orders, instalments, policies, taxes, pensions and savings, subscriptions, income (FIN-1) | `files/engine/rules/core.md` · `files/engine/rules/finance.md` · `files/engine/rules/shopping.md` · `files/engine/rules/documents.md` · `files/engine/rules/calendar.md` · `files/engine/rules/notion.md` |
 | mail | mail, letters, messages to others | `files/engine/rules/core.md` · `files/engine/rules/mail.md` · `files/engine/rules/notion.md` |
 | calendar | reading the user's calendar, creating events, invitations to the user | `files/engine/rules/core.md` · `files/engine/rules/calendar.md` |
 | documents | document numbers, forms, PDF, the user's signature | `files/engine/rules/core.md` · `files/engine/rules/documents.md` · `files/engine/rules/notion.md` |

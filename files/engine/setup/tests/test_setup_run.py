@@ -311,7 +311,8 @@ class FirstInstallation(unittest.TestCase):
 
         fixed = gitio.file_at(self.i.w.repo.path, self.i.w.main, "engine/rules/fields/fixed.md")
         self.i.w.release = "v0.1.2"
-        self.i.land({"engine/rules/fields/fixed.md": fixed.replace(b"RECORDS.", b"The user's RECORDS."),
+        # The text stands at its limit (DESIGN_PHASE3, text mark 7): the change keeps its length, so C6 lets it in.
+        self.i.land({"engine/rules/fields/fixed.md": fixed.replace(b"RECORDS.", b"Records."),
                      "user/engine.lock": b'release = "v0.1.2"\n'})
         watch, red, out = self.i.watch()
         self.assertEqual((watch, red), (0, 0), out)
@@ -319,7 +320,7 @@ class FirstInstallation(unittest.TestCase):
         [new] = self.i.writes("POST", ISSUES)
         self.assertEqual(new["title"], "Your assistant's instructions — ChatGPT")
         self.assertTrue(new["body"].startswith("@owner — Your assistant's instructions changed."))
-        self.assertIn("The user's RECORDS.", new["body"])
+        self.assertIn("Records. The user's Notion is the record", new["body"])
         self.assertIn("Open the place for your assistant's instructions — chatgpt.com in your browser: the "
                       "menu under your name, Personalization. If you pasted the old text somewhere else — into a "
                       "project's instructions — take it out of there: the text stands in one place only, this one.",
