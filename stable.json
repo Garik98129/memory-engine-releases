@@ -1,8 +1,8 @@
 {
-  "commit": "3c18c20c3704fb34e96ee9dbbae65c7bdc4248e4",
+  "commit": "57e4ffd61d653b678a6431482b36396465868584",
   "how": "by hand",
-  "moved": "2026-11-27T16:06:06Z",
-  "reason": "Owner, 27.11.2026, in chat with Claude Code: \u00ab\u041c\u0435\u0440\u0436\u0438 20 \u0438 \u0433\u043e \u043d\u0430 stable\u00bb \u2014 v0.1.20, rules only, the one text unchanged",
-  "release": "v0.1.20",
+  "moved": "2026-11-27T17:36:12Z",
+  "reason": "Owner, 27.11.2026, in chat with Claude Code: \u00ab\u043c\u0435\u0440\u0436\u0438 21 \u043f\u043e\u0441\u043b\u0435 \u0422\u043e\u043b\u0438\u043a\u0430 \u0438 \u0433\u043e \u043d\u0430 stable\u00bb \u2014 v0.1.21, text mark 8, ChatGPT addendum",
+  "release": "v0.1.21",
   "withdrawn": []
 }

@@ -12,6 +12,9 @@
 # plan         the plan the engine needs there
 # status       "supported", "beta" (installs, with what is unknown said), "not-supported"
 # unknown      for "beta" when notion is not "unknown": what is not known yet, said in the Issue
+# addendum     true: the text the user pastes here is the one text with engine/rules/fields/addendum.md set
+#              before its mark (setup.field_text), and it fits field_limit, not the floor — the one text
+#              alone still fits the floor; absent — the one text alone
 #
 # The one text for everybody (engine/rules/fields/fixed.md) sends the chat to the rules by the
 # branch `stable` of the repository of releases. Reading a file there by a branch's name was seen
@@ -79,6 +82,12 @@ notion = "yes"                      # seen 12.11.2026 in a test workspace: pages
 schedule = "yes"
 plan = "Plus"
 status = "supported"                # the owner's decision, 25.11.2026 (the note at the top of this file)
+addendum = true                     # the owner's test run of v0.1.19 and v0.1.20, 27.11.2026: «remember a film»
+                                    # went to ChatGPT's own memory three times of three, the rules and the map
+                                    # unread — once with no step at all; asked «what do you know about me?», it
+                                    # retold the one text as the user's settings and named its repository. With
+                                    # the addendum's two paragraphs in the field, after the mark: the film kept in
+                                    # Notion, once; the question answered from Notion alone, twice of two
 
 [gemini]
 title = "Gemini"

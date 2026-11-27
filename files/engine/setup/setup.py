@@ -43,6 +43,7 @@ ENGINE = Path(__file__).resolve().parents[1]
 PLATFORMS = ENGINE / "platforms.toml"
 DEFAULTS = ENGINE / "defaults.toml"
 FIXED = ENGINE / "rules" / "fields" / "fixed.md"            # the one text for everybody (limits_check.FIXED)
+ADDENDUM = ENGINE / "rules" / "fields" / "addendum.md"      # set before the one text's mark where the platform's row says so
 CONFIG = "user/config.toml"
 PART = "user/fields/chat.md"                                # the user's part: in the first message and on the map, not in the field
 INSTALLABLE = ("supported", "beta")
@@ -122,6 +123,13 @@ def _floor() -> int:
 
 def limit_of(row: dict, floor: int) -> int:
     return min(row["field_limit"], floor) if row.get("field_limit") else floor
+
+
+def field_limit(row: dict, floor: int) -> int:
+    """What the text the user pastes on this platform may hold: the floor, as for every field — or, where
+    the row gives the one text an addendum (`field_text`), the platform's own field limit: the one text
+    alone still fits the floor (test_rules_budget), the addendum only the field that takes it."""
+    return row["field_limit"] if row.get("addendum") is True and row.get("field_limit") else limit_of(row, floor)
 
 
 def _check(platform: str, language: str, country: str, timezone: str, name: str, gender: str,
@@ -287,14 +295,23 @@ def held(repo: Path, rev: str) -> list[Finding]:
             for path in (CONFIG, PART) if built[path] != texts[path]]
 
 
-def field_text(fixed: str | None = None) -> str:
+def field_text(fixed: str | None = None, row: dict | None = None, addendum: str | None = None) -> str:
     """The text the user pastes: the one text for everybody, with nothing of the user's joined to it
-    (`limits_check.installed`)."""
+    (`limits_check.installed`) — and, on a platform whose row says `addendum = true`, the addendum set
+    before its mark, an empty line on each side, so that the mark stays the text's last line and names
+    both (CORE-16): on ChatGPT «remember» went to its own memory, and «what do you know about me?» retold
+    the text, until the field itself said otherwise (engine/platforms.toml; docs/DESIGN_PHASE3.md)."""
     if fixed is None:
         # The file's bytes, as the checks read it from git: read_text would turn a CR LF into LF, and
         # the Issue's fingerprint would not be the one the watch computes (engine/checks/field_issue.py).
         fixed = FIXED.read_bytes().decode("utf-8")
-    return fixed.strip("\n")
+    text = fixed.strip("\n")
+    if not (row and row.get("addendum") is True):
+        return text
+    if addendum is None:
+        addendum = ADDENDUM.read_bytes().decode("utf-8")
+    body, _, mark = text.rpartition("\n")
+    return f"{body.rstrip(chr(10))}\n\n{addendum.strip(chr(10))}\n\n{mark}"
 
 
 # The user's own word that starts the setup, and what the AI is to know of the user from the start: the
@@ -379,7 +396,7 @@ def issue(row: dict, field: str, part: str, manifests: str) -> str:
         "first — into a notes app on your phone, for one. Do not put them back into this field: after the setup "
         "you send them to your AI in a chat. Check that its last line came "
         f"in too: it is «{field.rsplit(chr(10), 1)[-1]}» — keep it: your AI reads it to know its text is whole and "
-        "current. The text is the same for everybody: new rules do not change it, and "
+        "current. The text is the same for everybody on your platform: new rules do not change it, and "
         f"neither does a change of your settings. It is {limits_check.length(field)} characters long, and "
         "nothing else goes beside it. It works in all your chats: in each new one your AI "
         "looks at your Notion before its first answer.\n\n"
@@ -412,8 +429,8 @@ def prepare(repo: Path, platform: str, language: str, country: str, timezone: st
     table, floor = platforms(), _floor()
     files = build(platform, language, country, timezone, name, gender,
                   work_languages_of(work_languages), table, floor)
-    field = field_text()
-    limit = limit_of(table[platform], floor)
+    field = field_text(row=table[platform])
+    limit = field_limit(table[platform], floor)
     if (size := limits_check.length(field)) > limit:
         raise SetupError(f"the field would be {size} characters, the limit is {limit}")
     manifests, _tag = _release(repo)

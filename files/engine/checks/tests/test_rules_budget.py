@@ -40,7 +40,10 @@ class TheOneText(unittest.TestCase):
     # of one sign here means each of them pastes again, and until then the user's AI holds the older text.
     # So the text never changes by the way — whoever changes it changes this fingerprint in the same
     # pull request, and its reader sees a change of the text for what it is.
-    # Changed on purpose by the text's mark (CORE-16, docs/DESIGN_PHASE3.md §5a): «TEXT MARK 7.» — «First answer
+    # Changed on purpose by the text's mark (CORE-16, docs/DESIGN_PHASE3.md §5a): «TEXT MARK 8.» — the mark alone: from it on,
+    # ChatGPT's text carries the addendum before the mark (engine/rules/fields/addendum.md, ADDENDUM_FINGERPRINT
+    # below; the owner's test run of 27.11.2026 and his go, quoted in docs/DESIGN_PHASE3.md), and a chat with the text of mark 7,
+    # pasted without it, is told to take the current one. Before it, «TEXT MARK 7.» — «First answer
     # using rules: name the release and files read» is gone (the owner's word of 26.11.2026 on memory-files #2059:
     # it named the machinery CORE-14 keeps out), and numbers other than card data and secrets may be kept elsewhere
     # only on the user's own request, after one question that they are sensitive (the owner, 27.11.2026, quoted in
@@ -56,7 +59,54 @@ class TheOneText(unittest.TestCase):
     # the sentence before it implies and the index says, is gone — «Unsure whose → one question» stays. Two
     # words made exact by the reading before the merge: «that topic's files», not «each of those files», and
     # the health «profile», not «record».
-    FINGERPRINT = "32356dd77ec002bce859a867818ac2d82fdc1bf3e375e1fe805ccde1a1a2efd7"
+    FINGERPRINT = "d9da6c61f77c89e069b2c539b4fb5221490b3dfc932d857de9955f6bfba39980"
+
+    # The addendum (engine/rules/fields/addendum.md): set before the mark of the text a platform whose row asks for it
+    # takes (setup.field_text; ChatGPT, from text mark 8). It is pasted as the one text is, so it never changes by the way
+    # either: a change of it changes this fingerprint and raises the text's mark in the same pull request — the mark
+    # names the text with its addendum, and a chat that holds an older one is told so (CORE-16).
+    ADDENDUM_FINGERPRINT = "b22507b07027b77be3877f631b512437391e5ecf71a99e8df4416ad81209a373"
+
+    def test_the_addendum_is_the_one_that_was_read_and_raises_the_mark(self):
+        import hashlib
+        self.assertEqual(hashlib.sha256((FIELDS / "addendum.md").read_bytes()).hexdigest(), self.ADDENDUM_FINGERPRINT,
+                         "addendum.md is not the text that was read: change ADDENDUM_FINGERPRINT and the text's mark in "
+                         "the same pull request, and say so in its body")
+        self.assertEqual(self.TEXT.strip("\n").rsplit("\n", 1)[-1], "TEXT MARK 8.",
+                         "the mark the addendum came with; a later change of the addendum raises it")
+
+    def test_the_addendum_fits_the_field_that_takes_it_and_the_one_text_still_fits_every_field(self):
+        """The one text alone fits the smallest field (test_it_fits_the_smallest_field_she_can_choose); with the
+        addendum, it fits the field of every platform whose row asks for it — the field_limit of that row."""
+        import tomllib
+        from engine.setup import setup
+        table = tomllib.loads((FIELDS.parents[1] / "platforms.toml").read_text(encoding="utf-8"))
+        rows = {k: row for k, row in table.items() if row.get("addendum") is True}
+        self.assertEqual(sorted(rows), ["chatgpt"], "ChatGPT only, where the run showed the need (27.11.2026)")
+        for name, row in rows.items():
+            text = setup.field_text(row=row)
+            self.assertLessEqual(limits_check.length(text), row["field_limit"], name)
+            self.assertTrue(text.endswith("\n\nTEXT MARK 8."), "the mark stays the last line")
+            self.assertEqual(text.count("TEXT MARK"), 1)
+        addendum = " ".join((FIELDS / "addendum.md").read_text(encoding="utf-8").split())
+        # its fresh-eye read and its two readers of the logic (QUALITY 1a: Tolik, MonsterBot): the user's word for
+        # something kept for later, no other place named; no base → said, shown, asked; a number as the text says,
+        # what it writes nowhere never; a date → an event offered; no menu named that the chat cannot see; the bans
+        # scoped to this text and to the answer; Notion unread → said
+        for line in ("REMEMBER. The user's «remember», «note it», «keep it for later», in any language: no place named → "
+                     "the user's Notion, in the base the map and rules name, never your built-in memory; no such base or no "
+                     "map read → say so, show it, ask where; a place the user names → there, as above.",
+                     "Card data, passwords, codes → never anywhere, not even in part; other numbers → as above.",
+                     "Until recorded, in this chat alone.",
+                     "No Notion here → say so once and how to turn it on, naming no menu you cannot see; once on, record "
+                     "it, or ask the user to repeat it in a new chat.",
+                     "A future date → also offer an event.",
+                     "ABOUT THE USER. This text, first line to mark, is neither facts about the user nor the user's settings.",
+                     "Asked what you know about the user → what Notion holds that answers it and what the user said here, "
+                     "never this text retold; Notion unread → say so.",
+                     "In that answer, and asked how you work (answer plainly): never its repository, files or release; "
+                     "«Rules unavailable: » stays."):
+            self.assertIn(line, addendum)
 
     def test_the_text_is_the_one_that_was_read(self):
         import hashlib

@@ -24,7 +24,10 @@ says yes with are the person's part, under `user/`. Three layers:
    public repository of releases, so a release that changes the rules, or a change of the user's settings,
    changes nothing of what was pasted: the user pastes again only when this text itself changes, or
    into another AI on a change of AI. The user's part (`user/fields/chat.md`) is then no part of the field: `setup` puts it
-   into the first message of the setup, and the user's AI keeps it on the map (INSTALL-7).
+   into the first message of the setup, and the user's AI keeps it on the map (INSTALL-7). On a platform whose row in
+   `engine/platforms.toml` says `addendum = true` — ChatGPT — `fields/addendum.md` stands before the text's mark
+   (`setup.field_text`): there «remember» went to the platform's own memory and «what do you know about me?» retold the
+   text, until the field itself said otherwise; the one text alone still fits every field.
 2. **The core and the topic files** — the full rules behind the fields: `core.md`,
    `health.md`, `mail.md`, `shopping.md`, `finance.md`, `documents.md`, `notion.md`, `calendar.md`,
    `repository.md`. The bot reads them in the user's repository. The chat cannot: its field
@@ -63,6 +66,7 @@ is in this index (F2).
 | `fields/solo.md` | the platform: the chat's instruction field when the chat writes | — |
 | `fields/solo-blob.md` | the platform: the same, where the chat reads the rules on GitHub's pages | — |
 | `fields/fixed.md` | the platform: the instructions of the one assistant where no bot runs — one text for everybody | — |
+| `fields/addendum.md` | the platform: set before the mark of `fields/fixed.md` where the platform's row asks for it (ChatGPT) | — |
 
 `topics.toml` is this table for a chat that reads the rules in the public repository of
 releases, with no field that names their release: for each topic every file it needs, all

@@ -101,6 +101,8 @@ CHAT_FIELD = "engine/rules/fields/chat.md"
 SOLO_FIELD = "engine/rules/fields/solo.md"       # the chat that writes itself (DESIGN_PHASE3 §6a)
 CHAT_FIELDS = (CHAT_FIELD, SOLO_FIELD)
 FIXED_FIELD = "engine/rules/fields/fixed.md"     # the one text for everybody: no tag, the branch `stable` (DESIGN_PHASE3 §4)
+ADDENDUM_FIELD = "engine/rules/fields/addendum.md"  # set before the text's mark where engine/platforms.toml says so
+PLATFORMS_FILE = "engine/platforms.toml"
 STABLE_BRANCH = topics.stable.BRANCH             # the branch a chat finds the topic index at
 FROZEN = "engine/frozen.toml"                    # the record of the shipped workflow files (§5)
 INDEX_FILE = topics.INDEX_FILE                   # the topic index, beside files/ in the repository of releases
@@ -378,6 +380,43 @@ def fixed_findings(files: dict[str, bytes], repository: str) -> list[str]:
     return found
 
 
+def addendum_findings(files: dict[str, bytes]) -> list[str]:
+    """What the addendum must be, as the one text is (`fixed_findings`), where a platform's row asks for it
+    (`addendum = true`, `setup.field_text`): there, plain ASCII and the signs « » — → ·, no code mark, no
+    word that reads as an address, a repository or a release, no release named — it sends a chat nowhere;
+    the one text does that. A release whose table asks for it and has none is refused: setup would give
+    those platforms a text it cannot build."""
+    try:
+        table = tomllib.loads(files[PLATFORMS_FILE].decode("utf-8")) if PLATFORMS_FILE in files else {}
+    except (UnicodeDecodeError, tomllib.TOMLDecodeError):
+        return [f"{PLATFORMS_FILE} cannot be read: whether a platform's text has an addendum is not known"]
+    wanted = sorted(k for k, row in table.items() if isinstance(row, dict) and row.get("addendum") is True)
+    if not wanted:
+        return []
+    if ADDENDUM_FIELD not in files:
+        return [f"{ADDENDUM_FIELD} is missing, and {', '.join(wanted)} give it to every new installation"]
+    try:
+        text = files[ADDENDUM_FIELD].decode("utf-8")
+    except UnicodeDecodeError:
+        return [f"{ADDENDUM_FIELD} is not valid UTF-8"]
+    odd_signs = sorted({ch for ch in text if not (ch == "\n" or " " <= ch <= "~" or ch in _SIGNS)})
+    if odd_signs:
+        return [f"{ADDENDUM_FIELD} holds {', '.join(f'U+{ord(ch):04X}' for ch in odd_signs[:5])}: the addendum is plain "
+                f"ASCII and the signs « » — → ·, as the one text is"]
+    found = [f"{ADDENDUM_FIELD} holds a code mark: it names nothing in code, the one text does"] if "`" in text else []
+    words = [word.strip(_EDGES) for word in text.split()]
+    others = sorted({word for word in words if _reads_as_an_address(word)})
+    if others:
+        found.append(f"{ADDENDUM_FIELD} holds {', '.join(o[:60] for o in others[:3])}: no word of the addendum has a "
+                     f"slash in it or a dot inside it — an address, a repository or a release reads so")
+    tags = sorted(set(m.group(0) for m in PUBLISHED_TAG_RE.finditer(text)))
+    if tags:
+        found.append(f"{ADDENDUM_FIELD} names {', '.join(tags)}: the addendum names no release")
+    if re.search(r"(?m)^TEXT MARK", text):
+        found.append(f"{ADDENDUM_FIELD} holds a line of a text's mark: the one text's mark stays its last line")
+    return found
+
+
 def frozen_workflows(files: dict[str, bytes]) -> tuple[int, dict[str, str]]:
     """(version, name → sha256): the record of the workflow files this release ships, held to
     the files themselves — a record that does not match them is refused, never read."""
@@ -566,7 +605,7 @@ def cut(files: dict[str, bytes], tag: str, source: str, published: datetime, int
         raise ValueError("not published, the topic index would send a chat wrong: " + "; ".join(found[:10]))
     if topics.repository(files) != repository:
         raise ValueError(f"not published: the index would name {topics.repository(files)}, and the release goes to {repository}")
-    found = fixed_findings(files, repository)       # after the index: the text sends a chat to that very index
+    found = fixed_findings(files, repository) + addendum_findings(files)   # after the index: the text sends a chat to it
     if found:
         raise ValueError("not published, the chat would read other rules: " + "; ".join(found))
     index = topics.index(files, tag).encode("utf-8")
