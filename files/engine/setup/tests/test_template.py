@@ -279,7 +279,7 @@ class Readme(unittest.TestCase):
         text's own core reaches the user as an Issue (`engine.checks.field_issue`). What it still does
         not say: that anything checks what the user's AI in fact read (Kimi, on #54)."""
         self.assertNotIn("keeps your assistant's rules up to date", FLAT)
-        self.assertIn("The instructions you pasted are one text, the same for everybody. New rules do not change them, "
+        self.assertIn("The instructions you pasted are one text, the same for everybody on your platform. New rules do not change them, "
                       "and neither do your settings: the rules your AI reads come up to date by themselves, usually "
                       "about a week after a release.", FLAT)
         self.assertIn("Only if the core of that text itself ever changes — a rare thing — your copy tells you", FLAT)

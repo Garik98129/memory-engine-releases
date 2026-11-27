@@ -61,6 +61,24 @@ class Check(unittest.TestCase):
         entry = self.at({**TREE, **two, "user/config.toml": chatgpt})
         self.assertEqual(entry["where"], "a project, its instructions, or Settings, Custom instructions")
 
+    def test_a_platform_with_an_addendum_hands_the_text_with_it(self):
+        """ChatGPT's row asks for the addendum (engine/platforms.toml, from text mark 8): the Issue hands over the
+        text that platform takes — the one text with the addendum before its mark, as setup gives it and the page of
+        the release shows it; without the file, nothing is handed over (C1 reports the missing file)."""
+        chatgpt = NO_BOT.replace(b'name = "grok"', b'name = "chatgpt"')
+        row = b'[chatgpt]\ntitle = "ChatGPT"\nfield = "the field for every chat"\naddendum = true\n'
+        addendum = b"REMEMBER. In Notion, never in your own memory.\n"
+        tree = {**TREE, "user/config.toml": chatgpt, "engine/platforms.toml": row,
+                field_issue.ADDENDUM: addendum}
+        entry = self.at(tree)
+        expected = setup.field_text(FIELD, {"addendum": True}, addendum.decode())
+        self.assertEqual(entry["text"], expected)
+        self.assertIn("\n\nREMEMBER. In Notion, never in your own memory.\n\n", entry["text"])
+        self.assertEqual(entry["text"].rsplit("\n", 1)[-1], FIELD.rsplit("\n", 1)[-1], "the mark stays the last line")
+        self.assertIsNone(self.at({k: v for k, v in tree.items() if k != field_issue.ADDENDUM}))
+        self.assertEqual(self.at({**tree, "engine/platforms.toml": row.replace(b"addendum = true\n", b"")})["text"], FIELD,
+                         "a row that asks for none: the one text alone")
+
     def test_a_field_that_cannot_be_read_hands_nothing_over(self):
         self.assertIsNone(self.at({k: v for k, v in TREE.items() if k != "user/fields/chat.md"}))
         self.assertIsNone(self.at({**TREE, "user/fields/chat.md": b"\xff\xfe"}))
