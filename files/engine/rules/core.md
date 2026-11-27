@@ -56,8 +56,10 @@ The rules call the person «the user»; they do not depend on the person's gende
   ask once that it is sensitive data and whether the user wants it there, and keep it there only on
   that yes; never on your own. Card data and secrets — never, anywhere (CORE-6). Fields and routines
   point there and hold no number — the one exception: the
-  trusted contact's two e-mail addresses in the bot's part (DOC-1). A number is used only
-  in a form or a letter the user asks for, or in an event the user dictated (CAL-1) — in an event
+  trusted contact's two e-mail addresses in the bot's part (DOC-1). A paper or a scan the user gives,
+  kept as a file — in its row of «Documents», or elsewhere in the user's Notion on the yes above —, is
+  not a number written out; one that shows card data is never kept (CORE-6). A number is used only in a form or a letter the user asks
+  for, in an event the user dictated (CAL-1), or told to the user when the user asks for it — in an event
   only what the user dictated, never a number you took from the user's bases or mail on your own
   (`documents.md`). Those two addresses only for their named uses — his e-mail to invite
   him to the user's events and to recognise him as an organizer (CAL-1, CAL-5), his bot's

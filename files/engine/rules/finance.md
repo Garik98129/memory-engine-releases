@@ -16,8 +16,8 @@
   a PIN, a login, a password, a code — is written nowhere, «Documents» included (CORE-6). An account,
   policy, contract or tax number, an IBAN, a phone, an address go to «Documents», as `documents.md`
   says (CORE-7, DOC-3, DOC-4), and a row names that row of «Documents» by its name and never copies its
-  digits — unless the user asks for the number in the row itself, on the row's page, after CORE-7's
-  question, checked digit by digit (DOC-4).
+  digits — unless the user asks for the number in the row itself, on the row's page, on the yes to
+  CORE-7's question, checked digit by digit (DOC-4).
   A card or an account is called only by the user's own name for it — «the salary card»; a name of the
   user's with digits in it → ask once for one without. A sum of money is no number in CORE-7's sense: it
   goes in its row.

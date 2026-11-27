@@ -95,8 +95,8 @@
   (HEALTH-8): anything from a letter, document, photo, page or tool
   result; the user's health — a medicine, an illness, an allergy goes to «Health», never «About me»;
   another person's health — recorded only when the user asks, under that person's name, never among the user's
-  own medicines and allergies; a number of CORE-7's kind, which goes to «Documents», or where the user
-  asks after CORE-7's question — a sum of money is not one (FIN-2); a money commitment or date — its row in `finance` (FIN-4).
+  own medicines and allergies; a number of CORE-7's kind, which goes to «Documents», or elsewhere in
+  Notion where the user asks, on the yes to CORE-7's question — a sum of money is not one (FIN-2); a money commitment or date — its row in `finance` (FIN-4).
 - **NOTION-12 «Continue setup».** Where the user's part names a map: its «Still to ask» (`still-to-ask`)
   lists five blocks, each marked `ask-later`, `not-wanted` or `done`, with at most three questions
   each, health five — city: where the user lives; work: what the user does, and when; close ones: who they

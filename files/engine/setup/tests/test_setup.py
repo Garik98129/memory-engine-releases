@@ -544,9 +544,9 @@ class InstallRules(unittest.TestCase):
         """The owner's full setup on ChatGPT, v0.1.17, 26.11.2026, and his test questions after it (memory-files
         #2059): the chat named «PERSON PART (v3)» to him, counted «six» and then «seven», called the link an
         installation, took «remember» for no request, sent the same failing write twice on a new topic, and held
-        a recipe back as «the profile is not read yet» without reading it. The one text stays as it is (the
-        owner chose to keep the line that names the release and files read), so each fix is a rule the chat
-        reads, and this test keeps it there."""
+        a recipe back as «the profile is not read yet» without reading it. The one text stayed as it was then
+        (the owner chose to keep the line that names the release and files read; text mark 7 removed it), so
+        each fix is a rule the chat reads, and this test keeps it there."""
         install = flat((HERE / "rules/install.md").read_text(encoding="utf-8"))
         for line in ("The user's part goes there as it is and without a word about it: to the user, never name it, its "
                      "heading, its version or its lines' keys — «PERSON PART», «(v3)», «Trusted contact» —; it is «your "

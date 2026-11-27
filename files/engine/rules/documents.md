@@ -4,11 +4,11 @@
 
 - **DOC-1 A home.** Document numbers, bank accounts, phones and addresses — the user's and the
   user's close family's; the car's papers and insurance; visas — live in the user's Documents base in
-  Notion, or where the user asks after CORE-7's question (CORE-7). The nightly copy brings them to the repository; the fields and the
+  Notion, or elsewhere in the user's Notion where the user asks, on the yes to CORE-7's question (CORE-7). The nightly copy brings them to the repository; the fields and the
   routines hold none, except the trusted contact's two e-mail addresses in the bot's part
   (his e-mail for invitations, his bot's mailbox).
-- **DOC-2 Only when asked.** A number is used only in a form or a letter the user asks for, or
-  in an event the user dictated (CAL-1) — in an event only what the user dictated, never a number
+- **DOC-2 Only when asked.** A number is used only in a form or a letter the user asks for, in an
+  event the user dictated (CAL-1), or told to the user when the user asks for it — in an event only what the user dictated, never a number
   taken from the user's bases or mail on your own. Nothing with a number leaves without
   «Send?» and the user's yes — except what CORE-4 lists: the guest invitation of an event the user
   asked for carries the event as the user dictated it (CAL-1), and the fallback letter carries

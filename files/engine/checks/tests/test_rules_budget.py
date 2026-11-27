@@ -44,7 +44,9 @@ class TheOneText(unittest.TestCase):
     # using rules: name the release and files read» is gone (the owner's word of 26.11.2026 on memory-files #2059:
     # it named the machinery CORE-14 keeps out), and numbers other than card data and secrets may be kept elsewhere
     # only on the user's own request, after one question that they are sensitive (the owner, 27.11.2026, quoted in
-    # docs/DESIGN_PHASE3.md, «Text mark 7»); card data — never, and said why. Before it, «TEXT MARK 6.» — «Send?» has no
+    # docs/DESIGN_PHASE3.md, «Text mark 7»); card data — never, and said why; narrowed by its logic read before
+    # anyone pasted it (grafyla/releases #19): elsewhere only in Notion and on a yes, a number told to the user
+    # who asks, card data never used from a chat or a letter. Before it, «TEXT MARK 6.» — «Send?» has no
     # exception any more: «— one exception, a message the user dictated, only as the mail rules read in this chat
     # allow» is gone, and MAIL-8 now says a dictated message asks too (the owner's decision of 26.11.2026, quoted in
     # docs/DESIGN_PHASE3.md §5: no exception, said plainly). Before it, «TEXT MARK 5.» as its last line —
@@ -54,7 +56,7 @@ class TheOneText(unittest.TestCase):
     # the sentence before it implies and the index says, is gone — «Unsure whose → one question» stays. Two
     # words made exact by the reading before the merge: «that topic's files», not «each of those files», and
     # the health «profile», not «record».
-    FINGERPRINT = "a93fa2e6250466044774d6df35e950afbdaa8760c724d37ac36f1ed24531daa8"
+    FINGERPRINT = "32356dd77ec002bce859a867818ac2d82fdc1bf3e375e1fe805ccde1a1a2efd7"
 
     def test_the_text_is_the_one_that_was_read(self):
         import hashlib
@@ -120,9 +122,8 @@ class TheOneText(unittest.TestCase):
                      "The user's own clear request is a yes: do it; your idea → ask first",
                      "«Buy?»", "a letter or message → to whom, text → «Send?»; deleting → «Delete?»", "One yes, one action; silence is no yes; no silent retry",
                      "«Recorded: what → where»",
-                     "the user's Documents base; elsewhere only on the user's own request, after one question that they are sensitive; used only for a form, letter or event the user asks for; none leaves without «Send?»",
-                     "Card numbers, CVV, expiry, PIN, passwords, codes: never written anywhere; sent one → say once why",
-                     "Card numbers, CVV, expiry, PIN, passwords, codes: never written anywhere",
+                     "the user's Documents base; elsewhere only in Notion, only if the user asks and says yes when told they are sensitive; used only for a form, letter, event or telling the user, as the user asks; none leaves without «Send?»",
+                     "Card numbers, CVV, expiry, PIN, passwords, codes: written nowhere, used only from the platform's secure store; sent one → say once why",
                      "never a web or people search by name",
                      "The user's Notion is the record; your built-in memory is only a hint",
                      "when a fact about the user or the user's affairs matters, read Notion; not found → say so, ask; rules "
