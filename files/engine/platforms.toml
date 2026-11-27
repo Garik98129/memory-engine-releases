@@ -32,7 +32,11 @@ notion = "yes"                      # seen: the chat created a base and a row (1
 schedule = "unconfirmed"            # Automations «available to everyone» (x.ai), not yet seen on a free account
 plan = "Plus"                       # the owner's word, 22.11.2026: on the free plan it does not work
 status = "beta"
-unknown = "whether its chat finds and reads the rules by itself, as it must: not tried yet on Grok"
+# the owner's live run, 20.11.2026, in a project of his own account (the project card in Notion): nothing
+# harmful, a command in a letter not carried out, «call 101» first; without the branch `stable`, which
+# did not exist yet, it said «Rules unavailable» and then read the rules at a tag (the text closed that
+# since); the chat's switches did not cut its connectors. Reading at the branch `stable`: not tried since
+unknown = "whether its chat finds and reads the rules at the branch stable by itself, as it must: tried before that branch existed, not since"
 
 [claude]
 title = "Claude"
@@ -47,7 +51,11 @@ notion = "yes"                      # the Notion connector creates and updates p
 schedule = "paid"                   # scheduled tasks need Pro; projects may need it too (one report)
 plan = "Pro"
 status = "beta"
-unknown = "whether its chat finds and reads the rules by itself, as it must: not tried yet on Claude"
+# the owner's live run, 20.11.2026, in a project of his own account (the project card in Notion): the
+# cleanest of the three — the chat's switches cut its connectors, it tried to read the rules before a
+# letter and a deletion, «call 101» first; without the branch `stable`, which did not exist yet, it said
+# «Rules unavailable» and refused to read the index at main. Reading at the branch `stable`: not tried since
+unknown = "whether its chat finds and reads the rules at the branch stable by itself, as it must: tried before that branch existed, not since"
 
 [chatgpt]
 title = "ChatGPT"

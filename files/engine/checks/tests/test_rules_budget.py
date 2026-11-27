@@ -40,7 +40,11 @@ class TheOneText(unittest.TestCase):
     # of one sign here means each of them pastes again, and until then the user's AI holds the older text.
     # So the text never changes by the way — whoever changes it changes this fingerprint in the same
     # pull request, and its reader sees a change of the text for what it is.
-    # Changed on purpose by the text's mark (CORE-16, docs/DESIGN_PHASE3.md §5a): «TEXT MARK 6.» — «Send?» has no
+    # Changed on purpose by the text's mark (CORE-16, docs/DESIGN_PHASE3.md §5a): «TEXT MARK 7.» — «First answer
+    # using rules: name the release and files read» is gone (the owner's word of 26.11.2026 on memory-files #2059:
+    # it named the machinery CORE-14 keeps out), and numbers other than card data and secrets may be kept elsewhere
+    # only on the user's own request, after one question that they are sensitive (the owner, 27.11.2026, quoted in
+    # docs/DESIGN_PHASE3.md, «Text mark 7»); card data — never, and said why. Before it, «TEXT MARK 6.» — «Send?» has no
     # exception any more: «— one exception, a message the user dictated, only as the mail rules read in this chat
     # allow» is gone, and MAIL-8 now says a dictated message asks too (the owner's decision of 26.11.2026, quoted in
     # docs/DESIGN_PHASE3.md §5: no exception, said plainly). Before it, «TEXT MARK 5.» as its last line —
@@ -50,7 +54,7 @@ class TheOneText(unittest.TestCase):
     # the sentence before it implies and the index says, is gone — «Unsure whose → one question» stays. Two
     # words made exact by the reading before the merge: «that topic's files», not «each of those files», and
     # the health «profile», not «record».
-    FINGERPRINT = "7f08c02f5c9f764f26b1de43bacc8c6fe3eeafb9a81924260678162388ab16fc"
+    FINGERPRINT = "a93fa2e6250466044774d6df35e950afbdaa8760c724d37ac36f1ed24531daa8"
 
     def test_the_text_is_the_one_that_was_read(self):
         import hashlib
@@ -116,7 +120,8 @@ class TheOneText(unittest.TestCase):
                      "The user's own clear request is a yes: do it; your idea → ask first",
                      "«Buy?»", "a letter or message → to whom, text → «Send?»; deleting → «Delete?»", "One yes, one action; silence is no yes; no silent retry",
                      "«Recorded: what → where»",
-                     "the user's Documents base, only for a form, letter or event the user asks for; none leaves without «Send?»",
+                     "the user's Documents base; elsewhere only on the user's own request, after one question that they are sensitive; used only for a form, letter or event the user asks for; none leaves without «Send?»",
+                     "Card numbers, CVV, expiry, PIN, passwords, codes: never written anywhere; sent one → say once why",
                      "Card numbers, CVV, expiry, PIN, passwords, codes: never written anywhere",
                      "never a web or people search by name",
                      "The user's Notion is the record; your built-in memory is only a hint",

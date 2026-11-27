@@ -2,9 +2,9 @@
 
 ## Numbers (the chat follows its field's line «Numbers»)
 
-- **DOC-1 One home.** Document numbers, bank accounts, phones and addresses — the user's and the
+- **DOC-1 A home.** Document numbers, bank accounts, phones and addresses — the user's and the
   user's close family's; the car's papers and insurance; visas — live in the user's Documents base in
-  Notion (CORE-7). The nightly copy brings them to the repository; the fields and the
+  Notion, or where the user asks after CORE-7's question (CORE-7). The nightly copy brings them to the repository; the fields and the
   routines hold none, except the trusted contact's two e-mail addresses in the bot's part
   (his e-mail for invitations, his bot's mailbox).
 - **DOC-2 Only when asked.** A number is used only in a form or a letter the user asks for, or
@@ -22,13 +22,19 @@
   check digit is checked before it is written.
 - **DOC-5 Payment data never** in this base or anywhere (CORE-6).
 - **DOC-15 Read «valid until».** Before you use a row of the Documents base as DOC-2 allows, read its
-  date «valid until» — the column of that name, or the one whose title or hint says until when a
-  document holds. The day has passed, or will have passed by the day the thing is for (a trip, an
+  `valid-until` (DOC-16); none → the column whose title or hint says until when a document holds. The day has passed, or will have passed by the day the thing is for (a trip, an
   appointment) where you know it, else today → say so in one line, with the filled form where there is one (DOC-7) and before
   anything is signed or sent: the user decides whether the document is still used — no question of its own. No such column,
   or no date in the row → say nothing of the date. What a place asks beyond that day — a passport
   valid some months past a trip — is a fact about the world, checked as CORE-8 says when the form or the user names that place.
-  Nothing looks at that date by itself: never promise to remind — offer a calendar event (CORE-3).
+  Nothing looks at that date by itself: never promise to remind — offer a calendar event (CORE-3). When
+  you write a «valid until», offer one event for the day renewing can start — the window the issuing
+  country's official page gives for that document (CORE-8); none found → say so and offer the event on a
+  day the user chooses — never a window from memory.
+- **DOC-16 Columns by key.** The columns of the Documents base are found by the key at the end of their
+  hint — `whose`, `kind`, `number`, `issued`, `valid-until`, `notes`, `file` —, else by their title; none
+  fits → leave that part out, never make a column on your own (NOTION-4). `issued` and `valid-until` come
+  from the document or the user's own words, never from general knowledge; one neither gives stays empty.
 
 ## Forms and PDF
 
