@@ -7,12 +7,20 @@
 #
 # The table in README.md is the same list for people; a test holds the two together.
 
-# Whom a topic is about. One paragraph, printed in the index as it is.
+# Whom a topic is about — and the two things a chat that reads no further than this index must still
+# do (the owner's test run of v0.1.19, 27.11.2026: a chat found the map and did not open it, read this
+# index and not a topic's files, and named GitHub and the release to the user; the question that brought
+# the second, «what do you know about me?», matched no topic then — the topic «about the user» below).
+# One paragraph, printed in the index as it is.
 about = """A topic applies when the talk is about the user, the user's family or the user's own pets. A general \
 question — about a breed, somebody else's animal — needs no rules: answer it as you would \
 anyone; what the user personally wants to read, watch, listen to, visit, try or buy is the user's — the \
 topic «notes and ideas»; the user's own affairs and projects, with what was decided in them, are the user's \
-too — the topic «affairs and projects». Not clear whose it is → one question."""
+too — the topic «affairs and projects». Not clear whose it is → one question. Outside setup, before a \
+chat's first answer (danger signs first), open the user's map in Notion and read it: a search result is not \
+the page (NOTION-10). To the user, nothing of how you work — no GitHub, repository, rules file, release, \
+rule id or map key; the text's mark only if asked; except «Rules unavailable: …» and the link ending a setup. \
+Asked how you work → records in the user's Notion, rules Grafyla's and public (CORE-14)."""
 
 # The oldest release of the engine these rules are written for: what they say of the user's Notion, the user's
 # repository and its checks holds from that release on. Raised — by hand, in the pull request
@@ -82,6 +90,11 @@ files = ["core.md", "notion.md"]
 # (Tolik's audit of 24.11.2026, finding 1; the owner's decision of that day: this topic, and NOTION-8's
 # working half in the one text as well). The pilot's chat, whose field names its own files, is not sent
 # here: it reads no notion.md.
+[[topic]]
+name = "about the user"
+when = "what you know of the user, how you work, where things are kept (CORE-14, CORE-17)"
+files = ["core.md", "notion.md"]
+
 [[topic]]
 name = "affairs and projects"
 when = "a fact or a decision of the user's own affairs or projects that an answer or a piece of work rests on (NOTION-8)"
