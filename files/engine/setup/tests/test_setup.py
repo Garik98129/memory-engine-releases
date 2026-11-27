@@ -778,6 +778,29 @@ class TheIssue(unittest.TestCase):
                       "more — is the user's own request: put its lines under «The user's part» in place of the old ones", notion)
         self.assertTrue(setup.SETTINGS_MESSAGE.startswith("My settings changed. My part is now this"))
         self.assertTrue(setup.PART_MESSAGE.startswith("My part is this"))
+        # CORE-1: the three messages are English for everybody, so English among the user's work languages made
+        # the chat answer them in English (the owner's test run, 27.11.2026); they are answered in the user's language
+        core_one = flat((HERE / "rules/core.md").read_text(encoding="utf-8")).split("**CORE-2 ")[0]
+        for lead, words in ((setup.FIRST_MESSAGE, "Start the setup"), (setup.SETTINGS_MESSAGE, "My settings changed"),
+                            (setup.PART_MESSAGE, "My part is this")):
+            self.assertTrue(lead.startswith(words))
+            self.assertIn(f"«{words}»", core_one, f"CORE-1 names the message that starts «{words}»")
+        # …and the English words the setup's own text tells the user to say (setup.issue)
+        source = flat((HERE / "setup/setup.py").read_text(encoding="utf-8"))
+        for words in ("continue setup", "My old instructions"):
+            self.assertIn(f"«{words}", source)
+            self.assertIn(f"«{words}»", core_one, f"CORE-1 names «{words}»")
+        # …and the older first messages NOTION-10 still names (Tolik's note 4 on #96)
+        for words in ("Start the installation", "Open … start the installation"):
+            self.assertIn(f"«{words}", notion)
+            self.assertIn(f"«{words}»", core_one, f"CORE-1 names «{words}»")
+        for line in ("in the user's part, «Language codes — the user's»",
+                     "sent as they are printed: such a message is the user's own, answered in the user's language "
+                     "even when English is one of the user's work languages",
+                     "A message that changes the user's language is answered in the new one.",
+                     "The setup's own questions are always in the user's language."):
+            self.assertIn(line, core_one)
+        self.assertIn("Language codes — the user's: ", setup.build(**CHOICES)[setup.PART], "the line CORE-1 names")
         install = flat((HERE / "rules/install.md").read_text(encoding="utf-8"))
         self.assertIn("the headings `her-part`, `how-we-talk` and `still-to-ask`", install,
                       "the user's part is found on the map by its key, as the two other headings are")

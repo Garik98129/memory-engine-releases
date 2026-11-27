@@ -57,7 +57,13 @@
   base the user has not confirmed.
 - **NOTION-10 The map.** Where the user's part names a map — the page whose title ends with
   « · memory-map», made at setup (`install.md`): the user's anchors are found only through
-  it, never by guessing. What these rules call the user's «About me», health profile, medical-records
+  it, never by guessing. A search result is not the page: outside setup, open the map and read it
+  before the first answer of a chat, danger signs first; a map found and not opened is unread. Notion
+  out of your reach in this chat — no tool for it, or its search fails → say so once, and how the user
+  brings it in on the user's platform (not sure how → say so; not connected at all → INSTALL-1); once
+  it is in, open the map and do what was asked. Searched for and not there, or found and its page
+  does not open → the sentence on a map that cannot be found, below. Never offer to keep something in your platform's own memory instead
+  of Notion (NOTION-8). What these rules call the user's «About me», health profile, medical-records
   base and Documents base, the inbox base, the user's notes and the user's money base are the map's `about-me`, `health`,
   `health-records`, `documents`, `inbox`, `notes` and `finance`, whatever their titles; a map made before
   `notes`, `health-records` or `finance` existed has no line for it — that anchor is then unknown, not `none`: the first time such a thing comes up, ask the user where it goes
